@@ -1,0 +1,10 @@
+
+Attributes not converted or paid attention by mrLiquid:
+
+- miDisplaceAnimation  -- needed? Don't think is needed with my architecture
+- miAnimation          -- hmm... is it really that expensive?
+- miDerivatives        -- do we really need it?  After all, it should be up
+			  to the shader to ask for derivatives functionality
+- nodeCycleCheck       -- mrLiquid checks for cycles automatically.  It is
+			  not that expensive (I think).
+

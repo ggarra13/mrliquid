@@ -1,0 +1,1440 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+//
+// Alias Script File MODIFY THIS AT YOUR OWN RISK
+//
+//  Creation Date:  March 5, 2001
+//
+
+global proc string renderCreateBarCB( 
+	string $as, 
+	string $flag,
+	string $type)
+{
+	//
+	// Description:
+	//	This procedure is called when the user presses one of the buttons in
+	//	the create bar or releases a drag and drop from one of the buttons in
+	//	the create bar. 
+	//	This procedure calls renderCreateNode() with the arguments necessary to
+	//	create a node of the type which corresponds to the button.
+	//	Input arguments to this procedure are as follows:
+	//
+	//		$as: A flag specifying which how to classify the node created.
+	//		Choices:
+	//			-as2DTexture: 2d textures
+	//			-as3DTexture: 3d textures
+	//			-asEnvTexture: Environment textures
+	//			-asShader: as a shader
+	//			-asLight: as a light
+	//			-asUtility: as a rendering utility node
+	//
+	//      $flag: A secondary flag used to make decisions in combination with 
+	//			   $as.
+	//		Choices:
+	//			-asBump: defines a created texture as a bump
+	//			-asNoShadingGroup: for materials; create without a shading 
+	//				group.
+	//			-asDisplacement: for anything; map the created node 
+	//				to a displacement material.
+	//			-asUtility: for anything; do whatever the $as flag says,
+	//				but also classify as a utility
+	//			-asPostProcess: for any postprocess node
+	//
+	//		$type: The type of node to be created.
+	//
+	//
+	// Returns: 
+	//	The name of the created node.
+	//
+
+	string $postCommand = "";
+	int $projection = (`optionVar -query create2dTextureType` == "projection");
+	int $stencil = (`optionVar -query create2dTextureType` == "stencil");
+	int $placement = `optionVar -query createTexturesWithPlacement`;
+	int $shadingGroup = `optionVar -query createMaterialsWithShadingGroup`;
+	int $createAndDrop = 0;
+	string $editor = "";
+
+	return renderCreateNode(
+		$as,
+		$flag,
+		$type, 
+		$postCommand,
+		$projection,
+		$stencil,
+		$placement,
+		$shadingGroup,
+		$createAndDrop,
+		$editor);
+}
+
+global proc renderCreateBarUIManage(
+	string $renderCreateBarUI,
+	int $manage)
+{
+	//
+	// Description:
+	//	This procedure is called to cause the render create bar UI to be shown
+	//	or hidden.
+	//	This procedure causes the formLayout which contains the render create
+	//	bar UI to be managed or unmanaged, according to the $manage argument.
+	//
+	formLayout
+		-edit
+		-manage $manage
+		$renderCreateBarUI;
+}
+
+global proc int renderCreateBarUIIsManaged(
+	string $renderCreateBarUI)
+{
+	//
+	// Description:
+	//	This procedure is called to determine whether or not the create bar UI
+	//	is being shown.
+	//
+	// Returns: 
+	//	true if the render create bar UI is shown, false if not.
+	//
+
+	return (`formLayout -query -manage $renderCreateBarUI`);
+
+}
+
+proc string tabUIName(
+	string $tab)
+{
+	//
+	// Description:
+	//	This procedure is called whenever it is necessary to get a user
+	//	friendly name for one of the create bar tabs, given the name of the tab
+	//	itself.
+	//	This procedure associates a user friendly name with the tab name.
+	//
+	// Returns: 
+	//	The user friendly name.
+	//
+
+	string $noUIName = (uiRes("m_renderCreateBarUI.kNoUIName"));
+	string $uiName = $tab;
+
+	string $style = `optionVar -query renderCreateBarStyle`;
+
+	if ($style == "iconsAndText")
+	{
+		if ($tab == "MayaNodesTab")
+		{
+			$uiName = (uiRes("m_renderCreateBarUI.kCreateMayaNodes"));
+		}
+		else if ($tab == "AllNodesTab")
+		{
+			$uiName = (uiRes("m_renderCreateBarUI.kCreateAllNodes"));
+		}
+		else if ($tab == "mrNodesTab")
+		{
+			$uiName = (uiRes("m_renderCreateBarUI.kCreateMentalRayNodes"));
+		}
+		else
+		{
+			// Somebody has added a new tab to the create bar but has not
+			// associated it with a user friendly name.
+			//
+			warning $noUIName;
+		}
+	}
+	else // ($style == "iconsAndText")
+	{
+		if ($tab == "MayaNodesTab")
+		{
+			$uiName = "Maya";
+		}
+		else if ($tab == "AllNodesTab")
+		{
+			$uiName = (uiRes("m_renderCreateBarUI.kAll"));
+		}
+		else if($tab == "mrNodesTab")
+		{
+			$uiName = "mentalray";
+		}
+		else
+		{
+			// Somebody has added a new tab to the create bar but has not
+			// associated it with a user friendly name.
+			//
+			warning $noUIName;
+		}
+	}
+
+	return $uiName;
+}
+
+global proc renderCreateBarUIBuildTabChoiceMenu(
+	string $tabChoiceButton,
+	string $menu)
+//
+//	Description:
+//		This procedure is called whenever the user clicks on the tab choice
+//		button in the render create bar.
+//		This procedure builds the menu which appears.
+//
+//	Arguments:
+//		$tabChoiceButton - The button the popup menu is parented to.
+//
+//		$menu - The menu attached to the button.
+//
+{
+	setParent -menu $menu;
+	menu -edit -deleteAllItems $menu;
+
+	string $createBarTabLayout = `setParent createBarTabLayout`;
+	string $currentTab = `tabLayout -query -selectTab $createBarTabLayout`; 
+	string $tabArray[] = `tabLayout -query -childArray $createBarTabLayout`; 
+
+	radioMenuItemCollection;
+
+	for ($i = 0; $i < size($tabArray); $i++)
+	{
+		// Construct the command the menu item will invoke
+		//
+		string $cmd = 
+			("tabLayout -edit -selectTab " 
+				+ $tabArray[$i] 
+				+ " "
+				+ $createBarTabLayout
+				+ "; "
+				+ "optionVar -stringValue renderCreateBarCurrentTab "
+				+ $tabArray[$i]
+				+ "; "
+				+ "iconTextButton -edit -label \""
+				+ tabUIName($tabArray[$i])
+				+ "\" "
+				+ $tabChoiceButton);
+
+        // The paragraph below is a temporary fix for bug 201571
+        // during Maya 6.0 CG time (Feb 13, 2004).  
+        // This is only a unix problem.
+        // The real problem is on unix, when the 
+        // "tabLayout -edit -selectTab" is done
+        // through MEL not interactively through user clicking on the 
+        // tab, then the tabLayout's "changeCommand" does not get
+        // called.
+        // Here, as a temporary solution, for unix only, we make 
+        // an explicit call to the procedure specified in the 
+        // changeCommand, when the tab is selected using MEL. 
+        //
+		if (`about -linux` )
+		{
+			$cmd = ($cmd+"; refreshCreateBarTabLayout \""+$createBarTabLayout+"\"");
+		}
+
+		if( "AllNodesTab" == $tabArray[$i] ) menuItem -divider true;
+
+		// Create the menu item
+		//
+		menuItem
+			-enableCommandRepeat false
+			-radioButton ($tabArray[$i] == $currentTab)
+			-label (tabUIName($tabArray[$i]))
+			-command $cmd;
+
+	}
+}
+
+global proc hyperShadeCreateTabCreateButtons(
+	string $classification,
+	string $as,
+	string $flag)
+{
+	//
+	// Description:
+	//	This procedure is called as the tabs of the render create bar UI are
+	//	being built. 
+	//	This procedure builds a button for each node type that is classified
+	//	according to $classification. The button command is configured to
+	//	create a node of that type using the $as and $flag arguments to
+	//	renderCreateBarCB().
+	//
+
+	string $style = `optionVar -query renderCreateBarStyle`;
+
+	int $buttonWidth = 350;
+	int $buttonHeight = 34;
+	string $buttonStyle;
+
+    if ($style == "iconsOnly")
+    {
+		$buttonWidth = 34;
+
+        // Calculate how many columns we need to have for the icons.
+        //
+        int $createBarWidth = 
+            `optionVar -query hyperShadePanelCreateBarIconsAndTextWidth`;
+        int $leftRightMargin = 30;
+        int $numberOfColumns = ($createBarWidth-$leftRightMargin) / $buttonWidth;
+
+        // Check if the rowColumnLayout already exists.
+        //
+        string $parent = `setParent -q`;
+        string $childArray[] = `layout -q -childArray $parent`;
+        if (size($childArray) > 0)
+        {
+            if (`rowColumnLayout -exists $childArray[0]` &&
+                `rowColumnLayout -q -numberOfColumns $childArray[0]` == $numberOfColumns)
+            {
+                // The rowColumnLayout already exists and has the right number of columns.
+                // We are done.
+                //
+                return;
+            }
+
+            // The existing rowColumnlayout does not have the right number of
+            // columns.  It needs to be deleted and rebuilt.
+            //
+            deleteUI $childArray[0];
+        }
+
+        // Build the rowColumnLayout.
+        //
+        string $cmd = "rowColumnLayout -numberOfColumns "+$numberOfColumns+" ";
+        int $i = 1;
+        while ($i <= $numberOfColumns)
+        {
+            $cmd += "-columnWidth "+$i+" "+$buttonWidth+" ";
+            $i++;
+        }
+    
+        // Create the rowColumnLayout.
+        //
+        eval($cmd);
+
+        $buttonStyle = "iconOnly";
+    }
+    else
+    {
+	    columnLayout -adjustableColumn true /* createButtonColumn */;
+
+        // Specify that the button should display icon and text, and
+        // that it should not have an annotation
+        //
+        $buttonStyle = "iconAndTextHorizontal";
+    }
+
+	// some of mental ray shaders are registered as both 
+	// rendernode/mentalray/material and shaders/surface
+	// For those node, this function is called twice : 
+	// once with $classification = shader/surface, 
+	// once with $classification = rendernode/mentalray/material
+	// We want to create buttons/menus in mental ray section
+
+	string $nodes[];
+	string $mentalrayClassfication = "rendernode/mentalray";
+    string $renderCreateBarCallback;
+
+	if( startsWith($classification, $mentalrayClassfication) ) 
+	{
+		$nodes = `listNodeTypes $classification`;
+        $renderCreateBarCallback = "mrCreateCustomNode";
+	}
+	else
+	{
+		$nodes = `listNodeTypes -ex $mentalrayClassfication $classification`;
+        $renderCreateBarCallback = "renderCreateBarCB";
+	}
+
+	int $dynamicsIsLicensed = `licenseCheck -mode edit -type fx`;
+	int $completeLicense = `licenseCheck -mode edit -type complete`;
+
+    string $annotation = "";
+
+	for ($type in $nodes) 
+	{
+
+		// Check whether node should appear in this UI, based on 
+		// certain variables			
+		if (!shouldAppearInNodeCreateUI($type)) {
+			continue;
+		}
+
+            string $command = 
+			($renderCreateBarCallback
+                + " "
+				+ $as 
+				+ " \""
+				+ $flag
+				+ "\" "
+				+ $type);
+
+		string $labelName;
+       
+	    if( startsWith($classification, $mentalrayClassfication) ) 
+	    {
+            $labelName = $type;
+        }
+        else
+        {
+		    $labelName = `nodeTypeNiceName $type`;
+        }
+
+		if ($style == "iconsOnly") 
+        {
+			$annotation = $labelName;
+		} 
+
+        $labelName = " " + $labelName;
+
+		nodeIconButton
+			-width $buttonWidth
+			-height $buttonHeight
+			-label $labelName 
+			-image1 ("render_" + $type + ".xpm")
+			-style      $buttonStyle
+			-annotation $annotation 
+			-command    $command
+			("createBar" + $type + "Button");
+
+		if(		(!$dynamicsIsLicensed) 
+			&&	(	($type == "particleCloud") 
+				||  ($classification == "utility/particle"))) 
+		{
+			// The node is a particle node, but the user does not have a
+			// license for dynamics. We will disable the button for the 
+			// node.
+			//
+			nodeIconButton 
+				-edit
+				-enable false 
+				("createBar" + $type + "Button");
+		} 
+
+		if (	(!$completeLicense)
+			&&	($classification == "imageplane"))
+		{
+			// The node is a image plane, but the user does not have a
+			// license for complete. We will disable the button for the 
+			// node.
+			//
+			nodeIconButton 
+				-edit
+				-enable false 
+				("createBar" + $type + "Button");
+		}
+	}
+
+	setParent ..; // from createButtonColumn
+}
+
+global proc renderCreateBarUICollapse(
+	string $frame,
+	string $button)
+{
+	//
+	// Description:
+	//	This method is called when the render create bar is being displayed in
+	//	icons only mode and the user has clicked on the collapse separator of a
+	//	section of buttons.
+	//	This method collapses or expands the specified frame (which contains 
+	//	the buttons directly below the collapse separator) and updates the icon
+	//	on the button appropriately.
+	//
+
+	// Collapse or expand the frame layout
+	//
+	int $collapse = !(`frameLayout -query -collapse $frame`);
+
+	frameLayout
+		-edit
+		-collapse $collapse
+		$frame;
+	
+	// Update the image on the button
+	//
+	string $image;
+
+	if ($collapse)
+	{
+		$image = "closeBarHorizontal.xpm";
+	}
+	else
+	{
+		$image = "openBarHorizontal.xpm";
+	}
+
+	iconTextButton
+		-edit
+		-image1 $image
+		$button;
+}
+
+proc string createCollapseButton()
+{
+	//
+	// Description:
+	//	This procedure is called when the UI in a tab of the create bar is
+	//	being created.
+	//	This procedure creates a collapse separator button if and only if the
+	//	render create bar is in icons only mode. Otherwise this procedure does 
+	//	nothing.
+	//
+	// Returns:
+	//	The name of the button that is created.
+	//
+
+	string $button;
+
+	string $style = `optionVar -query renderCreateBarStyle`;
+
+	if ($style == "iconsOnly")
+	{
+        // We put the collapse state button in a formLayout, 
+        // so that we can position it to the left of the layout.
+        // 
+        string $buttonForm = `formLayout`;
+
+		$button = 
+			`iconTextButton
+				-width 26
+				-height 9
+				-image1 "closeBarHorizontal.xpm"`;
+
+        formLayout
+            -edit
+            -af $button top 0
+            -af $button bottom 0
+            -af $button left 0
+            -an $button right
+            $buttonForm;
+
+        setParent ..;  // from buttonForm
+	}
+	
+	return $button;
+}
+
+proc setCollapseButtonFrame(
+	string $button,
+	string $frame)
+{
+	//
+	// Description:
+	//	This procedure is called when the UI in a tab of the create bar is
+	//	being created.
+	//	This procedure associates the specified frame layout with the specified
+	//	collapse separator button. This allows the button to know which frame
+	//	to collapse/expand when pressed and what icon to initially display on
+	//	the button.
+	//
+
+	string $style = `optionVar -query renderCreateBarStyle`;
+
+	if ($style == "iconsOnly")
+	{
+		// Determine the initial image of the button from the current
+		// collapse/expand state of the frame layout
+		//
+		int $collapsed = `frameLayout -query -collapse $frame`;
+		string $annotation = `frameLayout -query -label $frame`;
+
+		string $image;
+
+		if ($collapsed)
+		{
+			$image = "closeBarHorizontal.xpm";
+		}
+		else
+		{
+			$image = "openBarHorizontal.xpm";
+		}
+
+		// Set the image, annotation and command of the button
+		//
+		iconTextButton
+			-edit
+			-image1 $image
+			-annotation $annotation
+			-command
+				("renderCreateBarUICollapse \"" + $frame + "\" \"" + $button + "\"" )
+			$button;
+	}
+}
+
+global proc string createCollapseGroup(
+	string $label,
+	int    $labelVisible,
+	int    $borderVisible,
+	int    $collapsed,
+    string $scrollLayoutName)
+//
+//	Description:
+//		Create the collapse mechanism for a group of controls.
+//
+//		Currently, this is simply a collapsable frame Layout.
+//
+//	Arguments:
+//		label         - The label for the group.
+//
+//		labelVisible  - True if the label should be made visible.
+//
+//		borderVisible - True if the frame border should be made visible.
+//
+//		collapsed     - True if the group should be collapsed.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+    // Remove the label's white space to form part of the name for 
+    // the frameLayout. 
+    //
+    string $last = $label;
+    string $frameName = substitute( " ", $last, "" );
+    while( $last != $frameName )
+    {
+        $last = $frameName;
+        $frameName = substitute( " ", $last, "" );
+    }
+    $frameName = $scrollLayoutName+$frameName; 
+    $frameName += "FrameLayout";
+
+    string $frame;
+    if (`frameLayout -exists $frameName`)
+    {
+        $frame = `setParent $frameName`;
+    }
+    else
+    {
+        // The frameLayout does not exist yet, build it.
+        //
+	    string $button;
+
+		$button = createCollapseButton();
+		if(`about -mac`){
+			string $style = `optionVar -query renderCreateBarStyle`;
+	
+			if ($style == "iconsOnly"){
+				$frame = `frameLayout 
+				-label         $label
+				-borderVisible $borderVisible
+				-width			40
+				-labelVisible  $labelVisible
+				-collapsable   true 
+				-borderStyle   "etchedIn"
+				-marginWidth   0
+				-marginHeight  5
+				-collapse      $collapsed
+	            $frameName
+				`;
+			}else{
+				$frame = `frameLayout 
+				-label         $label
+				-borderVisible $borderVisible
+				-labelVisible  $labelVisible
+				-collapsable   true 
+				-borderStyle   "etchedIn"
+				-marginWidth   0
+				-marginHeight  5
+				-collapse      $collapsed
+	            $frameName
+				`;
+			}
+		}else{
+	
+			$frame = `frameLayout 
+				-label         $label
+				-borderVisible $borderVisible
+				-labelVisible  $labelVisible
+				-collapsable   true 
+				-borderStyle   "etchedIn"
+				-marginWidth   0
+				-marginHeight  5
+				-collapse      $collapsed
+	            $frameName
+				`;
+		}
+	
+		setCollapseButtonFrame($button, $frame);
+    }
+
+	return $frame;
+}
+
+proc string createSurfaceMaterials(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the Surface Materials group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kSurface")); 
+	return createCollapseGroup($name, $labelVisible, $borderVisible, false, $scrollLayoutName);
+}
+
+proc string createVolumetricMaterials(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the Volumetric Materials group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kVolumetric")); 
+	return createCollapseGroup($name, $labelVisible, $borderVisible, true, $scrollLayoutName);
+}
+
+proc string createDisplacementMaterials(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the Displacement Materials group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kDisplacement")); 
+	return createCollapseGroup($name, $labelVisible, $borderVisible, true, $scrollLayoutName);
+}
+
+proc string create2DTextures(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the 2D Textures group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kTextures2D")); 
+	return createCollapseGroup( $name, $labelVisible, $borderVisible, false, $scrollLayoutName);
+}
+
+proc string create3DTextures(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the 3D Textures group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kTextures3D")); 
+	return createCollapseGroup($name, $labelVisible, $borderVisible, false, $scrollLayoutName);
+}
+
+proc string createEnvironmentTextures(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the Environment Textures group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kEnvTextures")); 
+	return createCollapseGroup($name, $labelVisible, $borderVisible, true, $scrollLayoutName);
+}
+
+proc string createOtherTextures(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the Other Textures group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kOtherTextures")); 
+	return createCollapseGroup($name, $labelVisible, $borderVisible, false, $scrollLayoutName);
+}
+
+
+proc string createLights(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the Lights group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kLights")); 
+	return createCollapseGroup($name, $labelVisible, $borderVisible, false, $scrollLayoutName);
+}
+
+
+proc string createGeneralUtilities(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the General Utilities group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kGeneralUtilities")); 
+	return createCollapseGroup($name, $labelVisible, $borderVisible, false, $scrollLayoutName);
+}
+
+proc string createColorUtilities(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the Color Utilities group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kColorUtilities")); 
+	return createCollapseGroup($name, $labelVisible, $borderVisible, false, $scrollLayoutName);
+}
+
+proc string createSwitchUtilities(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the Switch Utilities group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kSwitchUtilities")); 	
+	return createCollapseGroup($name, $labelVisible, $borderVisible, true, $scrollLayoutName);
+}
+
+proc string createParticleUtilities(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the Particle Utilities group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kParticleUtilities")); 	
+	return createCollapseGroup($name, $labelVisible, $borderVisible, true, $scrollLayoutName);
+}
+
+proc string createImagePlanes(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the Image Planes group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kImagePlanes")); 	
+	return createCollapseGroup($name, $labelVisible, $borderVisible, true, $scrollLayoutName);
+}
+
+proc string createGlow(int $labelVisible, int $borderVisible, string $scrollLayoutName)
+//
+//	Description:
+//		Create the Glow group.
+//
+//	Returns:
+//		The full path name of the layout control created.
+//
+{
+	string $name = (uiRes("m_renderCreateBarUI.kGlow")); 
+	return createCollapseGroup($name, $labelVisible, $borderVisible, true, $scrollLayoutName);
+}
+
+global proc createMayaNodesTab_Content(string $style, int $borderVisible, int $labelVisible,
+    string $scrollLayoutName)
+//
+//	Description:
+//		This procedure is forked from createMayaNodesTab.
+//		It contains code for creating actually content of the tab.
+//		The reason for separating it out is refactoring,
+//		to use it for both createMayaNodesTab and createAllNodesTab.
+{
+		//	Materials.
+		//
+		createSurfaceMaterials($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("shader/surface", "-asShader", "surfaceShader");
+		setParent ..;
+
+		createVolumetricMaterials($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("shader/volume", "-asShader", "volumeShader");
+		setParent ..;
+
+		createDisplacementMaterials($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("shader/displacement", "-asShader", "displacementShader");
+		setParent ..;
+
+		//	Textures.
+		//
+		create2DTextures($labelVisible, $borderVisible, $scrollLayoutName);
+
+        string $texture2dOptionsAndButtonsColumn = $scrollLayoutName+"texture2dOptionsAndButtonsColumn";
+		if (`columnLayout -exists $texture2dOptionsAndButtonsColumn`)
+        {
+            setParent $texture2dOptionsAndButtonsColumn;
+        } 
+        else
+        {
+		    columnLayout 
+			    -adjustableColumn true 
+			    $texture2dOptionsAndButtonsColumn ;
+
+			radioCollection;
+	
+			radioButton -label (uiRes("m_renderCreateBarUI.kNormal"))
+				-align "left"
+				-onCommand ("optionVar "
+					+ "-stringValue create2dTextureType \"normal\";"
+					+ "refreshCreateNodeUI();")
+				normalRadioBtn2;
+	
+			radioButton -label (uiRes("m_renderCreateBarUI.kAsProjection"))
+				-align "left"
+				-onCommand ("optionVar "
+					+ "-stringValue create2dTextureType \"projection\";"
+					+ "refreshCreateNodeUI();")
+				projectionRadioBtn2;
+	
+			radioButton -label (uiRes("m_renderCreateBarUI.kAsStencil"))
+				-align "left"
+				-onCommand ("optionVar "
+					+ "-stringValue create2dTextureType \"stencil\";"
+					+ "refreshCreateNodeUI();")
+				stencilRadioBtn2;
+					
+			if ($style == "iconsOnly") {
+				radioButton	-edit
+					-label (uiRes("m_renderCreateBarUI.kNorm"))
+					-annotation (uiRes("m_renderCreateBarUI.kNormalAnnot"))
+					normalRadioBtn2;
+				radioButton	-edit
+					-label (uiRes("m_renderCreateBarUI.kProj"))
+					-annotation (uiRes("m_renderCreateBarUI.kProjectionAnnot"))
+					projectionRadioBtn2;
+				radioButton	-edit
+					-label (uiRes("m_renderCreateBarUI.kSten"))
+					-annotation (uiRes("m_renderCreateBarUI.kStencilAnnot"))
+					stencilRadioBtn2;
+			}
+			
+			if (`optionVar -query create2dTextureType` == "normal")	{
+				radioButton -edit -select normalRadioBtn2;
+	
+			} else if (`optionVar -query create2dTextureType` == "projection") {
+				radioButton -edit -select projectionRadioBtn2;
+	
+			} else { // (`optionVar -query create2dTextureType` == "stencil")
+				radioButton -edit -select stencilRadioBtn2;
+			}
+	
+			separator -style "none" -height 5;
+        }
+
+		hyperShadeCreateTabCreateButtons("texture/2d", "-as2DTexture", "");
+		setParent ..;
+		setParent ..;
+
+		create3DTextures($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("texture/3d", "-as3DTexture", "");
+		setParent ..;
+
+		createEnvironmentTextures($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("texture/environment", "-asEnvTexture", "");
+		setParent ..;
+
+		createOtherTextures($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("texture/other", "-asTexture", "");
+		setParent ..;
+
+		//	Lights.
+		//
+		createLights($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("light", "-asLight", "");
+		setParent ..;
+
+		//	Utilities.
+		//
+		createGeneralUtilities($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("utility/general", "-asUtility", "");
+		setParent ..;
+
+		createColorUtilities($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("utility/color", "-asUtility", "");
+		setParent ..;
+
+		createSwitchUtilities($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("utility/switch", "-asUtility", "");
+		setParent ..;
+
+		createParticleUtilities($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("utility/particle", "-asUtility", "");
+		setParent ..;
+
+		createImagePlanes($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("imageplane", "-asUtility", "");
+		setParent ..;
+
+		createGlow($labelVisible, $borderVisible, $scrollLayoutName);
+		hyperShadeCreateTabCreateButtons("postprocess/opticalFX", "-asPostProcess", "");
+		setParent ..;
+}
+
+proc createMayaNodesTab(string $createContentProc, string $scrollLayoutName)
+//
+// Description:
+//	This procedure is called as the UI is being created. 
+// 	This procedure creates the contents of the Maya Nodes tab.
+//
+{
+	string $style = `optionVar -query renderCreateBarStyle`;
+
+	int $borderVisible = true;
+	int $labelVisible = true;
+
+	if ($style == "iconsOnly")
+	{
+		$borderVisible = false;
+		$labelVisible = false;
+	}
+
+    string $columnLayout;
+    string $parent = `setParent -q`;
+    string $childArray[] = `layout -q -childArray $parent`;
+    if (size($childArray) > 0)
+    {
+        // The MayaNodesTabColumn columnLayout already exists.
+        //
+        $columnLayout = $childArray[0];
+        setParent $columnLayout;
+    }
+    else
+    {
+        $columnLayout = `columnLayout -adjustableColumn true -columnAttach both 0`; 
+    }
+    columnLayout -edit -manage false $columnLayout;
+    
+        eval $createContentProc  $style  $borderVisible $labelVisible $scrollLayoutName;
+    columnLayout -edit -manage true $columnLayout;
+    setParent ..; // from MayaNodesTabColumn
+}
+
+// Description:  This procedure is called to create all nodes tab content.  
+//  All nodes includes maya nodes, and mentalray nodes (if mentalray plugin is loaded).
+//
+global proc createAllNodesTab_Content( string $style, int $borderVisible, int $labelVisible,
+    string $scrollLayoutName)
+{
+    createMayaNodesTab_Content($style, $borderVisible, $labelVisible, $scrollLayoutName);
+
+    if ( mentalIsLoaded() )
+    {
+        mrRenderCreateBar_CreateTab_Content($style, $borderVisible, $labelVisible, $scrollLayoutName);
+    }
+}
+
+global proc renderCreateBarUIRefresh(
+	string $renderCreateBarUI)
+{
+	//
+	// Description:
+	//	This procedure is called when the state of Maya has changed in a way
+	//	that requires the create bar UI to be updated to reflect the new state.
+	//	For now, the only thing this procedure does is ensure that the radio
+	//	buttons in the textures tab are in sync with the option var dictating
+	//	how 2d textures should be created (normal/projection/stencil).
+	//
+
+	// Remember the current parent so we can revert to it when we're done here.
+	//
+
+    // Check if the content of the renderCreateBarUI is created or not.
+    // If it is not yet created, then there is no need to update.
+    //
+    if (size(`scrollLayout -q -childArray $renderCreateBarUI`) == 0)
+    {
+        return;
+    }
+
+	string $oldParent = `setParent -query`;
+	string $oldMenuParent = `setParent -menu -query`;
+
+	// Ensure the proper radio button is selected in the 
+	// normal/projection/stencil radio button collection in the textures tab.
+	
+	string $texture2dOptionsAndButtonsColumn = $renderCreateBarUI+"texture2dOptionsAndButtonsColumn";
+
+	setParent $renderCreateBarUI;
+	setParent $texture2dOptionsAndButtonsColumn;
+
+	if (`optionVar -query create2dTextureType` == "normal")
+	{
+        if (`radioButton -exists normalRadioBtn`)
+        {
+		    radioButton -edit -select normalRadioBtn;
+        }
+        if (`radioButton -exists normalRadioBtn2`)
+        {
+		    radioButton -edit -select normalRadioBtn2;
+        }
+
+	}
+	else if (`optionVar -query create2dTextureType` == "projection")
+	{
+        if (`radioButton -exists projectionRadioBtn`)
+        {
+		    radioButton -edit -select projectionRadioBtn;
+        }
+        if (`radioButton -exists projectionRadioBtn2`)
+        {
+		    radioButton -edit -select projectionRadioBtn2;
+        }
+
+	}
+	else // (`optionVar -query create2dTextureType` == "stencil")
+	{
+        if (`radioButton -exists stencilRadioBtn`)
+        {
+		    radioButton -edit -select stencilRadioBtn;
+        }
+        if (`radioButton -exists stencilRadioBtn2`)
+        {
+		    radioButton -edit -select stencilRadioBtn2;
+        }
+	}
+
+	// Revert to the original parent.
+	//
+	setParent $oldParent;
+	if ($oldMenuParent != "NONE") setParent -menu $oldMenuParent;
+}
+
+// Description:  This procedure is called to create the 
+//  content of the createBarTabLayout.
+//
+proc createCreateBarTabLayoutContent(
+    string $createBarTabLayout, string $tabChoiceButton)
+{
+    string $oldParent = `setParent -q`;
+
+    setParent $createBarTabLayout;
+    tabLayout -edit 
+        -manage false 
+        $createBarTabLayout;
+
+    // Define a template for scrollLayout which will be used when
+    // creating the scrollLayouts inside of each of the following tabs.
+    //
+    if (!`uiTemplate -exists renderCreateBarTemplate`)
+    {
+        uiTemplate renderCreateBarTemplate;
+
+        scrollLayout
+            -defineTemplate renderCreateBarTemplate
+            -horizontalScrollBarThickness 0
+            -verticalScrollBarThickness 16;
+    }
+
+    setUITemplate -pushTemplate renderCreateBarTemplate;
+
+    // The order each tab is created will be reflected in 
+    // "tabLayout -query -childArray" result.
+    // We want to show maya node tab first.
+    // So create maya nodes tab first.
+    
+    // Create a place holder for the MayaNodesTab.
+    //
+    scrollLayout MayaNodesTab;
+    setParent ..;
+
+    int $mentalRayPluginLoaded =  mentalIsLoaded();
+    
+    if ($mentalRayPluginLoaded)
+    {
+        // Create a place holder for the mrNodesTab.
+        //
+        scrollLayout mrNodesTab;
+        setParent ..;
+    }
+
+    // Create a place holder for the AllNodesTab.
+    //
+    scrollLayout AllNodesTab;
+    setParent ..;
+
+    setUITemplate -popTemplate;
+
+    tabLayout
+        -edit
+        -tabLabel MayaNodesTab (uiRes("m_renderCreateBarUI.kMayaNodes"))
+        -tabLabel AllNodesTab (uiRes("m_renderCreateBarUI.kAllNodes"))
+        $createBarTabLayout;
+    
+    if ($mentalRayPluginLoaded)
+    {
+        tabLayout
+            -edit
+            -tabLabel mrNodesTab (uiRes("m_renderCreateBarUI.kMentalRayNodes"))
+            $createBarTabLayout;
+    }
+
+    // Determine the current tab and set the contents of the create
+    // bar and the label of the tab choice button to reflect it.
+    //
+    string $currentTab = 
+        (`optionVar -query renderCreateBarCurrentTab`);
+
+    string $curParent = `setParent -q`;
+    if (!`layout -exists ($curParent + "|" + $currentTab)` )
+    {
+        $currentTab = "MayaNodesTab";
+    }
+
+    string $label = tabUIName($currentTab);
+
+    iconTextButton
+        -edit
+        -label      $label
+        $tabChoiceButton;
+
+    tabLayout
+        -edit
+        -selectTab $currentTab
+        $createBarTabLayout;	
+
+    // Refresh the create bar tab.
+    //
+    refreshCreateBarTabLayout( $createBarTabLayout);
+
+    tabLayout -edit 
+        -changeCommand ("refreshCreateBarTabLayout "+
+                        $createBarTabLayout)
+        $createBarTabLayout;
+
+    tabLayout
+        -edit
+        -manage true
+        $createBarTabLayout;	
+
+    setParent $oldParent; 
+}
+
+// Description:  This procedure is called when we switch create
+//  bar tabs.
+//
+global proc refreshCreateBarTabLayout( string $createBarTabLayout)
+{
+    // Find out which tab is selected.
+    //
+    string $scrollLayout = `tabLayout -q -selectTab $createBarTabLayout`;
+    string $oldParent = `setParent -q`;
+    setParent $createBarTabLayout; 
+    string $style = `optionVar -query "renderCreateBarStyle"`;
+
+    // If the parent scrollLayout has any children, then the tab
+    // content has already been built.  
+    //
+    if (size(`scrollLayout -q -childArray $scrollLayout`) > 0)
+    {
+
+        if ($style != "iconsOnly")
+        {
+            // If we are not in iconOnly mode, then there is nothing
+            // to update.  We are done.
+            //
+            setParent $oldParent;
+            return;
+        }
+    }
+
+    // If the content of this tab has not been built yet, build it now.
+    // If we are in iconOnly mode, we might need to refresh the icon layout
+    // in the active tab.
+    //
+    setParent $scrollLayout; 
+    string $createContentProc;
+	switch ($scrollLayout) 
+    {
+		case "MayaNodesTab":
+            $createContentProc = "createMayaNodesTab_Content";
+            break;
+        case "AllNodesTab":
+            $createContentProc = "createAllNodesTab_Content";
+            break;
+        case "mrNodesTab":
+            $createContentProc = "mrRenderCreateBar_CreateTab_Content";
+            break;
+    }
+    createMayaNodesTab($createContentProc, $scrollLayout);
+
+    setParent $oldParent;
+}
+
+global proc string renderCreateBarUI(
+	string $parentForm)
+{
+	//
+	// Description:
+	//	This procedure is called to build the UI on the left of the Hypershade
+	//	panel which allows the user to create new render nodes.
+	//
+	// Returns:
+	//	The name of the renderCreateBarUI that has been created. This name
+	//	should be stored and used later as an argument to other procedures in
+	//	this file which require it.
+	//
+
+	// Initialize optionVars if they do not yet exist
+	//
+	if (!`optionVar -exists renderCreateBarStyle`)
+	{
+		optionVar -stringValue renderCreateBarStyle "iconsAndText";
+	}
+	if (!`optionVar -exists renderCreateBarCurrentTab`)
+	{
+		optionVar -stringValue renderCreateBarCurrentTab "MayaNodesTab";
+	}
+
+	string $style = `optionVar -query renderCreateBarStyle`;
+
+	setParent $parentForm;
+
+		string $renderCreateBarUI = `formLayout -manage false renderCreateBar`;
+				
+			string $tabChoiceFrame = 
+				`frameLayout 
+					-labelVisible false 
+					-collapsable false
+					-borderStyle "out"`;
+
+			string $tabChoiceButton = `iconTextButton
+				-image1     "shelfOptions.xpm"
+				-annotation (uiRes("m_renderCreateBarUI.kChooseNodeType"))
+				-height     20`;
+
+		setParent ..;
+
+		if ($style == "iconsAndText") {
+			iconTextButton -edit -style "iconAndTextHorizontal" $tabChoiceButton;
+		} else /* ($style == "iconsOnly") */ {
+			iconTextButton -edit -style "iconAndTextHorizontal" $tabChoiceButton;
+		}
+
+		// Create the popup menu from which the user can choose the type of
+		// nodes to create in the create bar
+		//
+		//	Put the popup menu on both the left and right mouse buttons.
+		//	By putting on the right mouse button the user will get a 
+		//	cursor change that indicates a popup menu is attached there.
+		//
+		string $menu = `popupMenu -button 1 -parent $tabChoiceButton`;
+		menu 
+			-edit 
+			-postMenuCommand 
+				("renderCreateBarUIBuildTabChoiceMenu "
+					+ $tabChoiceButton
+					+ " "
+					+ $menu)
+			$menu;
+
+		$menu = `popupMenu -button 3 -parent $tabChoiceButton`;
+		menu 
+			-edit 
+			-postMenuCommand 
+				("renderCreateBarUIBuildTabChoiceMenu "
+					+ $tabChoiceButton
+					+ " "
+					+ $menu)
+			$menu;
+
+		if (`about -win`)
+		{
+			frameLayout
+				-labelVisible false
+				-collapsable false
+				-borderStyle "in"
+				tabFrame;
+		}
+
+		// Create the tab layout which contains all of the maya node creation UI
+		//
+		string $createBarTabLayout = `tabLayout
+			-tabsVisible false
+			createBarTabLayout`;
+
+		setParent ..; // from createBarTabs
+
+		if (`about -win`)
+		{
+			setParent ..; // from tabFrame
+
+			formLayout
+				-edit
+				-af $tabChoiceFrame top 0
+				-an $tabChoiceFrame bottom
+				-af $tabChoiceFrame left 0
+				-af $tabChoiceFrame right 0
+
+				-ac tabFrame top 1 $tabChoiceFrame
+				-af tabFrame bottom 0
+				-af tabFrame left 0
+				-af tabFrame right 0
+				$renderCreateBarUI;
+		}
+		else
+		{
+			formLayout
+				-edit
+				-af $tabChoiceFrame top 0
+				-an $tabChoiceFrame bottom
+				-af $tabChoiceFrame left 0
+				-af $tabChoiceFrame right 0
+
+				-ac createBarTabLayout top 0 $tabChoiceFrame
+				-af createBarTabLayout bottom 0
+				-af createBarTabLayout left 0
+				-af createBarTabLayout right 0
+				$renderCreateBarUI;
+		}
+		
+	setParent ..; // from $renderCreateBarUI
+
+	formLayout
+		-edit
+		-af $renderCreateBarUI top 0
+		-af $renderCreateBarUI bottom 0
+		-af $renderCreateBarUI left 0
+		-af $renderCreateBarUI right 0
+		$parentForm;
+
+    // Now the formLayouts are created, we can fill in the content.
+    // Calling the content creation after specifying how things are
+    // attached to the the formLayout
+    // give us the option of speeding up the content building process
+    // by unmanaging the layout, create the content, then manage the 
+    // layout.
+    // 
+    createCreateBarTabLayoutContent($createBarTabLayout,$tabChoiceButton);
+    formLayout -edit -manage true $renderCreateBarUI;
+
+	return $renderCreateBarUI;
+}

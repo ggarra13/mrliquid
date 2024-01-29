@@ -1,0 +1,138 @@
+// Copyright (C) 1997-2004 Alias Systems Corp.
+// 
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias license agreement, without fee.
+// 
+// ALIAS DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+
+
+
+global proc string createMRImageFormatControl()
+{
+	string $parent = `setParent -query`;
+	
+	optionMenuGrp 
+		-label "Image Format" 
+		-changeCommand "changeMentalRayImageFormat"
+		imageMenuMentalRay;
+
+	global string $miImgFormat[];
+	if (size( $miImgFormat ) == 0) {
+		// If the file format array has not been initialized yet, do so.
+		// This routine may be called in dynPaintMenus.mel during the
+		// file save for PFX canvas images.
+		miCreateImageFormats();
+	}
+	
+		menuItem -label "Maya IFF (iff)";
+		menuItem -label "Wavefront (rla)";
+		menuItem -label "SGI (rgb)";
+		menuItem -label "TIFF (tif)";
+		menuItem -label "TIFF uncompressed (tif)";
+		menuItem -label "JPEG (jpg)";
+		menuItem -label "Targa (tga)";
+		menuItem -label "Windows Bitmap (bmp)";
+		menuItem -label "HDR (hdr)";
+		menuItem -label "PSD (psd)" ;
+		menuItem -label "PSD Layered (psd)" ;
+		menuItem -label "PNG (png)";
+		menuItem -label "OpenEXR (exr)";
+		menuItem -label "Softimage (pic)";
+		menuItem -label "Softimage Depth (Zpic)";
+		menuItem -label "Alias PIX (als)";
+		menuItem -label "Dassault (picture)";
+		menuItem -label "Portable Pixmap (ppm)";
+		menuItem -label "PostScript (ps)";
+		menuItem -label "EPS (eps)";
+		menuItem -label "Quantel PAL (yuv)";
+		menuItem -label "Quantel NTSC (yuv)";
+		menuItem -label "mentalray Color (ct)";
+		menuItem -label "mentalray Alpha (st)";
+		menuItem -label "mentalray Normal (nt)";
+		menuItem -label "mentalray Motion (mt)";
+		menuItem -label "mentalray Depth (zt)";
+		menuItem -label "mentalray Tag (tt)";
+		menuItem -label "mentalray Bit (bit)";
+		menuItem -label "mentalray HDR (cth)" ;
+	
+	scriptJob 
+		-parent $parent 
+		-attributeChange 
+		"defaultRenderGlobals.imageFormat" 
+		"updateMentalRayImageFormatControl";
+			
+			
+	updateMentalRayImageFormatControl();		
+	return "imageMenuMentalRay";
+}
+
+global proc changeMentalRayImageFormat()
+{
+//
+//  Procedure Name:
+//      changeMentalRayImageFormat
+//
+//  Description:
+//		This procedure is called when the user changes the type of 
+//		image that will be written out.  It sets the internal 
+//		representation and then updates the example to show the changes.
+//
+	setParentToCommonTab();
+
+	int $item = `optionMenuGrp -q -sl imageMenuMentalRay` - 1; 
+
+	global int 	$miImgExtNum[];
+	global string $miImgFormat[];
+	setAttr defaultRenderGlobals.imageFormat $miImgExtNum[$item];
+	setAttr defaultRenderGlobals.imfkey -type "string" $miImgFormat[$item];
+}
+
+global proc updateMentalRayImageFormatControl()
+{
+   string $currentRenderer = currentRenderer();
+   if( $currentRenderer != "mentalRay" && $currentRenderer != "mental" )
+      return;
+		
+	string $oldParent = `setParent -query`;
+	setParentToCommonTab();
+
+	global string $miImgFormat[];  // This is the actual file format
+	global int $miImgExtNum[];  // This is the corresponding internal value
+
+	int $compare;
+
+	int $imageNum = `getAttr "defaultRenderGlobals.imageFormat"`;
+	string $imageFormat = `getAttr "defaultRenderGlobals.imfkey"`;
+	int $i = 0;
+
+	for ($i=0; $i < size($miImgExtNum); ++$i) 
+	{
+		if ($imageNum == 51 && $imageFormat == $miImgFormat[$i]) {
+			optionMenuGrp -edit -sl ($i+1) imageMenuMentalRay;
+			break;
+		}
+		else if ($imageNum != 51 && $imageNum == $miImgExtNum[$i]) {
+			optionMenuGrp -edit -sl ($i+1) imageMenuMentalRay;
+			break;
+		}
+	}
+	
+	// could not find the corresponding image format.
+	// fall back to iff.
+	if( $i == size($miImgExtNum) )
+	{
+		setAttr defaultRenderGlobals.imageFormat 7;
+		optionMenuGrp -edit -sl 1 imageMenuMentalRay;
+	}
+	
+	setParent $oldParent;
+}
+

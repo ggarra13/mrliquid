@@ -1,0 +1,54 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+displayString -replace -value "As projection" m_createRenderNode.kAsProjection;
+displayString -replace -value "As stencil" m_createRenderNode.kAsStencil;
+displayString -replace -value "Close" m_createRenderNode.kClose;
+displayString -replace -value "Color Utilities" m_createRenderNode.kColorUtilities;
+displayString -replace -value "Create Render Node" m_createRenderNode.kCreateRenderNode;
+displayString -replace -value "Displacement Materials" m_createRenderNode.kDisplacementMaterials;
+displayString -replace -value "Environment Textures" m_createRenderNode.kEnvironmentTextures;
+displayString -replace -value "General Utilities" m_createRenderNode.kGeneralUtilities;
+displayString -replace -value "Glow" m_createRenderNode.kGlow;
+displayString -replace -value "Help" m_createRenderNode.kHelp;
+displayString -replace -value "Help on Create Render Node" m_createRenderNode.kHelpOnCreateRenderNode;
+displayString -replace -value "Icons and Text" m_createRenderNode.kIconsAndText;
+displayString -replace -value "Icons Only" m_createRenderNode.kIconsOnly;
+displayString -replace -value "Image Planes" m_createRenderNode.kImagePlanes;
+displayString -replace -value "Lights" m_createRenderNode.kLights;
+displayString -replace -value "Lights" m_createRenderNode.kLightsBuild;
+displayString -replace -value "Materials" m_createRenderNode.kMaterials;
+displayString -replace -value "mental ray" m_createRenderNode.kMentalRay;
+displayString -replace -value "Node type flag must be one of: -all,-allWithTexturesUp,-allWithShadersUp,-allWithLightsUp,-textures,-shadersSG,-shaders,-lights,-utilities" m_createRenderNode.kNodeError;
+displayString -replace -value "Normal" m_createRenderNode.kNormal;
+displayString -replace -value "Options" m_createRenderNode.kOptions;
+displayString -replace -value "Other Textures" m_createRenderNode.kOtherTextures;
+displayString -replace -value "Particle Utilities" m_createRenderNode.kParticleUtilities;
+displayString -replace -value "Surface Materials" m_createRenderNode.kSurfaceMaterials;
+displayString -replace -value "Switch Utilities" m_createRenderNode.kSwitchUtilities;
+displayString -replace -value "Text Only" m_createRenderNode.kTextOnly;
+displayString -replace -value "Textures" m_createRenderNode.kTextures;
+displayString -replace -value "3D Textures" m_createRenderNode.kThreeDTextures;
+displayString -replace -value "2D Textures" m_createRenderNode.kTwoDTextures;
+displayString -replace -value "Utilities" m_createRenderNode.kUtilities;
+displayString -replace -value "Volumetric Materials" m_createRenderNode.kVolumetricMaterials;
+displayString -replace -value "With new texture placement" m_createRenderNode.kWithNewTexture;
+displayString -replace -value "With shading group" m_createRenderNode.kWithShadingGroup;

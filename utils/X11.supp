@@ -1,0 +1,54 @@
+#
+# This is a valgrind suppression file for X11 that should be used when
+# using valgrind.
+#
+#
+{
+  libX11.so.6.2.0/libXaw.so.7.0
+  Memcheck:Value4
+  obj:/usr/lib/libX11.so.6.2.0
+  obj:/usr/lib/libXaw.so.7.0.0
+}
+
+{
+  libX11.so.6.2.0/libX11.so.6.2.0/libXaw.so.7.0.0
+  Memcheck:Value8
+  obj:/usr/lib/libX11.so.6.2.0
+  obj:/usr/lib/libXaw.so.7.0.0
+}
+
+{
+  libX11.so.6.2.0/libXaw.so.7.0.0/libXt.so.6.0.0
+  Memcheck:Cond
+  obj:/usr/lib/libX11.so.6.2.0
+  obj:/usr/lib/libXaw.so.7.0.0
+  obj:/usr/lib/libXt.so.6.0.0
+}
+
+{
+   writev
+   Memcheck:Param
+   writev(vector[...])
+   fun:writev
+}
+
+{
+   _XUpdateGCCache
+   Memcheck:Cond
+   fun:_XUpdateGCCache
+   fun:XCreateGC
+   fun:XtAllocateGC
+}
+
+{
+   XtAllocateGC
+   Memcheck:Cond
+   fun:XtAllocateGC
+}
+
+{
+   XSetLineAttributes
+   Memcheck:Cond
+   fun:XSetLineAttributes
+}
+

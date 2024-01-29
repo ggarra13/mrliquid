@@ -1,0 +1,42 @@
+
+global proc string mentalCustomNodeClass(string $nodeType)
+{
+	// Materials, Material surface shaders.
+	// Provides additional functionalities on top of
+	// Material shaders(rendernode/mentalray/material).
+	// "Assign New Material", "Assign Existing Material" RMB,
+	// Created with a SG.
+	// RMB on the node.
+
+	if ($nodeType == "gg_lambert" ||
+	    $nodeType == "gg_showinfo" ||
+	    $nodeType == "gg_orennayar" ||
+	    $nodeType == "gg_skin" ||
+	    $nodeType == "gg_pfxhair" ||
+	    $nodeType == "gg_strauss" ||
+	    $nodeType == "gg_ambientocclusion" ||
+	    $nodeType == "gg_reflectionocclusion" ||
+	    $nodeType == "gg_velvet" ||
+	    $nodeType == "gg_fakefur"
+            )
+		return "rendernode/mentalray/material:shader/surface:swatch/mentalRaySwatchGen";
+	
+	// texture shaders supported by swatch
+	if( $nodeType == "gg_cellnoiise" ||
+	    $nodeType == "gg_vcellnoise" ||
+	    $nodeType == "gg_tiff" ||
+	    $nodeType == "gg_ctiff" ||
+	    $nodeType == "gg_worley" ||
+	    $nodeType == "gg_vworley" ||
+	    $nodeType == "gg_parallaxbump" ||
+	    $nodeType == "gg_perlin" ||
+	    $nodeType == "gg_vperlin" ||
+	    $nodeType == "gg_noise" ||
+	    $nodeType == "gg_noises" ||
+	    $nodeType == "gg_threads" )
+	   return "rendernode/mentalray/texture:swatch/mentalRaySwatchGen";
+
+
+	return "";
+}
+

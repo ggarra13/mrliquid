@@ -1,0 +1,158 @@
+2007-08-30  gga  <ggarra@advancedsl.com.ar>
+
+	* mrClasses/mrFilters.h: Made the filters use a table and classes.
+	* mrClasses/mrRayDifferentials.h: Added ray differentials code.
+
+2006-12-11  gga  <ggarra@advancedsl.com.ar>
+
+	* LPGL: Removed mrTiff from distribution, to make mrClasses
+	a true BSD distribution.
+	
+2006-12-09  gga  <ggarra@advancedsl.com.ar>
+
+	* mrClasses/fvec.h: Added fvec.h for platforms that do not supply
+	such a class (most GNU platforms)
+
+2006-12-07  gga  <ggarra@advancedsl.com.ar>
+
+	* CMakeLists.txt: Created CMakeLists.txt for porting to other 
+	platforms.
+	* ChangeLog: Switched to using ChangeLog.
+
+
+v0.1.8	gga  <ggarra@advancedsl.com.ar>
+
+	 * Several typos removed.
+	 * Made code work on linux.
+	 * Fixed a problem with mi_query() of number of derivatives, bumps and
+	   textures.
+	 * Fixed a bug in parallax_bump(), as it was not calculating offsets
+           properly.
+	 * Fixed two ugly bugs in from/toTangent code.  I was creating 
+	   the matrix in row order, instead of column order and from/to
+	   was actually reversed.
+
+	 New features
+	 ------------
+	
+	 * Added mrRoots.h.  Added support for quadratic, cubic, quartic
+	   root finders.
+	 * Vectors/Points/Normals are now printed without a comma for
+           each element.  This makes it easier to cut/paste those values into
+           maya's requesters to verify things.
+
+
+v0.1.7 - And old bug fix release I forgot to upload....
+
+	 Bug fixes:
+         ----------
+
+	 - gg_fakefur was buggy and creating nan values, due to TWO divisions
+	   by 0 in fakefurOpacity near glancing angles (probably a bug in
+	   the original prman code, but prman's RSL hides bugs of dividing 
+	   by 0).
+	   Also shader was slower due to being operated in shadow calls, 
+	   which was unneeded (now it is faster).
+	   And fakefur was not dealing with area lights properly.
+	   Thanks go to pixero for the demo scene.
+
+	 - gg_velvet was incorrectly dealing with area lights.
+
+	 - gg_skin could also potentially lead to NAN values in some very, 
+	   very, very rare cases.  Fixed.
+	   gg_skin was also incorrectly dealing with multiple lights.
+
+	 - Miguel's shaders (gg_velvet, gg_fakefur, gg_orennayar, gg_skin) 
+	   were not taking global illumination into account.  Fixed.
+
+	 - Fixed typo in dPdu and dPdv macros in mrRman_macros.h
+
+	 - Improved comparison speed of matrices.
+
+	 - Pixie's tiff reading code was offseting maps one pixel compared
+	   to maya.  Fixed.
+
+	 Minor improvements:
+	 -------------------
+
+	 - Updated EXR output shader for mray3.4
+	 - Upgraded tiff code to support 16-bit tiffs properly
+	   (I'll probably need to rewrite this code, as Pixie's code, albeit
+	   good is also a tad inefficient overall for reading tiffs)
+	 - gg_ctiff and gg_tiff now support multiple uvsets.
+
+
+v0.1.6 - Bug fixes:
+         ----------
+	 Fixed one of the fromTangent() functions.
+
+	 Fixed from/toScreen() and equivalent matrix creation functions.
+	 (well, at least for perspective projection and without camera
+	  offsets)
+
+	 Fixed 2 bugs in mrTiff.cpp handling of tiff mipmaps (one minor,
+	 the other serious -crash).  To generate the mipmaps, you can use
+	 either Pixie or Aqsis (Prman, RDC, Air probably also work, but have
+	 not tested them).
+
+	 Fixed fastmath's ceil() function (well, not quite.  It can still
+	 fail here and there.  Need to do some hex coding here) 
+
+	 gg_tiff/gg_ctiff should now work fine under IPR.
+
+	 Fixed a possible crash in BumpUV function.
+
+	 What's new:
+	 -----------
+	 Consolidated project for maya5/6 development locations.
+
+	 Stripped all maya dependent libraries which were really not
+	 used in compilation so that it is easier for users of XSI, 
+	 3dMax, or others.
+
+	 Added support for Aqsis tiff mipmaps in mrTiff.
+
+	 Added mipmap histogram to mrTiff final stats.
+
+	 Improved speed a tad of tiff texture reading code in some cases.
+
+	 Added mipmap histogram stats for tiff reading thru mrTiff.
+
+	 Added Miguel Garcao's shaders (gg_orennayar, gg_velvet,
+	 gg_noises, gg_skin, gg_fakefur).  Thanks, Miguel.
+
+	 Added gg_spherical lens shader to generate renders around in a 
+	 sphere (requires scanline to be turned off, but it seems maya2mr
+	 is buggy in this aspect, as scanline is always on?)
+	 
+	 Added gg_shaderstate_peek shader to peek into shaderstate message
+	 passing when you don't control source code to shaders.
+
+	 Created mrRefractions.h and added Daniel Rind's blurred refraction
+	 code.  Still needs some more thought on how to expose this easily.
+
+	 Created mrShadows.h and consolidated shadow api.
+	 
+v0.1.5 - Bug fixes.
+         Added mrShading.h, fixed some macros in mrRman_macros.h,
+	 fixed typo in some color constructors, added new sampler functions,
+	 fixed ugly crash in ambient/reflection occlusion when using blockers,
+	 fixed perlin to calculate gradient properly in all dimensions.
+
+	 Developed some hair shaders (for maya) as a way of testing the
+	 classes, but I am currently not disting them yet.  I fear disting
+	 this code will effect the sales of several products, so I am somewhat
+	 reluctant to do it.
+
+	 Added support for SSE in matrix class, thru optional compile switch.
+	 This makes matrix class twice as fast if not more for many 
+	 operations (inversion, sums, multiplications, etc)
+
+	 Upgraded gg_exr to properly support OpenEXR1.2.1.
+
+	 The OpenEXR and libtiff I use are now disted with mrClasses
+	 (mrClasses_v*.zip), but a smaller distribution is available
+	 (mrClasses_v*_alone.zip), too.
+
+v0.1.2 - Bug fixes.  Added gg_exr, output shader for OpenEXR.
+v0.1   - first version uploaded to sourceforge.net

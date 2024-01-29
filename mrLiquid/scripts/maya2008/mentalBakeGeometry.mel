@@ -1,0 +1,1041 @@
+/**
+ * @file   mentalBakeGeometry.mel
+ * @author gga
+ * @date   Fri Aug  3 11:21:50 2007
+ * 
+ * @brief  
+ * 
+ * 
+ */
+
+global proc float[] mrl_pointMatrixMult( float $point[], float $matrix[] )
+//
+//  Description:
+//      Multiplies a point by a matrix and returns the result.
+//      pointMatrixMult is broken in maya.
+//
+{
+   float $result[];
+
+    $result[0] = 0.0;
+    $result[1] = 0.0;
+    $result[2] = 0.0;
+
+    if ( size($point) != 3 || size($matrix) != 16 )
+    {
+ warning("Point must be an array of 3 doubles and matrix must be an array of 16 doubles.");
+ return $result;
+    }
+
+    // create the node that will do the actual computation
+    //
+   string $multNode;
+    if ( catch($multNode = `createNode pointMatrixMult`) )
+    {
+ warning("Could not create pointMatrixMult node.");
+ return $result;
+    }
+
+    // set the matrix and point inputs to the node
+    //
+
+   setAttr ($multNode+".inPoint") -type "double3" $point[0] $point[1] $point[2];
+   setAttr ($multNode+".inMatrix") -type "matrix" $matrix[0] $matrix[1] $matrix[2] $matrix[3] $matrix[4] $matrix[5] $matrix[6] $matrix[7] $matrix[8] $matrix[9] $matrix[10] $matrix[11] $matrix[12] $matrix[13] $matrix[14] $matrix[15];
+
+    // get the result and delete the node since it is no longer required
+    //
+   $result = `getAttr ($multNode+".output")`;
+   delete $multNode;
+
+   return $result;
+}
+
+
+proc setOptionVars(int $forceFactorySettings)
+{
+  // style
+   if ($forceFactorySettings || !`optionVar -exists v_mentalBakeGeometryStyle`) {
+      optionVar -stringValue v_mentalBakeGeometryStyle "Assembly";
+   }
+
+   // scope
+   if ($forceFactorySettings || !`optionVar -exists v_mentalBakeGeometryScope`) {
+      optionVar -stringValue v_mentalBakeGeometryScope "Selected";
+   }
+
+   // Bake animation
+   if ($forceFactorySettings || !`optionVar -exists v_mentalBakeGeometryAnimation`) {
+      optionVar -intValue v_mentalBakeGeometryAnimation 1;
+   }
+
+   // Bake to one mi file per object or per frame
+   if ($forceFactorySettings || !`optionVar -exists v_mentalBakeGeometryMiFiles`) {
+      optionVar -stringValue v_mentalBakeGeometryMiFiles "Per Object";
+   }
+
+   // bake instances/materials
+   if ($forceFactorySettings || !`optionVar -exists v_mentalBakeGeometryInstances`) {
+      optionVar -intValue v_mentalBakeGeometryInstances 0;
+   }
+
+   // replace
+   if ($forceFactorySettings || !`optionVar -exists v_mentalBakeGeometryReplace`) {
+      optionVar -intValue v_mentalBakeGeometryReplace 1;
+   }
+}
+
+/** 
+ * Returns an array of the Shading Groups (shadingEngine 
+ *  nodes) responsible for shading the specified shape node.
+ * 
+ * @param shape Shape node
+ * 
+ * @return Array of shading groups for shape
+ */
+proc string[] getSGsFromShape( string $shape )
+{
+  string $shadingEngines[];
+
+  if ( `objExists $shape` )
+  {
+    string $dest[] = `listConnections -destination true -source false
+      -plugs false -type "shadingEngine" $shape`;
+
+    // listConnections can return duplicates within its list.
+    // Here we remove them.
+    if ( size( $dest ) )
+    {
+       $shadingEngines = stringArrayRemoveDuplicates( $dest );
+    }
+  }
+
+  return $shadingEngines;
+}
+
+
+/** 
+ * Main routine used to bake geometry
+ * 
+ * 
+ * @return 
+ */
+global proc mentalBakeGeometry()
+{
+  // User paramaters
+  setOptionVars( false );
+
+  string $namespace = "";
+  string $miDir = "";
+  string $assemblyNode = "";
+
+  // bake style
+  int $assembly = 0;
+  string $scope = `optionVar -query v_mentalBakeGeometryStyle`;
+  if( $scope == "Assembly" )
+    {
+      $assembly = 1;
+    }
+
+  // bake scope
+  int $selected = 0;
+  string $scope = `optionVar -query v_mentalBakeGeometryScope`;
+  if( $scope == "Selected" )
+    {
+      $selected = 1;
+    }
+
+  // bake animation
+  int $animation = 0;
+  if( `optionVar -query v_mentalBakeGeometryAnimation`)
+    {
+      $animation = 1;
+    }
+
+  // Bake an mi file per object
+  int $per_object = 1;
+
+  // Bake instances and materials
+  int $instances = $assembly;
+  if ( !$assembly )
+    {
+      if( `optionVar -query v_mentalBakeGeometryInstances`)
+	{
+	  $instances = 1;
+	  $per_object = 0; // bake one mi file per frame
+	}
+    }
+  else
+    {
+      $per_object = 0; // bake one mi file per frame
+    }
+
+  // Replace objects after baking is done
+  int $replace = 0;
+  if( `optionVar -query v_mentalBakeGeometryReplace`)
+    {
+      $replace = 1;
+    }
+
+  string $tmpCmd = "mentalGeometryBake()";
+  addToRecentCommandQueue $tmpCmd "mental ray Geometry Bake";
+
+
+
+
+  int $startFrame, $endFrame;
+  if ( $animation )
+    {
+      // get timeline start/end
+      $startFrame = `playbackOptions -q -min`;
+      $endFrame   = `playbackOptions -q -max`;
+    }
+  else
+    {
+      // Get current frame
+      $startFrame = `currentTime -q`;
+      $endFrame   = $startFrame;
+    }
+
+
+  int $animated;
+
+  string $scene = `file -q -sn`;
+  if ( $scene == "" )
+    {
+      SaveSceneAs();
+      $scene = `file -q -sn`;
+      if ( $scene == "" )
+	{
+	  error("You must save scene first before baking geometry.");
+	}
+    }
+  else
+    {
+      // Save a back-up of scene
+      file -s -f;
+    }
+
+
+  $scene = substitute(".*/", $scene, "");
+  $scene = substitute(".m[ab]$", $scene,  "");
+
+
+  // Store visible objects.  Hide objects we are not baking
+  // to bake faster.
+  string $visible[] = `ls -dag -v`;
+  string $shapes[];
+  if ( $selected ) {
+    $shapes = `ls -l -ni -sl`;
+    HideUnselectedObjects;
+  }
+  else {
+    $shapes = `ls -l -ni`;
+  }
+
+  // Verify miDir exists
+  if ( $miDir == "" )
+    {
+      $miDir = `workspace -q -rd`;
+      $miDir += "mi";
+      if ( ! `filetest -d $miDir` )
+	{
+	  workspace -create $miDir;
+	}
+    }
+
+  string $dir = ($miDir + "/" + $scene);
+  if ( ! `filetest -d $dir` )
+    {
+      workspace -create $dir;
+    }
+
+  string $shape;
+  string $objects[];
+  int $num = 0;
+  for ( $shape in $shapes )
+    {
+      string $type = `objectType $shape`;
+      if ( $type == "transform" )
+	{
+	  string $children[] = `listRelatives -f -type mesh -type subdiv -type nurbsSurface $shape`;
+	  $children = `ls -l -ni $children`;
+	  for ( $child in $children )
+	    {
+	      $objects[$num++] = $child;
+	    }
+	  continue;
+	}
+
+      if ( $type != "nurbsSurface" &&
+	   $type != "mesh" &&
+	   $type != "subdiv" )
+	continue;
+      $objects[$num++] = $shape;
+    }
+  if ( size($objects) == 0 )
+    {
+      select -r $visible;
+      showHidden -a;
+      error("No valid objects to bake to mi files.");
+    }
+
+  if ( $assembly )
+    {
+      //
+      // Create assembly
+      //
+      $assemblyNode = `createNode mentalFileAssemblyShape`;
+      string $list[] = `ls -l $assemblyNode`;
+      $assemblyNode = $list[0];
+
+      // Change name of .mi files to that of assembly node
+      $scene = $assemblyNode;
+
+      string $shortname[] = `ls $assemblyNode`;
+      $scene = substituteAllString( $shortname[0], "|", "_" );
+      print( "assembly A: " + $assemblyNode + "\n");
+    }
+
+  $objects = stringArrayRemoveDuplicates($objects);
+
+  string $basecmd = "mental -bin -mi -a ";
+  int $filter;
+  if ( $instances )
+    {
+      $filter = 8370924; // objects + instances + materials + shaders +
+                         // shader links + shader includes
+
+      // $filter = 8371951; // as above, but sans shaders, links or includes
+    }
+  else
+    {
+      $filter = 8388591; // just objects
+    }
+
+  // If assembly, set assembly flag (0x40000000) and filter
+  // render statements (0x80000) and options (0x200) and camera( 0x80 )
+  if ( $assembly ) $filter = 1074266752;
+
+
+  $basecmd += "-exportFilter " + $filter; 
+  // add namespace
+  $basecmd += " -namespace \"";
+  $basecmd += $namespace;
+  $basecmd += "\"";
+
+
+  string $cmd = "mentalIsAnimated";
+  for ( $object in $objects )
+    {
+      $cmd += " " + $object;
+
+      string $parent[] = `listRelatives -f -p $object`;
+      if ( size($parent) == 0 ) {
+	$cmd += " " + $object; // add it again as no transform
+	continue;
+      }
+
+      string $transform = $parent[0];
+      $cmd += " " + $transform;
+    }
+
+  int $animatedList[] = eval($cmd);
+
+  $animated = 0;
+  for ( $anim in $animatedList )
+    {
+      if ( $anim ) { $animated = 1; break; }
+    }
+
+
+  select -r $objects;
+  $cmd = $basecmd;
+  // Add midir (each object in a separate subdir)
+  $cmd += " -dir \"" + $dir + "\"";
+  // Add filename
+  $cmd += " -f \"";
+  $cmd += $scene;
+
+
+  if ( $animated )
+    {
+      if ( !$assembly && $instances )
+	{
+	  string $base = $cmd;
+	  $base += ".mi2\" -pf 0 -sf " + $startFrame + " -ef " + $startFrame;
+	  print($base+"\n");
+	  eval($base);
+	}
+
+      $cmd += "\" -fe -pf 2 -sf " + $startFrame + " -ef " + $endFrame;
+    }
+  else
+    {
+      $cmd += ".mi2\" -pf 0";
+      if ( !$instances )
+	{
+	  $cmd += " -fe";
+	}
+    }
+
+
+  print($cmd + "\n");
+  eval($cmd);
+
+
+  if ( $assembly )
+    {
+      //
+      // Once exported, replace all objects with one mentalFileAssembly
+      //
+
+      // bounding box (may be animated)
+      float $bMin[3];
+      float $bMax[3];
+
+      // motion box max (static)
+      float $mMax[3];
+      $mMin[0] = $mMin[1] = $mMin[2] = $mMax[0] = $mMax[1] = $mMax[2] = 0;
+
+      float $oMin[3];
+      float $oMax[3];
+      float $pMin[3];
+      float $pMax[3];
+
+      string $attr;
+
+
+      int $frame = $startFrame;
+      for ( $frame = $startFrame; $frame <= $endFrame; ++$frame )
+	{
+	  currentTime -e $frame;
+
+	  //
+	  // Calculate bounding box for this frame
+	  //
+	  for ( $object in $objects )
+	    {
+	      $attr = $object + ".boundingBox.boundingBoxMin";
+	      $oMin = `getAttr $attr`;
+
+	      $attr = $object + ".boundingBox.boundingBoxMax";
+	      $oMax = `getAttr $attr`;
+	      $attr = $object + ".worldMatrix";
+	      $mt = `getAttr $attr`;
+
+	      // pointMatrixMult is broken in maya by default
+	      float $aMax[] = mrl_pointMatrixMult($oMax, $mt);
+	      float $aMin[] = mrl_pointMatrixMult($oMin, $mt);
+
+	      for ( $i = 0; $i < 3; $i++ )
+		{
+		  if ( $aMax[$i] > $bMax[$i] ) $bMax[$i] = $aMax[$i];
+		  if ( $aMin[$i] < $bMin[$i] ) $bMin[$i] = $aMin[$i];
+
+		  if ( $aMin[$i] > $bMax[$i] ) $bMax[$i] = $aMin[$i];
+		  if ( $aMax[$i] < $bMin[$i] ) $bMin[$i] = $aMax[$i];
+		}
+
+	    }
+
+	  //
+	  // Calculate approx. motion box for this frame
+	  //
+	  if ( $frame != $startFrame )
+	    {
+	      $attr = $assemblyNode + ".boxMin";
+	      $pMin = `getAttr $attr`;
+
+	      $attr = $assemblyNode + ".boxMax";
+	      $pMax = `getAttr $attr`;
+
+	      
+	      for ( $i = 0; $i < 3; $i++ )
+		{
+		  $pMin[$i] = abs($pMin[$i] - $bMin[$i]);
+		  $pMax[$i] = abs($pMax[$i] - $bMax[$i]);
+
+		  if ( $pMax[$i] > $mMax[$i] ) $mMax[$i] = $pMax[$i];
+		  if ( $pMin[$i] > $mMax[$i] ) $mMax[$i] = $pMin[$i];
+		}
+
+	    }
+
+	  //
+	  // Set assembly's bounding box for this frame
+	  //
+	  setAttr ($assemblyNode + ".boxMinX") $bMin[0];
+	  setAttr ($assemblyNode + ".boxMaxX") $bMax[0];
+	  setAttr ($assemblyNode + ".boxMinY") $bMin[1];
+	  setAttr ($assemblyNode + ".boxMaxY") $bMax[1];
+	  setAttr ($assemblyNode + ".boxMinZ") $bMin[2];
+	  setAttr ($assemblyNode + ".boxMaxZ") $bMax[2];
+
+	  if ( $animated )
+	    {
+	      setKeyframe ($assemblyNode + ".boxMinX");
+	      setKeyframe ($assemblyNode + ".boxMaxX");
+	      setKeyframe ($assemblyNode + ".boxMinY");
+	      setKeyframe ($assemblyNode + ".boxMaxY");
+	      setKeyframe ($assemblyNode + ".boxMinZ");
+	      setKeyframe ($assemblyNode + ".boxMaxZ");
+	    }
+	}
+
+      //
+      // Set .mi2 scene file name of assembly
+      // 
+      string $file = $dir + "/" + $scene;
+      if ( $animated )
+	{
+	  $file += ".@";
+	}
+      $file += ".mi2";
+      setAttr -type "string" ($assemblyNode + ".file") $file;
+       
+      //
+      // Connect time to assembly time
+      // 
+      if ( $animated )
+	{
+	  connectAttr -f "time1.outTime" ($assemblyNode + ".inTime");
+	}
+      else
+	{
+	  $endFrame = $startFrame;
+	}
+
+      //
+      // Set motion box for all frames
+      // 
+      setAttr ($assemblyNode + ".motionBoxMinX") (- $mMax[0]);
+      setAttr ($assemblyNode + ".motionBoxMinY") (- $mMax[1]);
+      setAttr ($assemblyNode + ".motionBoxMinZ") (- $mMax[2]);
+      setAttr ($assemblyNode + ".motionBoxMaxX") $mMax[0];
+      setAttr ($assemblyNode + ".motionBoxMaxY") $mMax[1];
+      setAttr ($assemblyNode + ".motionBoxMaxZ") $mMax[2];
+
+      //
+      // Delete objects we are replacing with assembly
+      // 
+      if ( $replace )
+	{
+	  for ( $object in $objects )
+	    {
+	      string $parent[] = `listRelatives -f -p $object`;
+	      string $transform = $parent[0];
+
+	      delete $object;
+	      string $children[] = `listRelatives -ni -c $transform`;
+	      $children = `ls -ni $children`;
+	      if ( size($children) == 0 )
+		{
+		  delete $transform;
+		}
+	      else
+		{
+		  $children = `ls -s $children`;
+		  if ( size($children) != 0 )
+		    {
+		      warning("Instance \"" + $transform + 
+			      "\" was not removed due to multiple shapes.");
+		      warning("This can potentially lead to .mi " + 
+			      "translation to fail.");
+		    }
+		}
+	    }
+	}
+
+    }
+  else
+    {
+      
+      //
+      // Once exported, replace all objects with mentalFileObjectShapes
+      //
+      $idx = 0;
+      for ( $object in $objects )
+	{
+	  string $parent[] = `listRelatives -f -p $object`;
+	  string $transform = $parent[0];
+	  string $sgs[] = getSGsFromShape($object);
+
+	  string $name = substitute(".*|", $object, "");
+
+	  //
+	  // Replace (delete) old objects
+	  //
+	  if ( $replace )
+	    {
+	      delete $object;
+	      if ($instances)
+		{
+		  string $children[] = `listRelatives -ni -c $transform`;
+		  $children = `ls -ni $children`;
+		  if ( size($children) == 0 )
+		    {
+		      delete $transform;
+		    }
+		  else
+		    {
+		      $children = `ls -s $children`;
+		      if ( size($children) != 0 )
+			{
+			  warning("Instance \"" + $transform + 
+				  "\" was not removed due to multiple shapes.");
+			  warning("This can potentially lead to .mi " + 
+				  "translation to fail.");
+			}
+		    }
+		}
+	    }
+	  else
+	    {
+	      rename $object ($name + "_orig" );
+	    }
+
+	  if ( $instances ) continue;
+
+	  //
+	  // If exporting one file per object, get flag if object is animated
+	  //
+	  if ( $per_object )
+	    {
+	      $animated = $animatedList[$idx] || $animatedList[$idx+1];
+	      $idx += 2;
+	    }
+
+	  //
+	  // Create a new mentalFileObject for this object
+	  //
+	  string $newobj = `createNode -p $transform -n $name mentalFileObjectShape`;
+	  string $list[] = `ls -l $newobj`;
+	  $newobj = $list[0];
+
+	  //
+	  // Name should be the same as the old object's name so file object works
+	  // fine.  - verify
+	  //
+	  if ($newobj != $object)
+	    {
+	      warning("[BUG] Name is different: " + $newobj + " != " + 
+		      $object + "\n");
+	    }
+
+	  //
+	  // Calculate filename for object based on directory hierarchy name
+	  //
+	  string $fileroot;
+	  string $fulldir   = $dir;
+	  string $shortname[] = `ls $object`;
+	  $fileroot = substituteAllString( $shortname[0], "|", "_" );
+	  $fulldir += "/" + $fileroot;
+
+	  string $file = $fulldir + "/" + $fileroot;
+	  if ( $animated )
+	    {
+	      $file += ".@";
+	    }
+	  $file += ".mi2";
+	  setAttr -type "string" ($newobj + ".file") $file;
+
+	  //
+	  // If object is animated, connect global time to mentalFileObject's time
+	  //
+	  if ( $animated )
+	    {
+	      connectAttr -f "time1.outTime" ($newobj + ".inTime");
+	    }
+
+
+	  //
+	  // Assign main material to object
+	  //
+	  sets -e -forceElement $sgs[0] $newobj;
+
+
+	  if ( size($sgs) > 1 )
+	    {
+	      int $sgidx = 0;
+	      // Custom shapes do not allow per-face material assignments.
+	      // Code should really be:
+	      // 	 for ($sg in $sgs)
+	      // 	 {
+	      // 	    string $face = $newobj + ".f[" + $idx + "]"; $idx++;
+	      // 	    sets -e -forceElement $sg $face;
+	      // 	 }
+	      // with f[idx] being some random face (we don't care, as that is
+	      // really in the .mi file already).
+	      // This is a work-around specific to mrLiquid/mentalFileObject...
+	      for ( $sg in $sgs )
+		{
+		  string $face = $newobj + ".ma[" + $sgidx + "]"; $sgidx++;
+		  connectAttr -f ($sg + ".message") $face;
+		}
+	    }
+
+	}
+    }
+
+
+  if (! $assembly )
+    {
+      if ( $instances )
+	{
+	  //
+	  // For .mi file spits, create or modify mentalrayGlobal's text
+	  //
+	  string $custom;
+	  string $customs[] = `listConnections -d on mentalrayGlobals.miText`;
+	  if ( size($customs) == 0 )
+	    {
+	      $custom = `createNode mentalrayText`;
+	      connectAttr -f ($custom + ".message") mentalrayGlobals.miText;
+	    }
+	  else
+	    {
+	      $custom = $customs[0];
+	    }
+
+	  string $text = `getAttr ($custom + ".text")`;
+	  $text += "#######################################\n";
+	  $text += "# START of mentalBakeGeometry add-ons #\n";
+	  $text += "#######################################\n\n";
+
+	  string $fileroot = $scene;
+	  $dir = $miDir + "/" + $fileroot;
+	  string $file = $dir + "/" + $fileroot;
+
+	  $text += "#==== START baked_" + $fileroot + " ====\n";
+	  $text += "#-----------------\n# Static section\n#-----------------\n";
+	  $text += "$ifndef  \"baked_" + $fileroot + "\"\n";
+	  $text += "set  \"baked_" + $fileroot + "\" \"true\"\n";
+
+	  $text += "$include \"" + $file + ".mi2\"\n";
+
+	  $text += "$endif\n\n";
+
+	  //
+	  // Add all needed $include lines
+	  //
+	  if ( $animated )
+	    {
+	      $file += ".@";
+	      $file += ".mi2";
+	      $text += "#-----------------\n# Anim section\n";
+	      $text += "#-----------------\n";
+	      $text += "$include \"" + $file + "\"\n";
+	    }
+	  $text += "#==== END baked_" + $fileroot + " ====\n";
+
+	  $text += "\n";
+	  $text += "#####################################\n";
+	  $text += "# END of mentalBakeGeometry add-ons #\n";
+	  $text += "#####################################\n\n";
+
+	  setAttr -type "string" ($custom + ".text") $text;
+	}
+      else 
+	{
+	  select -r $visible;
+	  showHidden -a;
+
+	  select -r $objects;
+	}
+    }
+}
+
+
+
+//
+//  Procedure Name:
+//      mentalBakeGeometrySetup
+//
+//  Description:
+//		Update the state of the option box UI to reflect the option values.
+//
+//  Input Arguments:
+//      parent               - Top level parent layout of the option box UI.
+//                             Required so that UI object names can be 
+//                             successfully resolved.
+//
+//	forceFactorySettings - Whether the option values should be set to
+//                             default values.
+//
+//  Return Value:
+//      None.
+//
+global proc mentalBakeGeometrySetup(string $parent, int $forceFactorySettings)
+{
+   //	Retrieve the option settings
+   //
+   setOptionVars($forceFactorySettings);
+
+   setParent $parent;
+
+   //	Query the optionVar's and set the values into the controls.
+
+   optionMenuGrp -edit -value `optionVar -query v_mentalBakeGeometryScope` 
+                 mentalBakeGeometryScope;
+   checkBoxGrp -edit -v1 `optionVar -query v_mentalBakeGeometryAnimation` 
+                 mentalBakeGeometryAnimation;
+   checkBoxGrp -edit -v1 `optionVar -query v_mentalBakeGeometryInstances` 
+                 mentalBakeGeometryInstances;
+   checkBoxGrp -edit -v1 `optionVar -query v_mentalBakeGeometryReplace` 
+                 mentalBakeGeometryReplace;
+}
+
+
+//
+//  Procedure Name:
+//      mentalBakeGeometryCallback
+//
+//  Description:
+//		Update the option values with the current state of the option box UI.
+//
+//  Input Arguments:
+//      parent - Top level parent layout of the option box UI.  Required so
+//               that UI object names can be successfully resolved.
+//
+//	doIt   - Whether the command should execute.
+//
+//  Return Value:
+//      None.
+//
+global proc mentalBakeGeometryCallback(
+			       string $parent, 
+			       int $doIt )
+	
+{
+   setParent $parent;
+
+   //	Set the optionVar's from the control values, and then
+   //	perform the command.
+
+   optionVar -stringValue v_mentalBakeGeometryStyle 
+   `optionMenuGrp -q -value mentalBakeGeometryStyle`;
+
+   optionVar -stringValue v_mentalBakeGeometryScope 
+   `optionMenuGrp -q -value mentalBakeGeometryScope`;
+
+   optionVar -intValue v_mentalBakeGeometryAnimation 
+   `checkBoxGrp -q -v1 mentalBakeGeometryAnimation`;
+
+   optionVar -intValue v_mentalBakeGeometryInstances
+   `checkBoxGrp -q -v1 mentalBakeGeometryInstances`;
+
+   optionVar -intValue v_mentalBakeGeometryReplace
+   `checkBoxGrp -q -v1 mentalBakeGeometryReplace`;
+
+
+   if ($doIt) { 
+      mentalBakeGeometry();
+   }
+}
+
+/** 
+ * Main routine for bake geometry option box.
+ * 
+ * 
+ * @return 
+ */
+global proc mentalBakeGeometryOptions()
+{
+   // Global from setDefaultTemplates.mel
+   global int $kSingleWidgetWidthIndex;
+   int $minMaxWidth = ($kSingleWidgetWidthIndex * 3) / 4;
+
+   //	Name of the command for this option box.
+   //
+   string $commandName = "mentalBakeGeometry";
+
+   //	Build the option box actions.
+   //
+   string $callback = ($commandName + "Callback");
+   string $setup = ($commandName + "Setup");
+
+   //	STEP 1:  Get the option box.
+   //	============================
+   //
+   //	The value returned is the name of the layout to be used as
+   //	the parent for the option box UI.
+   //
+   string $layout = getOptionBox();
+   global string $gMentalBakeOptionBox;
+   $gMentalBakeOptionBox = $layout;
+   setParent $layout;
+	
+   //	STEP 2:  Pass the command name to the option box.
+   //	=================================================
+   //
+   //	Any default option box behaviour based on the command name is set 
+   //	up with this call.  For example, updating the 'Help' menu item with
+   //	the name of the command.
+   //
+   setOptionBoxCommandName($commandName);
+	
+   //	STEP 3:  Activate the default UI template.
+   //	==========================================
+   //
+   //	Activate the default UI template so that the layout of this 
+   //	option box is consistent with the layout of the rest of the 
+   //	application.
+   //
+   setUITemplate -pushTemplate DefaultTemplate;
+
+   //	STEP 4: Create option box contents.
+   //	===================================
+   //	
+   //	This, of course, will vary from option box to option box.	
+	
+   //	Turn on the wait cursor.
+   //
+   waitCursor -state 1;
+
+   //	RECOMMENDATION:  Place the UI in a 'scrollable' layout.  A 
+   //	scrollable layout ensures that if the option box window is ever
+   //	resized such that it's entire contents is not visible then the 
+   //	scroll bars provided by the scrollable layout will allow the user
+   //	to access the hidden UI.  Two layouts currently supporting 
+   //	scrollable behaviour are the 'scrollLayout' and the 'tabLayout'.
+   //
+   //	scrollLayout;
+   //
+   //	or...
+   //
+   tabLayout -tabsVisible 0 -scrollable 1;
+	
+   string $parent = `columnLayout -adjustableColumn 1`;
+	
+   //	RECOMMENDATION:  Use the 'Grp' commands where possible because
+   //	they obey the formatting specified in the default template.
+   //	This will result in a more consistent look throughout the
+   //	application.
+   //	
+
+
+   separator -height 10 -style "none";
+
+   optionMenuGrp -l "Bake Style" mentalBakeGeometryStyle;
+   menuItem -l "Assembly";
+   menuItem -l "Multi Objects";
+
+
+   optionMenuGrp -l "Objects to Bake" mentalBakeGeometryScope;
+   menuItem -l "All";
+   menuItem -l "Selected";
+	
+   checkBoxGrp
+   -label ""
+   -label1 "Bake Animation"
+   -numberOfCheckBoxes 1
+   -value1 on
+   mentalBakeGeometryAnimation;
+
+   separator -height 15;
+
+   setParent -menu ..;
+
+   checkBoxGrp
+   -label ""
+   -label1 "Bake With Materials/Instances"
+   -numberOfCheckBoxes 1
+   -value1 off
+   mentalBakeGeometryInstances;
+
+   checkBoxGrp
+   -label ""
+   -label1 "Replace Baked Objects"
+   -numberOfCheckBoxes 1
+   -value1 on
+   mentalBakeGeometryReplace;
+
+   separator -height 15;
+
+   setParent $parent;
+
+   //	Turn off the wait cursor.
+   //
+   waitCursor -state 0;
+	
+   //	Step 5: Deactivate the default UI template.
+   //	===========================================
+   //
+   setUITemplate -popTemplate;
+
+   //	Step 6: Customize the buttons.  
+   //	==============================
+   //
+   //	Provide more descriptive labels for the buttons.  This is not 
+   //	necessary, but in some cases, for example, a button labelled 
+   //	'Create' may be more meaningful to the user than one labelled
+   //	'Apply'.
+   //
+   //	Disable those buttons that are not applicable to the option box.
+   //
+   //	Attach actions to those buttons that are applicable to the option
+   //	box.  Note that the 'Close' button has a default action attached 
+   //	to it that will hide the window.  If a a custom action is
+   //	attached to the 'Close' button then be sure to call the 'hide the
+   //	option box' procedure within the custom action so that the option
+   //	box is hidden properly.
+
+   //	'Apply' button.
+   //
+   string $applyBtn = getOptionBoxApplyBtn();
+   button -edit
+   -label "Bake"
+   -command (
+	     $callback 
+	     + " " 
+	     + $parent 
+	     + " " 
+	     + 1 )
+   $applyBtn;
+
+   string $applyAndCloseBtn = getOptionBoxApplyAndCloseBtn();
+   button -edit
+   -label "Bake and Close"
+   $applyAndCloseBtn;
+
+   //	'Save' button.
+   //
+   string $saveBtn = getOptionBoxSaveBtn();
+   button -edit 
+   -command (
+	     $callback 
+	     + " " 
+	     + $parent 
+	     + " " 
+	     + 0 
+	     + " " 
+	     + "; hideOptionBox")
+   $saveBtn;
+
+   //	'Reset' button.
+   //
+   string $resetBtn = getOptionBoxResetBtn();
+   button -edit 
+   -command ($setup + " " + $parent + " " + 1)
+   $resetBtn;
+
+   //	Step 7: Set the option box title.
+   //	=================================
+   //
+   setOptionBoxTitle("mental ray Baking Geometry Options");
+
+   //	Step 8: Customize the 'Help' menu item text.
+   //	============================================
+   //
+   setOptionBoxHelpTag( "MentalBakeGeometryText" );
+
+   //	Step 9: Set the current values of the option box.
+   //	=================================================
+   //
+   eval (($setup + " " + $parent + " " + 0));	
+	
+   //	Step 10: Show the option box.
+   //	=============================
+   //
+   showOptionBox();
+}

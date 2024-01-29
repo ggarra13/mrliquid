@@ -1,0 +1,126 @@
+	
+mrLiquid
+--------
+
+My main goal while developing mrLiquid is to allow artists everywhere to
+take advantage of the best converter and render engine, while at the same time
+make enough money so that it justifies my effort in supporting it.
+Albeit I might give my time away for free to develop it, truth is that
+both Alias and mental ray cost money.
+
+As such, I've decided to split mrLiquid into several versions.
+While the actual version number may differ with time, the main idea is to
+keep 2 or 3 versions of the software.  Such that:
+
+     * one version is commercial   (this version has all the bells and
+				    whistles, but you pay for it)
+
+     * one version is free         (this version is probably 1-2 years
+				    behind the commercial version and is
+				    only available an older maya release)
+
+     * one version is open source  (this version is probably 2 or 3 years
+				    behind the commercial version - source
+				    code is there, but you get 0 support 
+				    from me)
+
+
+Currently, the available mrLiquid versions are:
+    * Open Source Version:  v0.6
+    * Free Version:	    v0.7
+    * Commercial Version:   v0.8
+
+In addition, the commercial version is being split into different
+licensing schemes.
+
+								 COST (u$s)
+							       --------------
+    - mrLiquid open source support per incident		            500
+    - mrLiquid open source yearly support			  5,000
+    - mrLiquid open source - custom development			 TBD per req.
+    - mrLiquid through .mi files				 500 per lic.
+    - Source Code (without raylib)				 75,000
+    - Source Code (without raylib) + 1 year support/devel.	100,000
+    - Source Code (with raylib source code)			100,000
+    - Source Code (with raylib source code) + 1 year support	125,000
+
+
+In addition to the open source version of mrLiquid, a newer version of 
+mrLiquid (sans source code) is available for download.
+
+Description:
+   mrLiquid through .mi files:
+	This is very similar to the free version available, but with less
+	bugs, faster conversion and added features.
+
+   mrLiquid as a geometry shader: (TBA)
+	This version allows you to use mrLiquid's core to spit .mi files
+	as well as run the mrLiquid engine within Mayatomr through a
+	geometry shader.  This allows you to IPR things that are not
+	currently possible in Mayatomr without the need to buy the
+	mental ray stand-alone.
+
+All source code licensing gives you the right to use the code for your
+own in-house applications, learning and so forth.  It does not give you
+copyright over it and it does not allow you to sell it commercially.
+
+   Source Code (without raylib)
+	This option gives you access to the latest version of mrLiquid's
+	source code.  You can deploy it on as many machines or platforms
+	as you wish.  You cannot, however, embed mrLiquid within a 
+	geometry shader or link it against mental images' raylib/mental 
+	matter/mental mesh/etc. libraries.
+
+   Source Code (without raylib) + 1 year support
+	As above, but you also get me for a year to help you out
+	remotely and to add custom code particular to your facility.
+
+   Source Code (with raylib source code)
+	This option gives you access to the latest version of mrLiquid's
+	source code.  You can deploy it on as many machines or platforms
+	as you wish.  You can use this version to embed mrLiquid in
+	a geometry shader (and use it with Mayatomr) or link it against
+	any of mental images' libraries.
+	What this does NOT give you is Copyright rights.  I retain them
+	so as to allow me to do other similar sales.
+
+   Source Code (with raylib source code) + support
+	As above, but you also get me for a year to help you out
+	remotely and to add custom code particular to your facility.
+
+
+Benefits of the Commercial Version:
+   - Linux / OSX / Windows.
+   - Full PDF docs.
+   - Can run stand-alone without Mayatomr (tiny memory footprint).
+   - Tons of bugs removed.
+   - Two-Pass IPR, for super fast progressive IPR.
+   - Control on Progressive IPRs sampling.
+   - Triangle meshes are supported for smaller memory footprint.
+   - Supports all new mray3.5 options (new finalgather modes,
+     catmull-clark meshes, instance light linking, spectrum 
+     colorprofiles).
+   - Subdivision surfaces support different uv interpolations (no
+     stretching).
+   - Shadow maps can be shown and previewed easily, even in IPR.
+   - Automatic Phenomena creation and expansion with easy to use
+     AETemplates.
+     Easily create a library of shaders with a single mouse click.
+     On complex scenes with many shaders, collapsing shading networks
+     into phenomena keeps maya scene small for faster loading.
+   - Full PaintFX support.
+     Almost all meshes and lines are supported with proper texturing.
+   - Trace groups.  Selectively choose which objects refract/reflect
+     onto others.
+   - Particle Instancer works in IPR.
+   - Sprite particles are now fully supported, with texturing.
+   - Easy to use arbitrary output passes/buffers.
+   - Support for samples pass rendering/compositing.
+   - High Quality Image Viewer.
+     A full replacement for imf_disp and maya's RenderView, it can
+     display your renders in full HDR float precision.
+     Supports all mental ray formats, stubs, AVIs, Quicktimes, etc.
+   - Updated RubyMEL with Full Bindings to the Maya API.
+     Write plugins in ruby for fast prototyping.
+   - Faster conversion.
+   - Maya 7 or 8.

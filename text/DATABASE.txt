@@ -1,0 +1,8 @@
+
+
+
+create table Image
+       (
+	 id	 INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+	 name	 varchar(40),
+       );

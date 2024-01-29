@@ -1,0 +1,378 @@
+
+
+
+// Simple routine to spit out the attributes of a node
+// for easy creation with mrLiquid's macros.
+global proc mentalSpitNodeAttrs( string $node )
+{
+   // This plug-in was developed by Martin Leguizamon (provide3d).
+   // It is available as source code from www.highend3d.com
+   loadPlugin "getEnumAttrString";
+ 
+   string $nodeType = `objectType $node`;
+   string $attrs[] = `listAttr $node`;
+   string $short[] = `listAttr -sn $node`;
+   string $types[];
+
+   int $i = 5;
+   int $isArray = 0;
+   for ( ; $i < size($attrs); $i++ )
+   {
+
+      string $t;
+      if ( match("\\.", $attrs[$i]) != "" )
+      {
+	 // child of a compound array
+	 string $buffer[];
+	 int $numTokens = `tokenize $attrs[$i] "." $buffer`;
+	 string $f = $node + "." + $buffer[0] + "[0]." + $buffer[1];
+	 $t = `getAttr -type $f`;
+      }
+      else
+      {
+	 string $f = $node + "." + $attrs[$i];
+	 $t = `getAttr -type $f`;
+      }
+      
+      if ( $t == "" ) $t = "message";
+      $types[$i] = $t;
+   }
+
+   print("//////// For ...Node.h file\n");
+   for ( $i = 5; $i < size($attrs); $i++ )
+   {
+      if ( match("\\.", $attrs[$i]) != "" )
+      {
+	 // child of a compound array
+	 string $buffer[];
+	 int $numTokens = `tokenize $attrs[$i] "." $buffer`;
+	 print("static MObject m_"+ $buffer[$numTokens-1] + ";\n");
+      }
+      else
+      {
+	 print("static MObject m_"+ $attrs[$i] + ";\n");
+      }
+   }
+   print("\n\n");
+
+   print("//////// For ...Node.cpp file\n");
+   for ( $i = 5; $i < size($attrs); $i++ )
+   {
+      if ( match("\\.", $attrs[$i]) != "" )
+      {
+	 // child of a compound array
+	 string $buffer[];
+	 int $numTokens = `tokenize $attrs[$i] "." $buffer`;
+	 print("MObject " + $nodeType + "Node::m_" +
+	       $buffer[$numTokens-1] + ";\n");
+      }
+      else
+      {
+	 print("MObject " + $nodeType + "Node::m_" + $attrs[$i] + ";\n");
+      }
+   }
+   print("\n\n");
+
+   print("//////// For ...Node.cpp, initialize() routine\n");
+
+   string $compound = "";
+   string $children[];
+
+   $isArray = 0;
+   int $oldArray = 0;
+   int $oldReadable = 1;
+   int $oldWritable = 1;
+   int $oldKeyable = 0;
+   int $oldHidden = 0;
+   int $oldConnectable = 1;
+   print("bool isArray = false;\nbool isReadable = true;\n");
+   print("bool isWritable = true;\n");
+   print("bool isKeyable  = false;\n");
+   print("bool isHidden   = false;\n");
+   print("bool isConnectable = true;\n\n");
+
+   int $inc;
+   for ( $i = 5; $i < size($attrs); $i += $inc )
+   {
+      $inc = 1;
+      string $f;
+      
+      if ( match("\\.", $attrs[$i]) != "" )
+      {
+	 // child of a compound array
+	 string $buffer[];
+	 int $numTokens = `tokenize $attrs[$i] "." $buffer`;
+	 $f = $node + "." + $buffer[0] + "[0]." + $buffer[$numTokens-1];
+	 $attrs[$i] = $buffer[$numTokens-1];
+	 int $numTokens = `tokenize $short[$i] "." $buffer`;
+	 $short[$i] = $buffer[$numTokens-1];
+      }
+      else
+      {
+	 $f = $node + "." + $attrs[$i];
+      }
+      string $t = $types[$i];
+
+      string $r[] = `listAttr -r $f`;
+      if ( size($r) ) $isReadable = 1;
+      else $isReadable = 0;
+      
+      $r = `listAttr -w $f`;
+      if ( size($r) ) $isWritable = 1;
+      else $isWritable = 0;
+      
+      $r = `listAttr -k $f`;
+      if ( size($r) ) $isKeyable = 1;
+      else $isKeyable = 0;
+      
+      $r = `listAttr -c $f`;
+      if ( size($r) ) $isConnectable = 1;
+      else $isConnectable = 0;
+      
+      $r = `listAttr -v $f`;
+      if ( size($r) ) $isHidden = 0;
+      else $isHidden = 1;
+
+      int $size = `getAttr -size $f`;
+      if ( $size == 1 ) $isArray = 0;
+      else $isArray = 1;
+
+      if ( $isArray != $oldArray )
+      {
+	 print("isArray = (" + $isArray + " == 1);\n");
+	 $oldArray = $isArray;
+      }
+      
+      if ( $isReadable != $oldReadable )
+      {
+	 print("isReadable = (" + $isReadable + " == 1);\n");
+	 $oldReadable = $isReadable;
+      }
+      
+      
+      if ( $isWritable != $oldWritable )
+      {
+	 print("isWritable = (" + $isWritable + " == 1);\n");
+	 $oldWritable = $isWritable;
+      }
+
+      if ( $isKeyable != $oldKeyable )
+      {
+	 print("isKeyable = (" + $isKeyable + " == 1);\n");
+	 $oldKeyable = $isKeyable;
+      }
+      
+      if ( $isConnectable != $oldConnectable )
+      {
+	 print("isConnectable = (" + $isConnectable + " == 1);\n");
+	 $oldConnectable = $isConnectable;
+      }
+      
+      if ( $isHidden != $oldHidden )
+      {
+	 print("isHidden = (" + $isHidden + " == 1);\n");
+	 $oldHidden = $isHidden;
+      }
+      
+      
+      if ( $t == "message" )
+      {
+	 print("CREATE_MSG_ATTR(" + $attrs[$i] + ", " + $short[$i] + ");\n");
+      }
+      else if ( $t == "string" )
+      {
+	 print("CREATE_STRING_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ");\n");
+      }
+      else if ( $t == "bool" )
+      {
+	 int $val = `getAttr $f`;
+	 print("CREATE_BOOL_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ", " + $val + ");\n");
+      }
+      else if ( $t == "short" )
+      {
+	 int $val = `getAttr $f`;
+	 print("CREATE_SHORT_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ", " + $val + ");\n");
+      }
+      else if ( $t == "int" )
+      {
+	 int $val = `getAttr $f`;
+	 print("CREATE_INT_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ", " + $val + ");\n");
+      }
+      else if ( $t == "long" )
+      {
+	 int $val = `getAttr $f`;
+	 print("CREATE_LONG_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ", " + $val + ");\n");
+      }
+      else if ( $t == "long2" )
+      {
+	 int $val[] = `getAttr $f`;
+	 print("CREATE_LONG_ATTR(" + $attrs[$i+1] + ", " + $short[$i+1] + ", " + $val[0] + ");\n");
+	 print("CREATE_LONG_ATTR(" + $attrs[$i+2] + ", " + $short[$i+2] + ", " + $val[1] + ");\n");
+	 print("CREATE_LONG2_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ", m_" + $attrs[$i+1] + ", m_" + $attrs[$i+2] + ");\n");
+	 $inc += 2;
+      }
+      else if ( $t == "float" )
+      {
+	 float $val = `getAttr $f`;
+	 print("CREATE_FLOAT_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ", " + $val + ");\n");
+      }
+      else if ( $t == "time" )
+      {
+	 float $val = `getAttr $f`;
+	 print("CREATE_TIME_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ", " + $val + ");\n");
+      }
+      else if ( $t == "angle" )
+      {
+	 float $val = `getAttr $f`;
+	 print("CREATE_ANGLE_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ", " + $val + ");\n");
+      }
+      else if ( $t == "distance" )
+      {
+	 float $val = `getAttr $f`;
+	 print("CREATE_DISTANCE_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ", " + $val + ");\n");
+      }
+      else if ( $t == "enum" )
+      {
+	 int $val = `getAttr $f`;
+	 print("CREATE_ENUM_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ", " + $val + ");\n");
+
+	 if ( `pluginInfo -q -l getEnumAttrString` )
+	 {
+	    string $values[] = eval("getEnumAttrString "+$f);
+	    int $j = 0;
+	    for ( ; $j < size($values); $j++ )
+	    {
+	       print("eAttr.addField(\"" + $values[$j] +"\", " + $j + ");\n");
+	    }
+	 }
+	 else
+	 {
+	    print("#error Missing eAttr.addField() for enum\n");
+	 }
+	 print("addAttribute( m_" + $attrs[$i] + " );\n");
+      }
+      else if ( $t == "TdataCompound" )
+      {
+	 print("CREATE_COMPOUND_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ");\n");
+	 $children = `listAttr -multi $f`;
+	 
+	 string $buffer[];
+	 int $last = size($children) - 1;
+	 if ( $last >= 0 )
+	 {
+	    $compound = $attrs[$i];
+	    int $numTokens = `tokenize $children[$last] "." $buffer`;
+	    int $lastb = size($buffer)-1;
+	    if ( $lastb >= 0 )
+	    {
+	       $children[$last] = $buffer[$lastb];
+	    }
+	 }
+	 continue;
+      }
+      else if ( $t == "float3" )
+      {
+	 float $val[] = `getAttr $f`;
+
+	 string $a = $attrs[$i+1];
+	 string $next = substring($a, size($a), size($a));
+	 if ( $next == "R" )
+	 {
+	    print("CREATE_COLOR_ATTR(" + $attrs[$i] + ", " +
+		  $short[$i] + ", " + $val[0] + ", " + $val[1] +
+		  ", " + $val[2] + ");\n");
+	 }
+	 else
+	 {
+	    print("CREATE_FLOAT_ATTR(" + $attrs[$i+1] + ", " + $short[$i+1] +
+		  ", " + $val[0] + ");\n");
+	    print("CREATE_FLOAT_ATTR(" + $attrs[$i+2] + ", " + $short[$i+2] +
+		  ", " + $val[1] + ");\n");
+	    print("CREATE_FLOAT_ATTR(" + $attrs[$i+3] + ", " + $short[$i+3] +
+		  ", " + $val[2] + ");\n");
+	    print("CREATE_FLOAT3_ATTR(" + $attrs[$i] + ", " +
+		  $short[$i] + ", m_" + $attrs[$i+1] + ", m_" +
+		  $attrs[$i+2] + ", m_" + $attrs[$i+3] + ");\n");
+	 }
+	 $inc += 3;
+      }
+      else if ( $t == "double3" )
+      {
+	 float $val[] = `getAttr $f`;
+
+	 string $a = $attrs[$i+1];
+	 string $next = substring($a, size($a), size($a));
+	 if ( $next == "X" )
+	 {
+	    print("CREATE_POINT_ATTR(" + $attrs[$i] + ", " +
+		  $short[$i] + ", " + $val[0] + ", " + $val[1] +
+		  ", " + $val[2] + ");\n");
+	 }
+	 else
+	 {
+	    print("CREATE_DOUBLE_ATTR(" + $attrs[$i+1] + ", " + $short[$i+1] +
+		  ", " + $val[0] + ");\n");
+	    print("CREATE_DOUBLE_ATTR(" + $attrs[$i+2] + ", " + $short[$i+2] +
+		  ", " + $val[1] + ");\n");
+	    print("CREATE_DOUBLE_ATTR(" + $attrs[$i+3] + ", " + $short[$i+3] +
+		  ", " + $val[2] + ");\n");
+	    print("CREATE_DOUBLE3_ATTR(" + $attrs[$i] + ", " +
+		  $short[$i] + ", m_" + $attrs[$i+1] + ", m_" +
+		  $attrs[$i+2] + ", m_" + $attrs[$i+3] + ");\n");
+	 }
+	 $inc += 3;
+      }
+      else if ($t == "byte" )
+      {
+	 int $val = `getAttr $f`;
+	 print("CREATE_BYTE_ATTR(" + $attrs[$i] + ", " +
+	       $short[$i] + ", " + $val + ");\n");
+      }
+      else if ($t == "doubleLinear" )
+      {
+	 print("CREATE_DOUBLELINEAR_ATTR(" + $attrs[$i] + ", " +
+		  $short[$i] + ");\n");
+      }
+      else if ($t == "matrix")
+      {
+	 print("CREATE_MATRIX_ATTR(" + $attrs[$i] + ", " +
+		  $short[$i] + ");\n");
+      }
+      else
+      {
+	 warning("Unknown attribute type " + $t + " for " + $attrs[$i] + "\n");
+      }
+      
+      if ( $compound != "" )
+      {
+	 print("cAttr.addChild( m_" + $attrs[$i] + ");\n");
+	 int $size = size($children);
+	 if ( $size > 0 )
+	 {
+	    if ( $attrs[$i] == $children[$size-1] )
+	    {
+	       print("addAttribute( m_"+$compound+" );\n");
+	       $compound = "";
+	    }
+	 }
+	 else
+	 {
+	    $compound = "";
+	 }
+      }
+   }
+
+}
+

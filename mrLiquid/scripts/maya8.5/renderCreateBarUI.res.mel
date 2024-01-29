@@ -1,0 +1,53 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+displayString -replace -value "All" m_renderCreateBarUI.kAll;
+displayString -replace -value "All Nodes" m_renderCreateBarUI.kAllNodes;
+displayString -replace -value "As projection" m_renderCreateBarUI.kAsProjection;
+displayString -replace -value "As stencil" m_renderCreateBarUI.kAsStencil;
+displayString -replace -value "Choose which type of node to create" m_renderCreateBarUI.kChooseNodeType;
+displayString -replace -value "Color Utilities" m_renderCreateBarUI.kColorUtilities;
+displayString -replace -value "Create All Nodes" m_renderCreateBarUI.kCreateAllNodes;
+displayString -replace -value "Create Maya Nodes" m_renderCreateBarUI.kCreateMayaNodes;
+displayString -replace -value "Create mental ray Nodes" m_renderCreateBarUI.kCreateMentalRayNodes;
+displayString -replace -value "Displacement" m_renderCreateBarUI.kDisplacement;
+displayString -replace -value "Env Textures" m_renderCreateBarUI.kEnvTextures;
+displayString -replace -value "General Utilities" m_renderCreateBarUI.kGeneralUtilities;
+displayString -replace -value "Glow" m_renderCreateBarUI.kGlow;
+displayString -replace -value "Image Planes" m_renderCreateBarUI.kImagePlanes;
+displayString -replace -value "Lights" m_renderCreateBarUI.kLights;
+displayString -replace -value "Maya Nodes" m_renderCreateBarUI.kMayaNodes;
+displayString -replace -value "mental ray Nodes" m_renderCreateBarUI.kMentalRayNodes;
+displayString -replace -value "Create bar tab does not have a corresponding UI name." m_renderCreateBarUI.kNoUIName;
+displayString -replace -value "N" m_renderCreateBarUI.kNorm;
+displayString -replace -value "Normal" m_renderCreateBarUI.kNormal;
+displayString -replace -value "Normal" m_renderCreateBarUI.kNormalAnnot;
+displayString -replace -value "Other Textures" m_renderCreateBarUI.kOtherTextures;
+displayString -replace -value "Particle Utilities" m_renderCreateBarUI.kParticleUtilities;
+displayString -replace -value "P" m_renderCreateBarUI.kProj;
+displayString -replace -value "Projection" m_renderCreateBarUI.kProjectionAnnot;
+displayString -replace -value "S" m_renderCreateBarUI.kSten;
+displayString -replace -value "Stencil" m_renderCreateBarUI.kStencilAnnot;
+displayString -replace -value "Surface" m_renderCreateBarUI.kSurface;
+displayString -replace -value "Switch Utilities" m_renderCreateBarUI.kSwitchUtilities;
+displayString -replace -value "2D Textures" m_renderCreateBarUI.kTextures2D;
+displayString -replace -value "3D Textures" m_renderCreateBarUI.kTextures3D;
+displayString -replace -value "Volumetric" m_renderCreateBarUI.kVolumetric;

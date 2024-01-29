@@ -1,0 +1,33 @@
+
+This is a list of known bugs and issues.
+
+
+- DsuDtv does not quite work as expected.  
+It returns something that is like DsuDtv but slightly slanted.  
+Not sure why.  Also the barycentric coordinates are not 100% continuous.
+This function should be considered experimental for the time being.
+
+- Class have a lot of internal documentation, but not all is
+  shown if Doxygen is run on it, as the format followed is not 100%
+  compatible.
+
+- Blinn bump mapping is missing the bump normalization for polygons.
+  (ADDED BUT NOT YET TESTED -- this can sometimes be a pain to get right)
+
+- fastmath<double>::invsqrt will only work in float precision.
+
+- area(state,P) probably is not possible in mray without point caching.
+  Should likely be removed?
+
+- textureinfo(), match(), texture(), shadow() still not properly
+  implemented in prman.  Not sure if I should implement some of them,
+  as there are other more correct ways of doing it.  I mean, textureinfo
+  would be just a short form for mi_query() for example.
+  Same with texture(), as the example is given in gg_tiff.cpp.  Shading
+  networks make needing this much, much less than in renderman.
+  shadow() should probably be added, thou.
+  match() never used it, neither in prman nor in mray.  Plus there are
+  plenty of good regex libraries out there.  No need to bloat mrClasses
+  with that.
+
+

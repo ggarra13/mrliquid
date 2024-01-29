@@ -1,0 +1,164 @@
+/**
+ * @file   AEmentalRenderLayerOverrideTemplate.mel
+ * @author gga
+ * @date   Mon Nov  5 18:30:18 2007
+ * 
+ * @brief  
+ * 
+ * 
+ */
+
+//
+//  Procedure Name:
+//	AEmentalrayRenderLayerOverrideTemplate
+//
+
+global proc gg_addVisibilityToOverride(string $plug)
+{
+   string $node = `substitute "\.[a-zA-Z]+$" $plug ""`;
+   string $text = `getAttr ($node+".preCommands")`;
+   if (match("mentalVisibility", $text) == "")
+   {
+      $text += "\nmentalVisibility -s;";
+      setAttr -type "string" ($node + ".preCommands") $text; 
+   }
+
+   $text = `getAttr ($node+".postCommands")`;
+   if (match("mentalVisibility", $text) == "")
+   {
+      $text += "\nmentalVisibility -r;";
+      setAttr -type "string" ($node + ".postCommands") $text;
+   }
+   AEmentalRenderLayerOverridePreReplace($node + ".preCommands");
+   AEmentalRenderLayerOverridePostReplace($node + ".postCommands");
+}
+
+
+global proc gg_addMaterialsToOverride(string $plug)
+{
+   string $node = `substitute "\.[a-zA-Z]+$" $plug ""`;
+   string $text = `getAttr ($node+".preCommands")`;
+   if (match("mentalMaterial", $text) == "")
+   {
+      $text += "\nmentalMaterial -s;";
+      setAttr -type "string" ($node + ".preCommands") $text;
+   }
+
+   $text = `getAttr ($node+".postCommands")`;
+   if (match("mentalMaterial", $text) == "")
+   {
+      $text += "\nmentalMaterial -r;";
+      setAttr -type "string" ($node + ".postCommands") $text;
+   }
+   AEmentalRenderLayerOverridePreReplace($node + ".preCommands");
+   AEmentalRenderLayerOverridePostReplace($node + ".postCommands");
+}
+
+
+proc AEmentalRenderLayerButtonsNew(string $node)
+{
+   setParent ..;
+
+   
+   formLayout passButtonsForm;
+      button
+      -height 25
+      -label "Materials"
+      -c ("gg_addMaterialsToOverride(\""+$node+"\")")
+      pMatButton;
+      
+      button
+      -height 25
+      -label "Visibility"
+      -c ("gg_addVisibilityToOverride(\""+$node+"\")")
+      pVisButton;
+    setParent ..;
+    
+    formLayout
+    -edit
+    -af pMatButton "left" 0
+    -ap pMatButton "right" 0 50
+    -ap pVisButton "left" 0 50
+    -af pVisButton "right" 0 passButtonsForm;
+}
+
+proc  AEmentalRenderLayerButtonsReplace(string $node)
+{
+      button -e
+      -c ("gg_addMaterialsToOverride(\""+$node+"\")")
+      pMatButton;
+      
+      button -e
+      -c ("gg_addVisibilityToOverride(\""+$node+"\")")
+      pVisButton;
+}
+
+global proc AEmentalRenderLayerChangedText( string $plug, string $field )
+{
+   string $text = `scrollField -q -text $field`;
+   setAttr -type "string" $plug $text;
+}
+
+global proc AEmentalRenderLayerOverridePreNew( string $plug )
+{
+   AEmentalRenderLayerButtonsNew($plug);
+
+   string $text = `getAttr $plug`;
+   frameLayout -collapse off -label "Pre Commands" -borderStyle "etchedIn" -labelAlign "center" -height 200 preFrame;
+   scrollField -numberOfLines 20 -wordWrap false -editable true -text $text
+   -cc ("AEmentalRenderLayerChangedText(\""+$plug+"\",\"preCommandsScrollField\");") 
+   preCommandsScrollField;
+   setParent ..;
+}
+
+global proc AEmentalRenderLayerOverridePreReplace( string $plug )
+{
+   AEmentalRenderLayerButtonsReplace($plug);
+
+   string $text = `getAttr $plug`;
+   scrollField
+   -e -text $text
+   -cc ("AEmentalRenderLayerChangedText(\""+$plug+"\",\"preCommandsScrollField\");")
+   preCommandsScrollField;
+}
+
+global proc AEmentalRenderLayerOverridePostNew( string $plug )
+{
+   string $text = `getAttr $plug`;
+   frameLayout -collapse off -label "Post Commands" -borderStyle "etchedIn" -labelAlign "center" -height 200 postFrame;
+   scrollField -numberOfLines 20 -wordWrap false -editable true -text $text
+   -cc ("AEmentalRenderLayerChangedText(\""+$plug+"\",\"postCommandsScrollField\");") 
+   postCommandsScrollField;
+   setParent ..;
+}
+
+global proc AEmentalRenderLayerOverridePostReplace( string $plug )
+{
+   string $text = `getAttr $plug`;
+   scrollField
+   -e -text $text
+   -cc ("AEmentalRenderLayerChangedText(\""+$plug+"\",\"postCommandsScrollField\");")
+   postCommandsScrollField;
+}
+
+global proc AEmentalRenderLayerOverrideTemplate ( string $nodeName )
+{
+   AEswatchDisplay $nodeName;
+   editorTemplate -beginScrollLayout;
+   editorTemplate -beginLayout "mental Render Pass Override" -collapse 0;
+   editorTemplate -addControl "language";
+
+   editorTemplate  -callCustom "AEmentalRenderLayerOverridePreNew" "AEmentalRenderLayerOverridePreReplace" "preCommands";
+   editorTemplate  -callCustom "AEmentalRenderLayerOverridePostNew" "AEmentalRenderLayerOverridePostReplace" "postCommands";
+
+
+   editorTemplate -endLayout;
+   
+   // suppressed attributes
+   editorTemplate -suppress "language";
+   editorTemplate -suppress "preCommands";
+   editorTemplate -suppress "postCommands";
+   
+   editorTemplate -addExtraControls;
+   editorTemplate -endScrollLayout;
+}

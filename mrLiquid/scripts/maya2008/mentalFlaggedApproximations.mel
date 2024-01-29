@@ -1,0 +1,58 @@
+
+
+source "mentalApproxEditor.mel";
+
+
+/** 
+ * Update a flagged approximations tab to the AE display of some
+ * approximation node.
+ * 
+ * @param node 
+ * 
+ * @return 
+ */
+global proc mentalFlaggedApproximationsReplace( string $node )
+{
+   print("B");
+   int $isFlagged = isFlaggedApproximation( $node );
+   if ( $isFlagged )
+   {
+      editorTemplate -e -dc "miVisible";
+      editorTemplate -e -dc "miTrace";
+      editorTemplate -e -dc "miShadow";
+      editorTemplate -e -dc "miCaustic";
+      editorTemplate -e -dc "miGlobIllum";
+   }
+   else
+   {
+      editorTemplate -e -ac "miVisible"   -l "Visible";
+      editorTemplate -e -ac "miTrace"     -l "Trace";
+      editorTemplate -e -ac "miShadow"    -l "Shadow";
+      editorTemplate -e -ac "miCaustic"   -l "Caustic";
+      editorTemplate -e -ac "miGlobIllum" -l "GlobIllum";
+   }
+}
+
+
+
+/** 
+ * Add a flagged approximations tab to the AE display of some
+ * approximation node.
+ * 
+ * @param node 
+ * 
+ * @return 
+ */
+global proc mentalFlaggedApproximationsNew( string $node )
+{
+   print("A");
+   editorTemplate -bl "Flagged Approximation" -cl 0;
+     editorTemplate -ac "miVisible"   -l "Visible";
+     editorTemplate -ac "miTrace"     -l "Trace";
+     editorTemplate -ac "miShadow"    -l "Shadow";
+     editorTemplate -ac "miCaustic"   -l "Caustic";
+     editorTemplate -ac "miGlobIllum" -l "GlobIllum";
+   editorTemplate -el;
+}
+
+

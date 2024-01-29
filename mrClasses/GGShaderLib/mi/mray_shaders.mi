@@ -1,0 +1,507 @@
+
+#
+# NodeId list starts at 3000
+#
+# This file includes:
+#
+# Material Shaders:
+#   - gg_ambientocclusion    **DONE**  (3000)
+#   - gg_reflectionocclusion **DONE**  (3001)
+#   - gg_showinfo            **DONE**  (3003)
+#   - gg_castshadow
+#   - gg_density
+#
+#   -                                 (3006)
+#   -                                 (3022)
+#   -     			      (3008)
+#   - gg_pfxhair          **DONE**    (3023)
+#   - gg_skin                         (3028)
+#   - gg_traceset                     (3031)
+#   - gg_select_traceset              (3032)
+#
+# Displacement Shaders:
+#   - gg_rgbdisplacement  **DONE**    (3004)
+#   -     		  	      (3007)
+#   -                                 (3029)
+#
+# Geometry Shaders:
+#   - gg_geo_pfxhair      **DONE**    (3021) --- obsolete
+#
+# Light Shaders:
+#
+#
+# LightMap Shaders:
+#
+# Texture Shaders:
+#   - gg_cellnoise  			(3009)
+#   - gg_vcellnoise			(3010)
+#   - gg_perlin				(3011)
+#   - gg_vperlin			(3012)
+#   - gg_worley				(3013)
+#   - gg_vworley			(3014)
+#   - gg_parallaxbump                   (3015)
+#   - gg_tiff                           (3016)
+#   - gg_ctiff                          (3017)
+#   - gg_noise                          (3025)
+#   - gg_noises                         (3027)
+#
+# Output Shaders:
+#   - gg_exr            **DONE**        (3019)
+#
+# Contour Shaders:
+#
+#
+# Lens Shaders:
+#   - gg_spherical      **DONE**         (3002)
+#
+# Image Shaders:
+#
+#
+# RenderPass Shaders:
+#
+#
+#  
+
+min version "2.1"
+
+
+#
+# MATERIAL
+#
+
+#
+# surface shader for debugging and showing information on objects
+#
+declare shader
+	color		#: shortname "oc"
+	"gg_showinfo" 
+	(
+		integer		"what",	 
+		#: shortname "w"
+		#: default 0
+		#: enum "Triangles=0:Boxes (Grids)=1:Orientation=2:N . V=3:Point(*)=4:Normal(*)=5:Norm.Geom(*)=6:dPdu(*)=7:dPdv(*)=8:dP2du2(*)=9:dP2dv2(*)=10:dP2dudv(*)=11:Tangent U(*)=12:Tangent V(*)=13:ST=14:dPds(*)=15:dPdt(*)=16:Barycentric=17:Time=18:Motion(*)=19:Instance ID=20:Object ID=21:Label=22:Material ID=23:RasterUnitX=24:RasterUnitY=25:EWA dPds(*)=26:EWA dPdt(*)=27:dNds(*)=28:dNdt(*)=29:Raster Area(*)=30:Raster Hit=31:I in Tangent(*)=32:DsuDsv(*)=33:dSdxy(*)=34:dTdxy(*)=35:dNdx(*)=36:dNdy(*)=37:MipMap LOD(*)=38:Memory Use(*)=39"
+		integer         "space", 
+		#: shortname "s"
+		#: default 0
+		#: enum "Internal=0:World=1:Object=2:Screen=3:Raster=4:NDC=5:Tangent=7"
+		vector          "minValues",
+		#: shortname "minv"
+		#: default 0.0 0.0 0.0
+		vector          "maxValues",
+		#: shortname "maxv"
+		#: default 1.0 1.0 1.0
+		integer         "uvset",
+		#: shortname "uv"
+		#: default 0
+		vector		"normalCamera"
+		#: shortname "nc"
+		#: default 0.0 0.0 0.0
+	)
+	#:
+	#: nodeid 3003
+	#:
+	apply material, shadow, texture
+	derivative 1 2
+	version 2
+end declare
+
+
+
+
+
+declare shader
+	color					#: shortname "oc"
+	"gg_ambientocclusion" 
+	(
+		boolean         "blocker",      #: default 0
+						#: shortname "b"
+		integer		"nearSamples",  #: default 64   min 1   max 512
+						#: shortname "ns"
+		scalar          "nearDistance", #: default 5.0  min 0.0 max 1.e+6
+						#: shortname "nd"
+		integer		"farSamples",   #: default 16   min 1   max 512
+						#: shortname "fs"
+		scalar          "farDistance",  #: default 100.0 min 0.0 max 1.e+6
+						#: shortname "fd"
+		scalar  	"angle",        #: default 180.0 min 0.0 max 180.0
+						#: shortname "a"
+		scalar  	"minFalloff",   #: default 5.0 min 0.0 max 1.e+6
+						#: shortname "minf"
+		scalar  	"maxFalloff",   #: default 10.0 min 0.0 max 1.e+6
+						#: shortname "maxf"
+		boolean		"calculateNormal", #: default 0 shortname "cn"
+		boolean         "useNormalDifference", #: default 1 shortname "und"
+		boolean         "useNormalBuffer",  #: default 1 shortname "unb"
+		boolean         "useProbes",    #: default 1
+						#: shortname "up"
+		scalar		"transparency", #: default 0.0
+						#: shortname "t"
+		vector		"normalCamera", #: default 0.0 0.0 0.0
+						#: shortname "nc"
+		integer         "normalSpace"   #: default 0
+						#: shortname "nsp"
+	)
+	#:
+	#: nodeid 3000
+	#:
+	apply material, shadow, texture
+	trace on
+	version 1
+end declare
+
+
+declare shader
+	color					#: shortname "oc"
+	"gg_reflectionocclusion" 
+	(
+		boolean         "blocker",      #: default 0
+						#: shortname "b"
+		integer		"nearSamples",  #: default 128 min 1 max 512
+						#: shortname "ns"
+		scalar          "nearDistance", #: default 5.0  min 0.0 max 1.e+6
+						#: shortname "nd"
+		integer		"farSamples",   #: default 16   min 1   max 512
+						#: shortname "fs"
+		scalar          "farDistance",  #: default 100.0 min 0.0 max 1.e+6
+						#: shortname "fd"
+		scalar  	"angle",        #: default 15.0 min 0.0 max 180.0
+						#: shortname "a"
+		scalar  	"minFalloff",   #: default 5.0 min 0.0 max 1.e+6
+						#: shortname "minf"
+		scalar  	"maxFalloff",   #: default 10.0 min 0.0 max 1.e+6
+						#: shortname "maxf"
+		boolean         "useProbes",    #: default 1
+						#: shortname "up"
+		scalar		"transparency", #: default 0.0
+						#: shortname "t"
+		vector		"normalCamera"  #: default 0.0 0.0 0.0
+						#: shortname "nc"
+	)
+	#:
+	#: nodeid 3001
+	#:
+	apply material, shadow, texture
+	trace on
+	version 1
+end declare
+
+
+
+#
+# TEXTURE
+#
+
+declare shader
+	scalar 			    #: shortname "os"
+	"gg_cellnoise"
+	(
+		integer "channels", #: default 3 min 1 max 4
+				    #: shortname "c"
+		vector "location",  #: shortname "l"
+		vector "scale",     #: default 1 1 1  min 0 0 0
+				    #: shortname "s"
+		scalar "timeScale"  #: default 1 min 0
+				    #: shortname "ts"
+	)
+	#:
+	#: nodeid 3009
+	#:
+	apply texture
+	version 1
+end declare
+
+declare shader
+	color  			    #: shortname "oc"
+	"gg_vcellnoise"
+	(
+		integer "channels", #: default 3 min 1 max 4 
+				    #: shortname "c"
+		vector "location",  #: shortname "l"
+		vector "scale",     #: default 1 1 1 min 0 0 0
+				    #: shortname "s"
+		scalar "timeScale"  #: default 1 min 0
+				    #: shortname "ts"
+	)
+	#:
+	#: nodeid 3010
+	#:
+	apply texture
+	version 1
+end declare
+
+
+
+declare shader
+	scalar				#: shortname "os"
+	"gg_worley"
+	(
+		integer "type",         #: default 3 min 0 max 6
+	#: enum "Flat=0:F1=1:F2=2:F2-F1=3:Step=4:Cosine=5:Crystal=6"
+					#: shortname "t"
+		integer "distanceType", #: default 0 min 0 max 4
+	#: enum "Euclidian=0:Manhattan=1:Chessboard=2:EuclidianBiased=3:Superquadratic=4"
+					#: shortname "dt"
+		vector "distanceScale", #: default 1.0 1.0 1.0 
+		                        #: min 0.1 0.1 0.1 
+		                        #: max 100.0 100.0 100.0
+					#: shortname "ds"
+		vector "location",      #: shortname "l"
+		vector "scale",         #: default 1.0 1.0 1.0 
+		                        #: min 0.1 0.1 0.1 
+		                        #: max 100.0 100.0 100.0
+					#: shortname "s"
+		scalar "jitter",        #: default 1.0  min 0.0  max 1.0
+					#: shortname "j"
+		scalar "c1",            #: default 0.8  softmin -2  softmax 2
+					#: shortname "cs1"
+		scalar "c2",            #: default 0.8  softmin -2  softmax 2
+					#: shortname "cs2"
+		scalar "stepsize",      #: default 0.05 min 0 max 0.5
+					#: shortname "ss"
+		boolean "clamp"         #: default 1.0
+					#: shortname "c"
+	)
+	#:
+	#: nodeid 3013
+	#:
+	apply texture
+	version 1
+end declare
+
+declare shader
+	color 				 #: shortname "oc"
+	"gg_vworley"
+	(
+		integer "type",          #: default 2 min 0 max 1
+					 #: enum "FlatRandom=0:FlatMix=1"
+					 #: shortname "t"
+		integer "distanceType",  #: default 0 min 0 max 4
+					 #: shortname "dt"
+	#: enum "Euclidian=0:Manhattan=1:Chessboard=2:EuclidianBiased=3:Superquadratic=4"
+		vector "distanceScale",  #: default 1.0 1.0 1.0 
+		                         #: min 0.1 0.1 0.1 
+		                         #: max 100.0 100.0 100.0
+					 #: shortname "ds"
+		vector "location",       #: shortname "l"
+		vector "scale",          #: default 1 1 1 
+					 #: min 0.1 0.1 0.1 
+					 #: shortname "s"
+					 #: max 100 100 100
+		scalar "jitter",         #: default 1.0  min 0.0  max 1.0
+					 #: shortname "j"
+		color "colorA",          #: default 0.0 0.0 0.0
+					 #: shortname "cA"
+		color "colorB"           #: default 1.0 1.0 1.0
+					 #: shortname "cB"
+	)
+	#:
+	#: nodeid 3014
+	#:
+	apply texture
+	version 1
+end declare
+
+
+declare shader
+	struct {
+	    scalar "offsetU",  #: shortname "u"
+	    scalar "offsetV"   #: shortname "v"
+	} "gg_parallaxbump"
+	(
+		scalar "amount",
+		#: shortname "a"
+		scalar "scale",
+		#: default 0.02 softmin -1 softmax 1
+		#: shortname "s"
+		scalar	"bias"
+		#: default 0.0  softmin -1 softmax 1
+		#: shortname "b"
+	)
+	#:
+	#: nodeid 3015
+	#:
+	apply texture
+	version 1
+end declare
+
+declare shader
+	scalar 			    #: shortname "os"
+	"gg_perlin"
+	(
+		integer "channels", #: default 3  min 1  max 4
+				    #: shortname "c"
+		vector "location",  #: shortname "l"
+		vector "scale",     #: default 1 1 1  min 0 0 0  
+				    #: shortname "s"
+		scalar "timeScale", #: default 1  min 0
+				    #: shortname "ts"
+		vector "periods",   #: min 0 0 0
+				    #: shortname "p"
+		scalar "timePeriod" #: min 0
+				    #: shortname "tp"
+	)
+	#:
+	#: nodeid 3011
+	#:
+	apply texture
+	version 1
+end declare
+
+declare shader
+	scalar 			    #: shortname "os"
+	"gg_noise"
+	(
+		boolean "uniform",  #: default 0 shortname "u"
+		integer "channels", #: default 3  min 1  max 3
+				    #: shortname "c"
+		vector "location",  #: shortname "l"
+		vector "scale",     #: default 1 1 1  min 0 0 0  
+				    #: shortname "s"
+		vector "periods"    #: min 0 0 0
+				    #: shortname "p"
+	)
+	#:
+	#: nodeid 3025
+	#:
+	apply texture
+	version 1
+end declare
+
+
+declare shader
+  	color 				#: shortname "oc"
+  	"gg_noises" 
+  	(
+  		integer "type",         #: default 2 min 0 max 2
+					#: shortname "t"
+					#: enum "fBm=0:vfBm=1:Turbulence=2"
+		integer "channels",     #: default 3 min 2 max 3
+				        #: shortname "c"
+		vector "location",      #: shortname "l"
+		vector "scale",         #: default 1 1 1  min 0 0 0
+				        #: shortname "s"
+		scalar  "filtermult",   #: shortname "fm" default 4.0
+					#: min 1.0 max 100
+		integer "octaves", 	#: default 4 softmin 1 softmax 8
+					#: shortname "o"
+		scalar "lacunarity", 	#: default 2 softmin 0.001 softmax 8
+					#: shortname "lac"
+    		scalar "gain"		#: default 0.5 min 0.001 max 1
+					#: shortname "g"
+
+  	)
+  	#:
+	#: nodeid 3027
+	#:
+	apply texture
+	version 1
+end declare
+
+declare shader
+	color  			    #: shortname "oc"
+	"gg_vperlin"
+	(
+		integer "channels", #: default 3 min 1 max 4
+				    #: shortname "c"
+		vector "location",  #: shortname "l"
+		vector "scale",     #: default 1 1 1  min 0 0 0
+				    #: shortname "s"
+		scalar "timeScale", #: default 1  min 0
+				    #: shortname "ts"
+		vector "periods",   #: min 0 0 0
+				    #: shortname "p"
+		scalar "timePeriod" #: min 0
+				    #: shortname "tp"
+	)
+	#:
+	#: nodeid 3012
+	#:
+	apply texture
+	version 1
+end declare
+
+
+#
+# LENS
+#
+
+declare shader
+	scalar "gg_spherical"
+	(
+	)
+	#:
+	#: nodeid 3002
+	#:
+	apply lens
+	scanline off
+	trace on
+	version 1
+end declare
+
+
+declare shader 
+	color 	                #: shortname "oa"
+	"gg_tracegroup"
+	(
+	color   "input",         #: shortname "it" default 0.5 0.5 0.5
+	integer "operation",     #: shortname "op" default 1
+				 #: enum "Ignore=0:Include=1:Exclude=2"
+	array geometry "groups"  #: shortname "gs"
+	)
+  	#:
+	#: nodeid 3031
+	#:
+	apply material, texture
+	version 1
+end declare
+
+
+declare shader 
+	color 	                #: shortname "oa"
+	"gg_select_tracegroup"
+	(
+	integer "type", #: shortname "t" default 0
+			#: enum "All Rays=0:Reflection=2:Refraction=3:Final Gather=20"
+	color  "input"  #: shortname "it" default 0.5 0.5 0.5
+	)
+  	#:
+	#: nodeid 3032
+	#:
+	apply material, texture
+	version 1
+end declare
+
+
+#
+# DISPLACEMENT
+#
+
+
+
+declare shader
+	scalar 		#: shortname "os"
+	"gg_rgbdisplacement"
+	(
+		scalar	"intensity",
+		#: default 1.0
+		#: shortname "i"
+		integer "mixType",
+		#: default 0
+		#: min 0 max 2
+		#: enum "Replace=0:Add=1:Multiply=2"
+		#: shortname "mt"
+		color	"direction",
+		#: shortname "d"
+		#: default 0.0 0.0 0.0
+		integer "space"
+		#: shortname "s"
+		#: default 0
+		#: enum "Internal=0:World=1:Object=2:Screen=3:Raster=4:NDC=5:Tangent=7"
+	)
+	#:
+	#: nodeid 3004
+	#:
+	apply displace
+	version 2
+end declare
+

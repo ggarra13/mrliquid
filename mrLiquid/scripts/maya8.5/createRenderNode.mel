@@ -1,0 +1,1298 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+ //
+// Alias Script File MODIFY THIS AT YOUR OWN RISK
+//
+//  Creation Date:  20 August 1996
+//
+//  Procedure Name:
+//      createRenderNode
+//
+//  Description:
+//		Procedure to popup the render creation window.
+//
+//  Input Arguments:
+//		A flag specifying which types of render nodes to create.
+//		Currently "-all", "-allWithTexturesUp", "-allWithShadersUp", 
+//		"-allWithLightsUp", "-textures", "-shadersSG", "-shaders", 
+//		"-lights", "-utilities" are supported.
+//
+//      The command to run after the a node has been created. The name
+//      of the created node will substituted "%node" in the command
+//      string. If an empty string is passed for the command nothing
+//      will be done. Currently the command is only attached to the
+//      buttons in the texture tab.
+//
+//		If a command is specified the createRenderNode window will be
+//		closed.
+//
+//  Return Value:
+//      None.
+//
+//////////////////////////////////////////////////////////////////////
+//
+//  Procedure Name:
+//      createRenderNodeCB
+//
+//  Description:
+//		Procedure to create the node classified as specifed by the inputs
+//
+//  Input Arguments:
+//		$as - 
+//		A flag specifying which how to classify the node created.
+//		Choices:
+//			-as2DTexture : 2d textures
+//			-as3DTexture : 3d textures
+//			-asEnvTexture : Environment textures
+//			-asShader : as a shader
+//			-asLight : as a light
+//			-asUtility : as a rendering utility node
+//
+//      $flag - 
+//			A secondary flag used to make decisions in combination with $as.
+//			Choices:
+//				-asBump : defines a created texture as a bump
+//				-asNoShadingGroup : for materials; create without a shading group
+//				-asDisplacement : for anything; map the created node 
+//					to a displacement material.
+//				-asUtility : for anything; do whatever the $as flag says,
+//					but also classify as a utility
+//				-asPostProcess : for any postprocess node
+//
+//		$type - 
+//			The type of node to be created.
+//
+//		$command - 
+//			A command entered by the user when invoking createRenderNode.
+//		The command will substitute the string %node with the name of the
+//		node it creates.  createRenderWindow will be closed if a command
+//		is not the null string ("").
+//
+//  Return Value:
+//      None.
+//
+
+global proc string createRenderNodeCB ( string $as, string $flag,
+								 string $type, string $postCommand )
+{
+	int $projection = (`optionVar -query create2dTextureType` == "projection");
+	int $stencil = (`optionVar -query create2dTextureType` == "stencil");
+	int $placement = `optionVar -query createTexturesWithPlacement`;
+	int $shadingGroup = `optionVar -query createMaterialsWithShadingGroup`;
+	int $createAndDrop = 0;
+	string $editor = "";
+
+	return renderCreateNode(
+		$as,
+		$flag,
+		$type, 
+		$postCommand,
+		$projection,
+		$stencil,
+		$placement,
+		$shadingGroup,
+		$createAndDrop,
+		$editor);
+}
+
+
+
+global proc refreshButtons( string $classification, string $RClayout )
+{
+
+	int $buttonHeight = 34;  // default for Icons and Text
+	int $columnWidth = 135;  // default for Icons and Text
+
+	if (`about -win`)
+	{
+		$columnWidth = 145;  // a bit wider on Windows than on IRIX
+	}
+
+	string $buttonStyle = `optionVar -query createRenderNodeButtonStyle`;
+	int $iconsOnly = ($buttonStyle == (uiRes("m_createRenderNode.kIconsOnly")));
+	int $textOnly = ($buttonStyle == (uiRes("m_createRenderNode.kTextOnly")));
+
+	if ($textOnly) {
+		$buttonHeight = 24;
+		$columnWidth = 120;
+	} 
+
+	int $dynamicsIsLicensed = `licenseCheck -mode edit -type fx`;
+
+    if (!$iconsOnly) {
+		rowColumnLayout -numberOfColumns 2 
+			-rowAttach 1 "top" 4 -rowAttach 2 "top" 4
+			-columnAttach 1 "both" 2 -columnAttach 2 "both" 2
+			-columnWidth 1 $columnWidth -columnWidth 2 $columnWidth 
+			$RClayout;
+	} else {
+		rowColumnLayout -numberOfColumns 6 
+			-rowAttach 1 "top" 0 -rowAttach 2 "top" 0
+			-columnAttach 1 "both" 0 -columnAttach 2 "both" 0
+			-columnAttach 3 "both" 0 -columnAttach 4 "both" 0
+			-columnAttach 5 "both" 0 -columnAttach 6 "both" 0
+			-columnWidth 1 40 -columnWidth 2 40  
+			-columnWidth 3 40 -columnWidth 4 40  
+			-columnWidth 5 40 -columnWidth 6 40  
+			$RClayout;
+	}
+
+	// some of mental ray shaders are registered as both 
+	// rendernode/mentalray/material and shaders/surface
+	// For those node, this function is called twice : 
+	// once with $classification = shader/surface, 
+	// once with $classification = rendernode/mentalray/material
+	// We want to create buttons/menus in mental ray section
+
+	string $nodes[];
+	string $mentalrayClassfication = "rendernode/mentalray";
+
+	if( startsWith($classification, $mentalrayClassfication) ) 
+	{
+		$nodes = `listNodeTypes $classification`;
+	}
+	else
+	{
+		$nodes = `listNodeTypes -ex $mentalrayClassfication $classification`;
+	}
+	
+	for( $name in $nodes ) {
+
+		// Check whether node should appear in this UI, based on 
+		// certain variables			
+		if (!shouldAppearInNodeCreateUI($name)) {
+			continue;
+		}
+
+		string $labelName = nodeTypeNiceName($name);
+
+		// Add a frame layout here to make the nodeIconButton appear raised
+		// like a normal button.
+		//
+		frameLayout
+			-labelVisible false
+			-borderStyle "out"
+			-collapsable false;
+
+			// Create the button
+			//
+			nodeIconButton 
+				-height $buttonHeight
+				($name+"Btn");
+
+		setParent ..; // from frame layout
+
+		if ( $iconsOnly ) 
+		{
+			// Add an image and annotation to the button
+			//
+			nodeIconButton 
+				-edit
+				-image1 ("render_" + $name + ".xpm")
+				-annotation $labelName 
+				($name+"Btn");
+		} 
+		else if ( $textOnly ) 
+		{
+			// Add a label to the button
+			//
+			if(`about -mac`){
+				nodeIconButton 
+					-edit
+					-style "textOnly"
+					-label (" " + $labelName) 
+					-annotation $labelName 
+					($name+"Btn");
+			}else{
+				nodeIconButton 
+					-edit
+					-style "iconAndTextHorizontal"
+					-label (" " + $labelName) 
+					-annotation $labelName 
+					($name+"Btn");
+			}
+		} 
+		else 
+		{  // icons and Text
+			// Add an image and a label to the button
+			//
+			nodeIconButton 
+				-edit
+				-image1 ("render_" + $name + ".xpm")
+				-style "iconAndTextHorizontal"
+				-label (" " + $labelName) 
+				-annotation $labelName 
+				($name+"Btn");
+		}
+
+		if( !$dynamicsIsLicensed && 
+			( $name == "particleCloud" ||
+			  $classification == "utility/particle" ) ) 
+		{
+			// The user does not have a license which allows them to create
+			// this node type, so we will disable the button.
+			//
+			nodeIconButton 
+				-edit
+				-enable false 
+				($name+"Btn");
+		}
+	}
+
+	setParent ..;
+}
+
+proc setupButtons( string $classification,
+                   string $as,
+                   string $flag,
+                   string $postCommand )
+{
+    string $command;
+
+	string $nodes[] = `listNodeTypes $classification`;
+
+	for( $name in $nodes ) {
+		if( `nodeIconButton -exists ($name+"Btn")` ) {
+            $command = "createRenderNodeCB " +
+                $as + " " +
+                "\"" + $flag + "\" " +
+                $name + " " +
+                "\"" + $postCommand + "\"";
+
+			nodeIconButton -e -command $command ($name+"Btn");
+		}
+	}
+}
+
+proc buildTextures ()
+//
+//	Building the textures tab.
+//
+{
+	columnLayout -adj true texturesTab;
+
+		separator -style "none" -height 5;
+
+		checkBox 
+			-label (uiRes("m_createRenderNode.kWithNewTexture")) 
+			-align left
+			-value `optionVar -query createTexturesWithPlacement` 
+			-onCommand 
+				("optionVar -intValue createTexturesWithPlacement true;"
+					+ "refreshCreateNodeUI;")
+			-offCommand 
+				("optionVar -intValue createTexturesWithPlacement false;"
+					+ "refreshCreateNodeUI;")
+			placementCheckBox;
+
+		separator -style "none" -height 5;
+
+		//
+		//	Building subtab for all 2d Textures
+		//
+
+		frameLayout -label (uiRes("m_createRenderNode.kTwoDTextures")) 
+			-borderVisible true -collapsable true 
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+			-collapse false twoDTexturesF;
+
+			columnLayout twoDTexturesC;
+
+ 				radioCollection radioOptions;
+ 				radioButton 
+					-label (uiRes("m_createRenderNode.kNormal")) 
+					-onCommand 
+						("optionVar "
+							+ "-stringValue create2dTextureType \"normal\";"
+							+ "refreshCreateNodeUI();")
+					normalRadioBtn;
+ 				radioButton 
+					-label (uiRes("m_createRenderNode.kAsProjection")) 
+					-onCommand 
+						("optionVar "
+							+ "-stringValue create2dTextureType \"projection\";"
+							+ "refreshCreateNodeUI();")
+					projectionRadioBtn;
+				radioButton 
+					-label (uiRes("m_createRenderNode.kAsStencil")) 
+					-onCommand 
+						("optionVar "
+							+ "-stringValue create2dTextureType \"stencil\";"
+							+ "refreshCreateNodeUI();")
+					stencilRadioBtn;
+				
+				if (`optionVar -query create2dTextureType` == "normal")
+				{
+					radioButton 
+						-edit
+						-select
+						normalRadioBtn;
+				}
+				else if (`optionVar -query create2dTextureType` == "projection")
+				{
+					radioButton 
+						-edit
+						-select
+						projectionRadioBtn;
+				}
+				else // (`optionVar -query create2dTextureType` == "stencil")
+				{
+					radioButton 
+						-edit
+						-select
+						stencilRadioBtn;
+				}
+
+				separator -style "none" -height 5;
+
+				refreshButtons("texture/2d","twoDTexturesRC");
+
+			setParent ..;
+
+		setParent ..;
+
+		//
+		//	Building subtab for all 3D Textures
+		//
+
+		frameLayout -label (uiRes("m_createRenderNode.kThreeDTextures")) -borderVisible true -collapsable true 
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+			-collapse false threeDTexturesF;
+
+			columnLayout threeDTexturesC;
+
+				refreshButtons("texture/3d","threeDTexturesRC");
+
+			setParent ..;
+
+		setParent ..;
+
+
+        //
+        //  Building subtab for all Env Textures
+        //
+
+        frameLayout -label (uiRes("m_createRenderNode.kEnvironmentTextures")) -borderVisible true 
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+			-collapsable true 
+			-collapse true envTexturesF;
+
+			columnLayout envTexturesC;
+
+				refreshButtons("texture/environment","envTexturesRC");
+
+        	setParent ..;
+		
+		setParent ..;
+
+		//
+		//	Building subtab for all other Textures
+		//
+
+		frameLayout -label (uiRes("m_createRenderNode.kOtherTextures")) 
+			-borderVisible true -collapsable true 
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+			-collapse false otherTexturesF;
+
+			columnLayout otherTexturesC;
+
+					refreshButtons("texture/other","otherTexturesRC");
+
+			setParent ..;
+
+		setParent ..;
+
+
+	setParent ..;				// columnLayout texturesTab
+}
+
+proc setupTextures ( string $postCommand, string $flag )
+{
+	setParent texturesTab;
+
+	setupButtons("texture/2d", "-as2DTexture", $flag, $postCommand);
+	setupButtons("texture/3d", "-as3DTexture", $flag, $postCommand);
+	setupButtons("texture/environment", "-asEnvTexture", $flag, $postCommand);
+	setupButtons("texture/other", "-asTexture", $flag, $postCommand);
+}
+
+proc buildShaders ()
+//
+//	Building the shaders tab.
+//
+{
+	columnLayout -adj true shadersTab;
+
+		separator -style "none" -height 5;
+
+		checkBox 
+			-label (uiRes("m_createRenderNode.kWithShadingGroup")) 
+			-align left
+			-value `optionVar -query createMaterialsWithShadingGroup`
+			-onCommand 
+				("optionVar -intValue createMaterialsWithShadingGroup true;"
+					+ "refreshCreateNodeUI;")
+			-offCommand 
+				("optionVar -intValue createMaterialsWithShadingGroup false;"
+					+ "refreshCreateNodeUI;")
+			shadingGroupCheckBox;
+
+		separator -style "none" -height 5;
+
+        frameLayout -label (uiRes("m_createRenderNode.kSurfaceMaterials")) -borderVisible true -collapsable true 
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+			-collapse false
+            surfShadersF;
+
+			columnLayout surfShadersC;
+
+				refreshButtons("shader/surface","surfShadersRC");
+
+			setParent ..;        
+
+       	setParent ..;
+
+
+        //
+        //  Building subtab for all  Fog Shaders
+        //
+
+        frameLayout -label (uiRes("m_createRenderNode.kVolumetricMaterials")) -borderVisible true -collapsable true 
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+			-collapse true fogShadersF;
+
+			columnLayout fogShadersC;
+
+				refreshButtons("shader/volume","fogShadersRC");
+
+			setParent ..;
+
+       	setParent ..;
+
+        //
+        //  Building subtab for all Displacement Shaders
+        //
+
+        frameLayout -label (uiRes("m_createRenderNode.kDisplacementMaterials")) -borderVisible true -collapsable true 
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+			-collapse true displacementShadersF;
+
+			columnLayout displacementShadersC;
+
+				refreshButtons("shader/displacement","displacementShadersRC");
+
+			setParent ..;
+
+       	setParent ..;
+
+	setParent ..;
+
+}
+
+proc setupShaders ( string $postCommand, string $flag )
+{
+	setParent shadersTab;
+
+    string $command;
+
+	if ($flag != "") {
+		setupButtons("shader", "-asShader", $flag, $postCommand);
+	}
+    else {
+		setupButtons("shader/surface", "-asShader", "surfaceShader", $postCommand);
+		setupButtons("shader/volume", "-asShader", "volumeShader", $postCommand);
+		setupButtons("shader/displacement", "-asShader", "displacementShader", $postCommand);
+	}
+}
+
+proc buildLights ()
+//
+//	Building the lights tab.
+//
+{
+	columnLayout -adj true lightsTab;
+
+        frameLayout -label (uiRes("m_createRenderNode.kLightsBuild")) -borderVisible true -collapsable true 
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+			-collapse false
+            lightsF;
+
+			columnLayout lightsC;
+
+				refreshButtons("light","lightsRC");
+
+			setParent ..;
+
+		setParent ..;
+
+	setParent ..;
+}
+
+proc setupLights ( string $postCommand, string $flag )
+{
+	setParent lightsTab;
+
+	setupButtons("light", "-asLight", $flag, $postCommand);
+}
+
+proc buildUtilities ()
+//
+//  Building the utilities tab.
+//
+{
+	columnLayout -adj true utilitiesTab;
+		//
+		//	Building subtab for general utilities
+		//
+		frameLayout -label (uiRes("m_createRenderNode.kGeneralUtilities")) -borderVisible true -collapsable true 
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+			-collapse false	generalUtilsF;	
+
+			columnLayout generalUtilsC;
+
+				refreshButtons("utility/general","generalUtilsRC");
+
+			setParent ..;
+
+	    setParent ..;
+
+
+		//
+		//	Building subtab for color utilities
+		//
+		frameLayout -label (uiRes("m_createRenderNode.kColorUtilities")) -borderVisible true -collapsable true 
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+			-collapse false	colorUtilsF;	
+	
+			columnLayout colorUtilsC;
+	
+				refreshButtons("utility/color","colorUtilsRC");
+
+			setParent ..;
+
+	    setParent ..;
+
+		//
+		//	Building subtab for switch utilities
+		//
+		frameLayout -label (uiRes("m_createRenderNode.kSwitchUtilities")) -borderVisible true -collapsable true 
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+			-collapse true switchUtilsF;	
+
+			columnLayout switchUtilsC;
+
+				refreshButtons("utility/switch","switchUtilsRC");
+
+			setParent ..;
+
+	    setParent ..;
+
+        //
+        //  Building subtab for particle utilities
+        //
+        frameLayout -label (uiRes("m_createRenderNode.kParticleUtilities")) -borderVisible true -collapsable true
+			-borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+            -collapse true partUtilsF;
+
+            columnLayout partUtilsC;
+
+                refreshButtons("utility/particle","partUtilsRC");
+
+            setParent ..;
+
+        setParent ..;
+
+		if (`licenseCheck -m "edit" -typ "complete"`) {
+	        //
+	        //  Building subtab for image planes
+	        //
+	        frameLayout -label (uiRes("m_createRenderNode.kImagePlanes")) -borderVisible true -collapsable true
+				-borderStyle "etchedIn"
+				-marginWidth 5
+				-marginHeight 5
+	            -collapse true imgUtilsF;
+	
+	            columnLayout imgUtilsC;
+	
+	                refreshButtons("imageplane","imgUtilsRC");
+	
+ 	           setParent ..;
+	
+	        setParent ..;
+		}
+
+        //
+        //  Building subtab for glow
+        //
+        frameLayout -label (uiRes("m_createRenderNode.kGlow")) -borderVisible true -collapsable true
+            -borderStyle "etchedIn"
+			-marginWidth 5
+			-marginHeight 5
+            -collapse true glowUtilsF;
+
+            columnLayout glowUtilsC;
+
+                refreshButtons("postprocess/opticalFX","glowUtilsRC");
+
+            setParent ..;
+
+        setParent ..;
+
+	setParent ..;
+}
+
+proc setupUtilities ( string $postCommand, string $flag )
+{
+    setParent utilitiesTab;
+
+	setupButtons("utility/general", "-asUtility", $flag, $postCommand);
+	setupButtons("utility/switch", "-asUtility", $flag, $postCommand);
+	setupButtons("utility/color", "-asUtility", $flag, $postCommand);
+	setupButtons("utility/particle", "-asUtility", $flag, $postCommand);
+
+	if (`licenseCheck -m "edit" -typ "complete"`) {
+		setupButtons("imageplane", "-asUtility", $flag, $postCommand);
+    }
+
+	setupButtons("postprocess/opticalFX", "-asPostProcess", $flag, $postCommand);
+}
+
+global proc setCreateRenderNodeButtonStyle()
+//
+//	sets the createRenderNodeButton OptionVar for button styles in
+//	the createRenderNodeWindow
+//
+{
+	int $iconsAndText = `menuItem -q -radioButton iconsAndTextItem`;
+	int $iconsOnly = `menuItem -q -radioButton iconsOnlyItem`;
+	int $textOnly = `menuItem -q -radioButton textOnlyItem`;
+
+	if ( $iconsAndText) 
+	{   
+		optionVar -stringValue "createRenderNodeButtonStyle" (uiRes("m_createRenderNode.kIconsAndText"));
+	} 
+	else if ( $iconsOnly ) 
+	{ 
+		optionVar -stringValue "createRenderNodeButtonStyle" (uiRes("m_createRenderNode.kIconsOnly"));
+	} 
+	else if ( $textOnly ) 
+	{
+		optionVar -stringValue "createRenderNodeButtonStyle" (uiRes("m_createRenderNode.kTextOnly"));
+	}
+
+}
+
+global proc toggleCreateRenderNodeWindowStyle ()
+//
+//  toggles the style and requests a redraw of the buttons in 
+//  the createRenderNodeWindow 
+//
+{
+	string $class ;
+
+	// add mental ray classifications;
+	global string $mrNodeTypeInfo[];
+
+	if( !`about -evalVersion` && mentalIsLoaded() )
+	{
+		int $i;
+		for( $i=0; $i<size($mrNodeTypeInfo)/4; $i++)
+		{
+			$class += $mrNodeTypeInfo[4*$i+2]+":";
+		}
+	}
+	
+	$class += "texture/2d:texture/3d:texture/environment:texture/other:shader/surface:" +
+	                "shader/volume:shader/displacement:light:utility/general:utility/switch:" +
+					"utility/color:utility/particle:imageplane:postprocess/opticalFX";
+
+	setCreateRenderNodeButtonStyle;
+   	refreshCreateRenderNodeWindow($class);
+
+}
+
+global int $gCreateRenderNodePluginCallbacksRegistered = false;
+
+global proc createRenderNode( 
+	string $nodeTypesFlag, 
+	string $command, 
+	string $flag )
+//
+//	the creationWindow is the window which gives the user the 
+// 	ability to choose from different texture types
+//
+{
+	int $mentalRayPluginLoaded = 0;
+
+	// show mentalray custom shaders by default.
+	if (!`about -evalVersion` && mentalIsLoaded())
+	{
+		$mentalRayPluginLoaded = 1;
+	}
+
+	int $crnWindowWidth = 315; 
+
+	// Initialize the optionVar which specifies what style the buttons in the
+	// create render node dialog should be drawn in, if the optionVar doesn't
+	// already exist.
+	//
+	if (!`optionVar -exists createRenderNodeButtonStyle`)
+	{
+		optionVar -stringValue createRenderNodeButtonStyle "Icons and Text";
+	}
+
+	string $buttonStyle = `optionVar -q createRenderNodeButtonStyle`;
+	int $textOnly = ($buttonStyle == "Text Only");
+
+	if ($textOnly) {
+		$crnWindowWidth = 300;
+	}
+
+	if (!`window -exists createRenderNodeWindow`) {
+                string $createRenderNode = (uiRes("m_createRenderNode.kCreateRenderNode"));
+		window -rtf false
+			-title $createRenderNode
+			-iconName $createRenderNode
+			-menuBar true
+			-maximizeButton false
+			-ret 
+			-wh $crnWindowWidth 730 
+			createRenderNodeWindow;
+
+		//
+		// Setup up the menu bar
+		//
+
+		menu -label (uiRes("m_createRenderNode.kOptions")) optionsMenu;
+			
+			radioMenuItemCollection;
+
+			menuItem -label (uiRes("m_createRenderNode.kIconsOnly"))
+				-radioButton off 
+				-command "toggleCreateRenderNodeWindowStyle"
+				iconsOnlyItem;
+			menuItem -label (uiRes("m_createRenderNode.kIconsAndText"))
+				-radioButton off 
+				-command "toggleCreateRenderNodeWindowStyle"
+				iconsAndTextItem;
+			menuItem -label (uiRes("m_createRenderNode.kTextOnly"))
+				-radioButton off 
+				-command "toggleCreateRenderNodeWindowStyle"
+				textOnlyItem;
+		
+		setParent -m ..;  // from optionsMenu
+
+		menu -label (uiRes("m_createRenderNode.kHelp")) -helpMenu true;
+
+			menuItem -label (uiRes("m_createRenderNode.kHelpOnCreateRenderNode"))
+				-enableCommandRepeat false
+				-command "showHelp CreateRenderNode";
+		
+		setParent -m ..;
+
+		//
+		// setup initial values of the menuItems on the Options menu
+		//
+
+		string $crnButtonStyle = `optionVar -q createRenderNodeButtonStyle`;
+
+		if ( $crnButtonStyle == (uiRes("m_createRenderNode.kIconsAndText"))) 
+		{
+			// set to icons and text
+			menuItem -e -radioButton on iconsAndTextItem;
+		} 
+		else if ( $crnButtonStyle == (uiRes("m_createRenderNode.kIconsOnly"))) 
+		{
+			// set to icons only 
+			menuItem -e -radioButton on iconsOnlyItem;
+		} 
+		else if ( $crnButtonStyle == (uiRes("m_createRenderNode.kTextOnly"))) 
+		{
+			// set to text only
+			menuItem -e -radioButton on textOnlyItem;
+		} 
+		else 
+		{   
+			// set to icons and text by default
+			menuItem -e -radioButton on iconsAndTextItem;
+		}
+
+		//
+		// Create a variable to hold the current location of the
+		// $parent and ask the current location to be assigned to the
+		// variable.  This variable is passed onto other function to
+		// ensure widgets to have the correct $parent.
+		//
+
+		string $parent = `setParent -query`;
+
+		formLayout creationWindowForm;
+
+			tabLayout -tabsVisible  false indexTab;
+				tabLayout -scr true -horizontalScrollBarThickness 0 creationWindowTabs;
+					buildShaders;
+					buildTextures;
+					buildLights;
+					buildUtilities;
+
+				setParent ..;
+			setParent ..;
+
+			tabLayout -e 
+				-tabLabel shadersTab (uiRes("m_createRenderNode.kMaterials"))
+				-tabLabel texturesTab (uiRes("m_createRenderNode.kTextures"))
+				-tabLabel lightsTab (uiRes("m_createRenderNode.kLights"))
+				-tabLabel utilitiesTab (uiRes("m_createRenderNode.kUtilities"))
+				creationWindowTabs;
+
+			button -label (uiRes("m_createRenderNode.kClose")) 
+				-h 26
+				-c "window -e -vis false createRenderNodeWindow" 
+				closeButton;
+		setParent ..;
+
+		formLayout -e
+			-af indexTab "left" 1
+			-af indexTab "right" 1
+			-af indexTab "top" 1
+			-ac indexTab "bottom" 5 closeButton
+
+			-af closeButton "left" 5
+			-af closeButton "right" 5
+			-af closeButton "bottom" 5
+			-an closeButton "top"
+			creationWindowForm;
+    }
+    
+    //  If the window already existed, but the mental ray tab 
+    //  did not, then we want to create the mental ray tab (assuming custom 
+    //  shaders are to be shown). This ensures that the mental ray tab gets 
+    //  created if the mental ray plugin is loaded dynamically.
+    //
+	if (!`about -evalVersion`) {
+		string $currentParent = `setParent creationWindowTabs`;
+		if (!`columnLayout -exists ($currentParent + "|mentalRayTab")` && $mentalRayPluginLoaded)
+		{
+			mrCreateNodeWindow_BuildTab;
+			tabLayout -edit
+				-tabLabel mentalRayTab (uiRes("m_createRenderNode.kMentalRay"))
+				creationWindowTabs;
+		} 
+		else if( `columnLayout -exists ($currentParent + "|mentalRayTab")` &&  !$mentalRayPluginLoaded)
+		{
+			deleteUI mentalRayTab;
+		} 
+	}
+
+	setParent createRenderNodeWindow;
+
+	string $first4 = substring($nodeTypesFlag,1,4);
+
+	if ($first4 == "-all") {
+		setupShaders $command $flag;
+		setupTextures $command $flag;
+		setupLights $command $flag;
+		setupUtilities $command $flag;
+		if (!`about -evalVersion` && $mentalRayPluginLoaded) {
+			mrCreateNodeWindow_SetupTab $command $flag;
+		}
+
+		tabLayout -e -tabsVisible  false indexTab;
+		if($nodeTypesFlag != "-all") {
+			if($nodeTypesFlag == "-allWithShadersUp") {
+				tabLayout -e -tabsVisible  true -selectTabIndex 1 creationWindowTabs;
+			} else if($nodeTypesFlag == "-allWithTexturesUp") {
+				tabLayout -e -tabsVisible  true -selectTabIndex 2 creationWindowTabs;
+			} else if($nodeTypesFlag == "-allWithLightsUp") {
+				tabLayout -e -tabsVisible  true -selectTabIndex 3 creationWindowTabs;
+			} else if($nodeTypesFlag == "-allWithMentalUp") {
+				if (!`about -evalVersion` && $mentalRayPluginLoaded) {
+					tabLayout -e -tabsVisible  true -selectTabIndex 5 creationWindowTabs;
+				}
+			}
+		} else {
+			tabLayout -e -tabsVisible  true creationWindowTabs;
+		}
+	}
+	else if ($nodeTypesFlag == "-textures") {
+		setupTextures $command $flag;
+
+		tabLayout -e -tabsVisible  true -tabLabelIndex 1 (uiRes("m_createRenderNode.kTextures")) indexTab;
+		tabLayout -e -st texturesTab -tabsVisible  false creationWindowTabs;
+	}
+	else if ($nodeTypesFlag == "-shaders" || $nodeTypesFlag == "-shadersSG") {
+		setupShaders $command $flag;
+
+		tabLayout -e -tabsVisible  true -tabLabelIndex 1 (uiRes("m_createRenderNode.kMaterials")) indexTab;
+		tabLayout -e -st shadersTab -tabsVisible  false creationWindowTabs;
+		if($nodeTypesFlag == "-shaders") {
+			checkBox -e -v false shadingGroupCheckBox;
+		} else if($nodeTypesFlag == "-shadersSG") {
+			checkBox -e -v true shadingGroupCheckBox;
+		}
+	}
+	else if ($nodeTypesFlag == "-lights") {
+		setupLights $command $flag;
+
+		tabLayout -e -tabsVisible  true -tabLabelIndex 1 (uiRes("m_createRenderNode.kLights")) indexTab;
+		tabLayout -e -st lightsTab -tabsVisible  false creationWindowTabs;
+	}
+    else if ($nodeTypesFlag == "-utilities") {
+        setupUtilities $command $flag;
+
+        tabLayout -e -tabsVisible  true -tabLabelIndex 1 (uiRes("m_createRenderNode.kUtilities")) indexTab;
+        tabLayout -e -st utilitiesTab -tabsVisible  false creationWindowTabs;
+    }
+	else
+		error (uiRes("m_createRenderNode.kNodeError"));
+
+	showWindow createRenderNodeWindow;
+
+	// Establish a callback which will be called when a plugin is loaded.
+	// The callback will find out what plugin was loaded and will update the
+	// create render node window if necessary.
+	//
+	global int $gCreateRenderNodePluginCallbacksRegistered;
+
+	if (!$gCreateRenderNodePluginCallbacksRegistered)
+	{
+		loadPlugin -addCallback createRenderNodeLoadPluginCallback;
+		unloadPlugin -addCallback createRenderNodeUnloadPluginCallback;
+		$gCreateRenderNodePluginCallbacksRegistered = true;
+	}
+}
+
+proc createRenderNodePluginChange(
+	string $changeType, 
+	string $plugin)
+{
+	//
+	// Description:
+	//	This procedure is called from createRenderNodeLoadPluginCallback() or 
+	//	from createRenderNodeUnloadPluginCallback(). If this method has been 
+	//	called because a plugin has finished loading, $changeType should be
+	//	"loadPlugin". If it has been called because a plugin is about to be
+	//	unloaded, $changeType should be "unloadPlugin".
+	//	This procedure determines what node types, if any, are affected by the
+	//	plugin loading/unloading, and refreshes the createRenderNodeWindow if 
+	// 	any of those node types are displayed therein.
+	//
+
+	if (!`window -exists createRenderNodeWindow`)
+	{
+		return;
+	}
+
+	// Get a list of all node types loaded by the plugin
+	//
+	string $pluginNodeTypeArray[] = `pluginInfo -query -dependNode $plugin`;
+
+	string $nodeType;
+
+	for ($nodeType in $pluginNodeTypeArray)
+	{
+		// Determine the classification(s) of each node type. Note that nodes
+		// can have multiple classifications.
+		//
+		string $classificationArray[] = `getClassification $nodeType`;
+		string $classification;
+
+		for ($classification in $classificationArray)
+		{
+			string $tokenArray[];
+			int $numTokens = tokenize($classification, "/", $tokenArray);
+
+			if (	($tokenArray[0] == "texture")
+				||	($tokenArray[0] == "shader")
+				||	($tokenArray[0] == "light")
+				||	($tokenArray[0] == "utility")
+				||	($tokenArray[0] == "imageplane")
+				||	($tokenArray[0] == "postprocess")
+				||	( $numTokens>=2 && $tokenArray[0] == "rendernode" && $tokenArray[1] == "mentalray") )
+			{
+				// The node type is classified as something which appears
+				// within the createRenderNodeWindow, so we need to refresh
+				// that window.
+				//
+				// Note that the above list needs to be kept in sync with the
+				// types of nodes which appear in the createRenderNodeWindow.
+				//
+				if ($changeType == "loadPlugin")
+				{
+					refreshCreateRenderNodeWindow($classification);
+					return;
+				}
+				else if ($changeType == "unloadPlugin")
+				{
+					// The plugin is being unloaded, but is not yet gone. We
+					// want to refresh the createRenderNodeWindow but not until
+					// after the plugin has finished unloading. If we don't
+					// wait until the plugin has finished unloading, then the
+					// refreshed window will still contain the node types
+					// defined by the plugin.
+					// 
+					// To make sure the plugin has finished unloading before we
+					// refresh the window, we will defer the evaluation of the
+					// refresh command until idle time.
+					//
+					evalDeferred(
+						"refreshCreateRenderNodeWindow(\"" 
+						+ $classification
+						+ "\")");
+						return;
+				}
+			}
+		}
+	}
+}
+
+global proc createRenderNodeUnloadPluginCallback(string $plugin)
+{
+	//
+	// Description:
+	//	This procedure is called immediately before a plugin is unloaded.
+	//	This procedure invokes createRenderNodePluginChange() to potentially
+	//	refresh the createRenderNodeWindow.
+	//
+	createRenderNodePluginChange("unloadPlugin", $plugin);
+}
+
+global proc createRenderNodeLoadPluginCallback(string $plugin)
+{
+	//
+	// Description:
+	//	This procedure is called immediately after a plugin is loaded.
+	//	This procedure invokes createRenderNodePluginChange() to potentially
+	//	refresh the createRenderNodeWindow.
+	//
+	createRenderNodePluginChange("loadPlugin", $plugin);
+}
+
+global proc refreshCreateRenderNodeWindow( string $classification )
+{
+	if (!`window -exists createRenderNodeWindow`) {
+		return;
+	}
+    
+    // Description:
+    //  If the mental ray plug-in is not loaded yet and the  
+    //  Render Node window is already open without the mentalRayTab, 
+    //  then after we load the mental ray plug-in, we want to update the
+    //  Render Node Window to have one more tab -- the mentalRayTab. 
+    //  This ensures that the mental ray tab gets 
+    //  created if the mental ray plugin is loaded dynamically.
+    //
+	if( !`about -evalVersion` && `window -query -visible createRenderNodeWindow` )
+	{
+		int $mentalRayPluginLoaded = mentalIsLoaded();
+
+		string $currentParent = `setParent creationWindowTabs`;
+
+		if ($mentalRayPluginLoaded &&
+			!`columnLayout -exists ($currentParent + "|mentalRayTab")`) 
+		{
+			mrCreateNodeWindow_BuildTab;
+			tabLayout -edit
+				-tabLabel mentalRayTab (uiRes("m_createRenderNode.kMentalRay"))
+				creationWindowTabs;
+
+			setParent createRenderNodeWindow; 
+			mrCreateNodeWindow_SetupTab "" "";
+		}
+
+		else if(!$mentalRayPluginLoaded &&
+			`columnLayout -exists ($currentParent + "|mentalRayTab")`)
+		{
+			deleteUI mentalRayTab;
+		} 
+	}
+
+	// Turn on the wait cursor and unmanage the UI because it can take a few
+	// moments to build the UI and the process can be ugly to watch
+	//
+	waitCursor -state on;
+
+	formLayout
+		-edit
+		-manage false
+		creationWindowForm;
+
+	string $indiv[];
+	tokenize($classification,":",$indiv);
+
+	for( $class in $indiv ) {
+		string $parent = "";
+		string $RC = "";
+		string $top = "";
+
+		if( $class == "texture/2d" ) {
+			$parent = "texturesTab|twoDTexturesF|twoDTexturesC";
+			$RC = "twoDTexturesRC";
+			$top = "texture";
+		} else if( $class == "texture/3d" ) {
+			$parent = "texturesTab|threeDTexturesF|threeDTexturesC";
+			$RC = "threeDTexturesRC";
+			$top = "texture";
+		} else if( $class == "texture/environment" ) {
+			$parent = "texturesTab|envTexturesF|envTexturesC";
+			$RC = "envTexturesRC";
+			$top = "texture";
+		} else if( $class == "texture/other" ) {
+			$parent = "texturesTab|otherTexturesF|otherTexturesC";
+			$RC = "otherTexturesRC";
+			$top = "texture";
+		} else if( $class == "shader/surface" ) {
+			$parent = "shadersTab|surfShadersF|surfShadersC";
+			$RC = "surfShadersRC";
+			$top = "shader";
+		} else if( $class == "shader/volume" ) {
+			$class = "shader/volume";
+			$parent = "shadersTab|fogShadersF|fogShadersC";
+			$RC = "fogShadersRC";
+			$top = "shader";
+		} else if( $class == "shader/displacement" ) {
+			$class = "shader/displacement";
+			$parent = "shadersTab|displacementShadersF|displacementShadersC";
+			$RC = "displacementShadersRC";
+			$top = "shader";
+		} else if( $class == "light" ) {
+			$parent = "lightsTab|lightsF|lightsC";
+			$RC = "lightsRC";
+			$top = "light";
+		} else if( $class == "utility/general" ) {
+			$parent = "utilitiesTab|generalUtilsF|generalUtilsC";
+			$RC = "generalUtilsRC";
+			$top = "utility";
+		} else if( $class == "utility/switch" ) {
+			$parent = "utilitiesTab|switchUtilsF|switchUtilsC";
+			$RC = "switchUtilsRC";
+			$top = "utility";
+		} else if( $class == "utility/color" ) {
+			$parent = "utilitiesTab|colorUtilsF|colorUtilsC";
+			$RC = "colorUtilsRC";
+			$top = "utility";
+		} else if( $class == "utility/particle" ) {
+			$parent = "utilitiesTab|partUtilsF|partUtilsC";
+			$RC = "partUtilsRC";
+			$top = "utility";
+		} else if( $class == "imageplane" ) {
+			$parent = "utilitiesTab|imgUtilsF|imgUtilsC";
+			$RC = "imgUtilsRC";
+			$top = "imageplane";
+		} else if( $class == "postprocess/opticalFX" ) {
+			$parent = "utilitiesTab|glowUtilsF|glowUtilsC";
+			$RC = "glowUtilsRC";
+			$top = "postprocess/opticalFX";
+		} else {
+			// mental ray ?
+			// mentalRayTab could be deleted by unloading the plugin.
+			if(!`about -evalVersion` && `columnLayout -exists mentalRayTab`)
+			{
+				global string $mrNodeTypeInfo[];
+				int $i;
+				for( $i=0; $i<size($mrNodeTypeInfo)/4; $i++) {
+					if( $class == $mrNodeTypeInfo[4*$i+2] ) {
+						string $uiBaseName = $mrNodeTypeInfo[4*$i+1] ;
+						$parent = "mentalRayTab|" + $uiBaseName + "F" + "|" + $uiBaseName + "C";
+						$RC = $uiBaseName + "RC";
+						$top = "mentalray";
+						break;
+					}
+				}
+			}
+		}
+
+		if( $parent == "" )
+			continue;
+
+		string $parWndLayout;
+		
+		if(`about -mac`) {
+			//	Fixes Bug #170869
+			//	For Mac, we need add an extra layout, i.e Menubar layout.
+			//
+			$parWndLayout = "createRenderNodeWindow|createRenderNodeWindow|creationWindowForm|indexTab|creationWindowTabs|"+$parent;
+		} else {
+			$parWndLayout =  "createRenderNodeWindow|creationWindowForm|indexTab|creationWindowTabs|"+$parent;
+		}
+		$parentLayout = $parWndLayout;
+
+		setParent $parentLayout;
+		
+		deleteUI $RC;
+		refreshButtons($class,$RC);
+		if(`about -mac`) {
+			//	Fixes Bug #170869
+			//	For Mac, we need add an extra layout, i.e Menubar layout.
+			//
+			setParent createRenderNodeWindow|createRenderNodeWindow|creationWindowForm|indexTab;
+		} else {
+			setParent createRenderNodeWindow|creationWindowForm|indexTab;
+		}
+
+		if( $top == "texture" ) {
+			setupTextures "" "";
+		} else if( $top == "shader" ) {
+			setupShaders "" "";
+		} else if( $top == "light" ) {
+			setupLights "" "";
+		} else if( $top == "utility" ) {
+			setupUtilities "" "";
+		}
+	}
+
+	// Now that we have finished building the UI, we can remanage the window
+	// and turn off the wait cursor.
+	//
+	formLayout
+		-edit
+		-manage true
+		creationWindowForm;
+
+	waitCursor -state off;
+}		
+
+

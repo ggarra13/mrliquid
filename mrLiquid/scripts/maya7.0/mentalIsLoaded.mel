@@ -1,0 +1,33 @@
+
+// Check if Mayatomr or mrLiquid is loaded
+global proc int mentalIsLoaded()
+{ 
+  if ( `pluginInfo -query -loaded Mayatomr` || 
+       `pluginInfo -query -loaded mrLiquid` ||
+       `pluginInfo -query -loaded mrLiquid_debug` ||
+       `pluginInfo -query -loaded "mrLiquid-demo"` )
+    return 1;
+  return 0;
+}
+
+// Check if mrLiquid is loaded
+global proc int mrLiquidIsLoaded()
+{ 
+  if ( `pluginInfo -query -loaded mrLiquid` ||
+       `pluginInfo -query -loaded mrLiquid_debug` ||
+       `pluginInfo -query -loaded "mrLiquid-demo"` )
+    return 1;
+  return 0;
+}
+
+global proc string mrLiquidPlugin()
+{ 
+  string $plugin = "mrLiquid";
+  if ( `pluginInfo -query -loaded mrLiquid_debug` )
+    $plugin = "mrLiquid_debug";
+
+  if ( `pluginInfo -query -loaded "mrLiquid-demo"` )
+    $plugin = "mrLiquid-demo";
+
+  return $plugin;
+}

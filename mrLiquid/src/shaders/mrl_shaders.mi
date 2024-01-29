@@ -1,0 +1,224 @@
+
+#
+# NodeId list starts at 6000
+#
+# This file includes:
+#
+# Volume Shaders:
+#       - mrl_volume_isect    (6000)  # particle intersector using pdc cache
+#       - mrl_particle_clouds (6001)  # maya-like particle cloud shader
+# Geo Shaders:
+#       - mrl_geo_hair        (6002)  # geoshader to create hairs from .hr file
+# Surface Shaders:
+#       - mrl_hairshader      (6003)  # shader to shade hairs
+#       - mrl_furshader       (6006)  # shader to shader fur
+# Texture Shaders:
+#       - mrl_exr_file        (6007)  # shader to load exr files
+# Lens  Shaders:
+#       - mrl_lens            (6005)  # shader to "stop" IPR render only when
+#                                     # finalgather_only is used on
+#                                     # stand-alone.
+# State Shaders:
+#       - mrl_state           (6004)  # shader to "stop" IPR render on
+#                                     # stand-alone
+#
+
+declare shader
+	color					   #: shortname "oc"
+	"mrl_volume_isect" (
+                integer "type",			   #: shortname "t"
+		shader  "volumeShader",		   #: shortname "vols"
+		shader  "surfaceShader",	   #: shortname "srfs"
+		shader  "shadowShader",		   #: shortname "shds"
+		boolean "visibleInReflections",	   #: shortname "vrefl"
+		boolean "visibleInRefractions",	   #: shortname "vrefr"
+		scalar  "threshold",		   #: shortname "thres"
+		scalar  "surfaceShading",	   #: shortname "ss"
+		boolean "betterIllumination",	   #: shortname "bi"
+		boolean "disableCloudAxis",	   #: shortname "dca"
+		scalar  "filterRadius",		   #: shortname "fr"
+		###### compositing controls
+		boolean "additive",		   #: shortname "a"
+		boolean "raymarch",		   #: shortname "raym"
+		###### octree controls
+		integer "octreeMaxSize",	   #: shortname "oms"
+		integer "octreeMaxDepth",	   #: shortname "omd"
+		###### motion blur info
+		integer "motionBlurType",	   #: shortname "mbt"
+		scalar  "frameRate"		   #: shortname "fra"
+	)
+	#:
+	#: nodeid 6000
+	#:
+	version 1
+	apply volume
+end declare
+
+declare shader
+	color							#: shortname "oc"
+	"mrl_particlecloud" (
+		color		"color",			#: shortname "c"
+		color		"transparency",			#: shortname "t"
+		color		"incandescence",		#: shortname "i"
+		scalar		"density",			#: shortname "d"
+		scalar		"glowIntensity",		#: shortname "gi"
+		scalar		"noise",			#: shortname "n"
+		scalar		"noiseFreq",			#: shortname "nf"
+		scalar		"noiseAspect",			#: shortname "na"
+		color		"blobMap",			#: shortname "bm"
+		integer		"lightMode",			#: shortname "lm"
+		array light	"lightList",			#: shortname "ll"
+		shader		"lightLink",			#: shortname "llink"
+		vector		"normalCamera",			#: shortname "nc"
+		scalar		"translucenceCoeff",		#: shortname "tc"
+		scalar		"diffuseCoeff",			#: shortname "dc"
+		boolean		"surfaceShadingShadow",		#: shortname "sss"
+		color		"surfaceColor",			#: shortname "sc"
+		scalar		"solidCoreSize",		#: shortname "scs"
+		scalar		"translucence",			#: shortname "trans"
+		scalar		"noiseAnimRate",		#: shortname "nar"
+		scalar		"roundness"			#: shortname "r"
+	)
+	#:
+	#: nodeid 6001
+	#:
+	version 1
+	apply material
+end declare
+
+declare shader
+	geometry				#: shortname "g"
+	"mrl_geo_hair" (
+		# type: 0 - guide hairs
+		#       1 - clumps
+		#       2 - interpolated
+		#       3 - paintfx renderlines (brute force a la maya)
+		integer  "type",             #: shortname "t" min 0 max 2
+		string   "filename",         #: shortname "fr"
+		integer  "maxHairsPerGroup", #: shortname "mhg" 
+			 		     #: min 10000 max 10000000
+		integer  "degree",           #: shortname "d"   min 0 max 2
+		integer	 "approx",           #: shortname "ap"  min 0 max 100
+		integer  "hairsPerClump",    #: min 1 max 1000000
+		integer	 "shadow",	      #: shortname "s"
+		integer	 "reflection",        #: shortname "refl"
+		integer	 "refraction",        #: shortname "refr"
+		integer	 "transparency",      #: shortname "trans"
+		integer	 "finalgather",       #: shortname "fg"
+		boolean  "passSurfaceNormal", #: shortname "psn"
+		boolean  "passUV",            #: shortname "pu"
+		boolean  "keepFilename"       #: shortname "kf"
+	)
+	#:
+	#: nodeid 6002
+	#:
+	version 1
+	apply geometry
+end declare
+
+
+# Long Hair Shader
+#
+declare shader
+	struct {				     
+		color		"outColor",          #: shortname "oc"
+		color		"outGlowColor",      #: shortname "ogc"
+		color		"outMatteOpacity",   #: shortname "omo"
+		color		"outTransparency"    #: shortname "ot"
+	} "mrl_hairshader" (
+		array struct	"hairColorScale" {
+			scalar	"position",          #: shortname "hcsp"
+			color	"color",             #: shortname "hcsc"
+			integer	"interp"             #: shortname "hcsi"
+			},
+		scalar		"specularPower",     #: shortname "sp"
+		color		"specularColor",     #: shortname "sc"
+		scalar		"translucence",      #: shortname "trans"
+		color		"hairColor",         #: shortname "hc"
+		array struct	"opacityScale" { 
+			scalar	"position",          #: shortname "osp"
+			color	"color",             #: shortname "osc"
+			integer	"interp"             #: shortname "osi"
+			},
+		scalar		"opacity",           #: shortname "opac"
+		integer		"matteOpacityMode",  #: shortname "mom"
+		scalar		"matteOpacity",      #: shortname "mo"
+		scalar		"diffuseRand",       #: shortname "diffr"
+		scalar		"specularRand",      #: shortname "specr"
+		scalar		"hueRand",           #: shortname "huer"
+		scalar		"satRand",           #: shortname "satr"
+		scalar		"valRand",           #: shortname "valr"
+		integer         "shadeMethod",	     #: shortname "sm"
+		integer		"lightMode",	     #: shortname "lm"
+		array light	"lightList",	     #: shortname "ll"
+		shader		"lightLink"	     #: shortname "llink"
+		)
+	#:
+	#: nodeid 6003
+	#:
+	apply material
+	version 1
+end declare
+
+
+declare shader
+	color			#: shortname "oc" 
+	"mrl_state" ()
+	#:
+	#: nodeid 6004
+	#:
+        apply state
+        version 1
+end declare
+
+declare shader
+	color			#: shortname "oc" 
+	"mrl_lens" ()
+	#:
+	#: nodeid 6005
+	#:
+        apply lens
+        version 1
+end declare
+
+declare shader
+	color			#: shortname "oc" 
+	"mrl_furshader" (
+			 color  "baseColor",                    #: shortname "bc"
+			 scalar "baseColorNoise",               #: shortname "bcn"
+			 scalar "baseColorNoiseFreq",           #: shortname "bcnf"
+			 color  "tipColor",                     #: shortname "tc"
+			 scalar "tipColorNoise",                #: shortname "tcn"
+			 scalar "tipColorNoiseFreq",            #: shortname "tcnf"
+			 color  "baseAmbientColor",             #: shortname "bac"
+			 scalar "baseAmbientColorNoise",        #: shortname "bacn"
+			 scalar "baseAmbientColorNoiseFreq",    #: shortname "bacnf"
+			 color  "tipAmbientColor",              #: shortname "tac"
+			 scalar "tipAmbientColorNoise",         #: shortname "tacn"
+			 scalar "tipAmbientColorNoiseFreq",     #: shortname "tacnf"
+			 color  "specularColor",                #: shortname "sc"
+			 scalar "specularColorNoise",           #: shortname "scn"
+			 scalar "specularColorNoiseFreq",       #: shortname "scnf"
+			 scalar "specularSharpness",            #: shortname "ss"
+			 scalar "specularSharpnessNoise",       #: shortname "ssn"
+			 scalar "specularSharpnessNoiseFreq",   #: shortname "ssnf"
+			 scalar "baseOpacity",                  #: shortname "bo"
+			 scalar "baseOpacityNoise",             #: shortname "bon"
+			 scalar "baseOpacityNoiseFreq",         #: shortname "bonf"
+			 scalar "tipOpacity",                   #: shortname "to"
+			 scalar "tipOpacityNoise",              #: shortname "ton"
+			 scalar "tipOpacityNoiseFreq",          #: shortname "tonf"
+			 integer          "lightModel",         #: shortname "lmod"
+			 integer		"lightMode",    #: shortname "mode"
+			 integer          "i_lights",           #: shortname "il"
+			 integer          "n_lights",           #: shortname "nl"
+			 array light     	"lights",       #: shortname "l"
+			 shader           "lightLink"           #: shortname "ll"
+			 )
+	#:
+	#: nodeid 6006
+	#:
+	apply material
+	version 1
+end declare
+

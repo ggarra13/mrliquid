@@ -1,0 +1,156 @@
+
+source "AEfileTemplate.mel";
+
+//
+//  Procedure Name:
+//	AEassignMentalFileObjectCB
+//
+
+global proc int AEassignMentalFileObjectCB( string $fileAttribute,
+					    string $filename,
+					    string $fileType )
+{
+   //
+   // Description:
+   //	This procedure is called when the user changes the file object name in
+   //	the edit box in the file attribute editor (whether by manually
+   //	typing it in, or by using the file browser to choose a new file).
+   //
+   //	This procedure updates the file object node file attribute
+   //
+
+   setAttr $fileAttribute -type "string" $filename;
+
+   string $currentDir = `workspace -q -dir`;
+   retainWorkingDirectory ($currentDir);
+   return true;
+}
+
+//
+//  Procedure Name:
+//	AEmentalFileObjectNameNew 
+//
+global proc AEmentalFileObjectNameNew (string $fileAttribute)
+{
+   setUITemplate -pst attributeEditorTemplate;
+   rowLayout -nc 3 textureNameLayout;
+   text -l "Mi File";
+   textField textureNameField;
+   symbolButton -image "navButtonBrowse.xpm" browser;
+   setParent ..;
+   setUITemplate -ppt;
+	
+   AEfileTextureNameReplace $fileAttribute;
+}
+
+//
+//  Procedure Name:
+//	AEfileTextureNameReplace
+//
+global proc AEmentalFileObjectNameReplace (string $fileAttribute)
+{
+   connectControl -fileName textureNameField $fileAttribute;
+
+   string $command = "AEassignMentalFileObjectCB "+" "+$fileAttribute;
+
+   button -e -c
+   ("AEfileTextureBrowser \"" + $command + "\"" ) browser;
+}
+
+
+
+global proc AEmentalFileObjectShapeTemplate(string $nodeName)
+{
+   editorTemplate -beginScrollLayout;
+
+   editorTemplate -beginLayout "File Object" -collapse false;
+
+   editorTemplate -callCustom "AEmentalFileObjectNameNew" 
+   "AEmentalFileObjectNameReplace" 
+   "file";
+
+   editorTemplate -addControl "useNamespace";
+   editorTemplate -addControl "nameType";
+   editorTemplate -addControl "showBBox";
+   editorTemplate -endLayout;
+
+   AEgeometryShapeTemplate $nodeName;
+
+   // include/call base class/node attributes
+   editorTemplate -beginLayout "mental ray" -collapse true;
+
+   editorTemplate -beginNoOptimize;
+   editorTemplate -label "Visible In Transparency" -ac "miTransparencyCast";
+   editorTemplate -label "Transmit Transparency" -ac "miTransparencyReceive";
+		
+   editorTemplate -label "Trace Reflection" -ac "miReflectionReceive";
+   editorTemplate -label "Transmit Refration" -ac "miRefractionReceive";
+		
+   editorTemplate -label "Final Gather Cast" -ac "miFinalGatherCast";
+   editorTemplate -label "Final Gather Receive" -ac "miFinalGatherReceive";
+   editorTemplate -endNoOptimize;
+   editorTemplate -addSeparator;
+
+   editorTemplate -label "Min Max Object Sample Limits" -ac "miOverrideSamples"
+   "AEmentalrayOverrideObjectSamplesFlagsActive";
+   editorTemplate -label "Min Sample Level" -ac "miMinSamples";
+   editorTemplate -label "Max Sample Level" -ac "miMaxSamples";	
+
+   editorTemplate -addSeparator;
+
+   editorTemplate
+   -label "Final Gather Override"
+   -ac "miOverrideFinalGather"
+   "AEmentalrayOverrideFinalGatherFlagsActive";
+   editorTemplate -label "Final Gather Rays"
+   -ac "miFinalGatherRays";
+   editorTemplate -label "Min Radius"
+   -ac "miFinalGatherMinRadius";
+   editorTemplate -label "Max Radius"
+   -ac "miFinalGatherMaxRadius";
+   editorTemplate -label "View (Radii in Pixel Size)"
+   -ac "miFinalGatherView";
+   editorTemplate -label "Filter"
+   -ac "miFinalGatherFilter";
+   editorTemplate -addSeparator;
+   editorTemplate
+   -label "Global Illumination Override"
+   -ac "miOverrideGlobalIllumination"
+   "AEmentalrayOverrideGlobalIlluminationFlagsActive";
+   editorTemplate -label "Global Illum Accuracy"
+   -ac "miGlobillumAccuracy";
+   editorTemplate -label "Global Illum Radius"
+   -ac "miGlobillumRadius";
+   editorTemplate -addSeparator;
+   editorTemplate
+   -label "Caustics Override"
+   -ac "miOverrideCaustics"
+   "AEmentalrayOverrideCausticsFlagsActive";
+   editorTemplate -label "Caustic Accuracy" -ac "miCausticAccuracy";
+   editorTemplate -label "Caustic Radius"   -ac "miCausticRadius";
+
+   editorTemplate -endLayout;
+
+
+   // suppressed attributes
+   editorTemplate -suppress "motionBoxMin";
+   editorTemplate -suppress "motionBoxMax";
+   editorTemplate -suppress "miMaxDisplace";
+
+   editorTemplate -suppress "collisionOffsetVelocityIncrement";
+   editorTemplate -suppress "collisionDepthVelocityIncrement";
+
+   editorTemplate -addExtraControls;
+
+   editorTemplate -addDynamicControl "collisionOffset";
+   editorTemplate -addDynamicControl "collisionDepth";
+   editorTemplate -addDynamicControl "collisionPriority";
+   editorTemplate -addDynamicControl "depthMapEnable";
+   editorTemplate -addDynamicControl "depthMapWeight";
+   editorTemplate -addDynamicControl "displayCollision";
+   AEaddDynRampClothCollision "collisionOffsetVelocityMultiplier";
+   AEaddDynRampClothCollision "collisionDepthVelocityMultiplier";
+
+   editorTemplate -endScrollLayout;
+}
+

@@ -1,0 +1,38 @@
+
+
+
+source "gg_mray_aux.mel";
+
+
+global proc AEgg_geo_pfxhairTemplate( string $nodeName )
+{
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	   editorTemplate 
+	     -beginLayout "PFX Strokes Geo Hair Attributes" 
+	     -collapse 0;
+
+	       editorTemplate  -beginLayout "Main" -collapse 0;
+		   editorTemplate -l "pfxstrokes fileroot" -addControl "fileroot";
+	       editorTemplate -endLayout;
+
+	       editorTemplate -addControl "usePFXHair";
+		   
+	       editorTemplate  -beginLayout "Group Options" -collapse 0;
+		   editorTemplate -addControl "maxHairsPerGroup";
+
+	       editorTemplate -endLayout;
+
+	   editorTemplate -endLayout;
+
+	   editorTemplate -suppress "fileroot";
+	   editorTemplate -suppress "maxHairsPerGroup";
+	   editorTemplate -suppress "usePFXHair";
+
+	   AEdependNodeTemplate $nodeName;
+
+	   editorTemplate -addExtraControls;
+
+	editorTemplate -endScrollLayout;
+}

@@ -1,0 +1,50 @@
+declare shader
+	color #: shortname "oc"
+	"gg_fakefur" (
+		color "skinColor",            #: shortname "sc"
+					      #: default 0.23 0.17 0.13
+		color "diffuseColor",         #: shortname "dc"
+					      #: default 1.00 1.00 1.00					      
+		color "specular1Color",       #: shortname "s1c"
+				 	      #: default 0.95 0.85 0.85
+		scalar "specular1Exponent",   #: shortname "s1e"
+					      #: default 50 min 1 max 1500
+		color "specular2Color",       #: shortname "s2c"
+				 	      #: default 0.60 0.50 0.30
+		scalar "specular2Exponent",   #: shortname "s2e"
+					      #: default 50 min 1 max 1500
+		scalar "hairDensity",         #: shortname "hd"
+					      #: default 100 min 1 max 1000
+		scalar "backwardScatering",   #: shortname "bs"
+					      #: default 0.80 min 0 max 1 	
+    		scalar "forwardScattering",   #: shortname "fs"
+					      #: default 0.20 min 0 max 1 	
+		scalar "hairOverHairShadow",  #: shortname "hhs"
+					      #: default 0.50 min 0 max 1  	
+    		scalar "shadowAttenuation",   #: shortname "sa"
+					      #: default 0.50 min 0 max 1  	
+    		scalar "startShadowCos",      #: shortname "wi"
+					      #: default 0.00 min 0 max 1  	
+    		scalar "endShadowCos",        #: shortname "wf"
+					      #: default 0.50 min 0 max 1  	
+    		scalar "hairLength",          #: shortname "len"
+					      #: default 0.15 min 0 max 1   	
+    		scalar "hairBaseRadius",      #: shortname "rb"
+					      #: default 0.02 min 0 max 1   	
+    		scalar "hairTipRadius",       #: shortname "rt"
+					      #: default 0.00 min 0 max 1  	    
+		scalar "tangentBreakupAmt",   #: shortname "tba"
+					      #: default 0.05 min 0.0 max 1.0
+		scalar "tangentBreakup",      #: shortname "tb"
+					      #: default 100.0  
+					      #: min 0.01 max 100.0    					      					      					      
+		integer	"mode",       	      #: shortname "m"
+					      #: default 2					      
+		array light "lights"          #: shortname "l"
+		  )
+	#:
+	#: nodeid 4010
+	#:
+	version 1
+	apply material, shadow, texture
+end declare

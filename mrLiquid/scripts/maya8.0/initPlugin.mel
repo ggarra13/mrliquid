@@ -1,0 +1,14 @@
+
+
+global proc initPlugin( string $plugin )
+{
+   if ( `pluginInfo -q -l $plugin` == 0 )
+   {
+      loadPlugin $plugin;
+
+      if ( `pluginInfo -q -l $plugin` == 0 )
+      {
+	 error("Could not load plugin \"" + $plugin + "\".");
+      }
+   }
+}

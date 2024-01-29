@@ -1,0 +1,96 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.// All rights reserved.//// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.//// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+displayString -replace -value "Add Renderable Camera" m_createMayaSoftwareCommonGlobalsTab.kAddRenderCam;
+displayString -replace -value "Advanced Image Naming" m_createMayaSoftwareCommonGlobalsTab.kAdvancedFileNaming;
+displayString -replace -value "Alpha channel (Mask)" m_createMayaSoftwareCommonGlobalsTab.kAlphaChannel;
+displayString -replace -value "By frame:" m_createMayaSoftwareCommonGlobalsTab.kByFrame;
+displayString -replace -value "Renderable Camera" m_createMayaSoftwareCommonGlobalsTab.kCamera2;
+displayString -replace -value "Compression..." m_createMayaSoftwareCommonGlobalsTab.kCompression;
+displayString -replace -value "Custom" m_createMayaSoftwareCommonGlobalsTab.kCustom;
+displayString -replace -value "Requested DPI cannot be achieved because image resolution is limited to ^1sx^2s pixels for the Maya Personal Learning Edition" m_createMayaSoftwareCommonGlobalsTab.kDPICannotBeAchieved;
+displayString -replace -value "Depth channel (Z depth)" m_createMayaSoftwareCommonGlobalsTab.kDepthChannel;
+displayString -replace -value "Device aspect" m_createMayaSoftwareCommonGlobalsTab.kDeviceAspect;
+displayString -replace -value "Device aspect ratio:" m_createMayaSoftwareCommonGlobalsTab.kDeviceAspectRatio;
+displayString -replace -value "End frame:" m_createMayaSoftwareCommonGlobalsTab.kEndFrame;
+displayString -replace -value "name (Single Frame)" m_createMayaSoftwareCommonGlobalsTab.kExt1;
+displayString -replace -value "name.ext (Single Frame)" m_createMayaSoftwareCommonGlobalsTab.kExt2;
+displayString -replace -value "name.#.ext" m_createMayaSoftwareCommonGlobalsTab.kExt3;
+displayString -replace -value "name.ext.#" m_createMayaSoftwareCommonGlobalsTab.kExt4;
+displayString -replace -value "name.#" m_createMayaSoftwareCommonGlobalsTab.kExt5;
+displayString -replace -value "name#.ext" m_createMayaSoftwareCommonGlobalsTab.kExt6;
+displayString -replace -value "name_#.ext" m_createMayaSoftwareCommonGlobalsTab.kExt7;
+displayString -replace -value "name (Multi Frame)" m_createMayaSoftwareCommonGlobalsTab.kExt8;
+displayString -replace -value "name.ext (Multi Frame)" m_createMayaSoftwareCommonGlobalsTab.kExt9;
+displayString -replace -value "Extension:" m_createMayaSoftwareCommonGlobalsTab.kExtension;
+displayString -replace -value "File name" m_createMayaSoftwareCommonGlobalsTab.kFileName;
+displayString -replace -value "Insert keyword:" m_createMayaSoftwareCommonGlobalsTab.kFileNameKeywords;
+displayString -replace -value "File name prefix:" m_createMayaSoftwareCommonGlobalsTab.kFileNamePrefix;
+displayString -replace -value "Right click in the text field to insert keywords" m_createMayaSoftwareCommonGlobalsTab.kFileNamePrefixAnn;
+displayString -replace -value "Frame/Animation ext:" m_createMayaSoftwareCommonGlobalsTab.kFrameAnimationExt;
+displayString -replace -value "Frame padding:" m_createMayaSoftwareCommonGlobalsTab.kFramePadding;
+displayString -replace -value "Height:" m_createMayaSoftwareCommonGlobalsTab.kHeight;
+displayString -replace -value "Height must be at least 2 pixels" m_createMayaSoftwareCommonGlobalsTab.kHeightWarning;
+displayString -replace -value "Image File Output" m_createMayaSoftwareCommonGlobalsTab.kImageFileOutput;
+displayString -replace -value "Image format:" m_createMayaSoftwareCommonGlobalsTab.kImageFormatMenu;
+displayString -replace -value "Image resolution is limited to ^1sx^2s pixels for the Maya Personal Learning Edition" m_createMayaSoftwareCommonGlobalsTab.kImageResolutionLimited;
+displayString -replace -value "Image size" m_createMayaSoftwareCommonGlobalsTab.kImageSize;
+displayString -replace -value "Found invalid image format description: \"^1s\" in imageFormats.mel" m_createMayaSoftwareCommonGlobalsTab.kInvalidImageFormat;
+displayString -replace -value "Found invalid image format description: \"^1s\" in userImageFormats.mel" m_createMayaSoftwareCommonGlobalsTab.kInvalidUserImageFormat;
+displayString -replace -value "Insert camera name <Camera>" m_createMayaSoftwareCommonGlobalsTab.kKeywordCamera;
+displayString -replace -value "Insert current date: " m_createMayaSoftwareCommonGlobalsTab.kKeywordDate;
+displayString -replace -value "Insert layer name <Layer>" m_createMayaSoftwareCommonGlobalsTab.kKeywordLayer;
+displayString -replace -value "Insert scene name <Scene>" m_createMayaSoftwareCommonGlobalsTab.kKeywordScene;
+displayString -replace -value "Insert current time: " m_createMayaSoftwareCommonGlobalsTab.kKeywordTime;
+displayString -replace -value "Insert version: <Version>" m_createMayaSoftwareCommonGlobalsTab.kKeywordVersion;
+displayString -replace -value "Image Size" m_createMayaSoftwareCommonGlobalsTab.kLayoutImageSize;
+displayString -replace -value "Maintain ratio:" m_createMayaSoftwareCommonGlobalsTab.kMaintainRatio;
+displayString -replace -value "Maintain width/height ratio" m_createMayaSoftwareCommonGlobalsTab.kMaintainWidthHeightRatio;
+displayString -replace -value "  File name:  ^1s" m_createMayaSoftwareCommonGlobalsTab.kNewFileName;
+displayString -replace -value "  Image size: ^1s x ^2s \(^3s x ^4s ^5s ^6s ^7s \)" m_createMayaSoftwareCommonGlobalsTab.kNewImageSize;
+displayString -replace -value "  Path: ^1s/" m_createMayaSoftwareCommonGlobalsTab.kNewPath;
+displayString -replace -value "  To:             ^1s" m_createMayaSoftwareCommonGlobalsTab.kNewTo;
+displayString -replace -value "Non-IFF image formats are not supported when writing 2D motion vectors; setting image format to IFF" m_createMayaSoftwareCommonGlobalsTab.kNonIFFImageFormatNotSupported;
+displayString -replace -value "(not set; using scene name)" m_createMayaSoftwareCommonGlobalsTab.kNotSetUsingFilename;
+displayString -replace -value "Path" m_createMayaSoftwareCommonGlobalsTab.kPath;
+displayString -replace -value "Pixel aspect" m_createMayaSoftwareCommonGlobalsTab.kPixelAspect;
+displayString -replace -value "Pixel aspect ratio:" m_createMayaSoftwareCommonGlobalsTab.kPixelAspectRatio;
+displayString -replace -value "Post render frame MEL:" m_createMayaSoftwareCommonGlobalsTab.kPostRenderFrameMEL;
+displayString -replace -value "Post render layer MEL:" m_createMayaSoftwareCommonGlobalsTab.kPostRenderLayerMEL;
+displayString -replace -value "Post render MEL:" m_createMayaSoftwareCommonGlobalsTab.kPostRenderMEL;
+displayString -replace -value "Pre render frame MEL:" m_createMayaSoftwareCommonGlobalsTab.kPreRenderFrameMEL;
+displayString -replace -value "Pre render layer MEL:" m_createMayaSoftwareCommonGlobalsTab.kPreRenderLayerMEL;
+displayString -replace -value "Pre render MEL:" m_createMayaSoftwareCommonGlobalsTab.kPreRenderMEL;
+displayString -replace -value "Presets:" m_createMayaSoftwareCommonGlobalsTab.kPresets;
+displayString -replace -value "Render Options" m_createMayaSoftwareCommonGlobalsTab.kRenderOptions;
+displayString -replace -value "Renderable Cameras" m_createMayaSoftwareCommonGlobalsTab.kRenderableCameras;
+displayString -replace -value "By frame:" m_createMayaSoftwareCommonGlobalsTab.kRenumberByFrame;
+displayString -replace -value "Renumber frames using:" m_createMayaSoftwareCommonGlobalsTab.kRenumberFramesUsing;
+displayString -replace -value "Resolution:" m_createMayaSoftwareCommonGlobalsTab.kResolution;
+displayString -replace -value "Resolution (DPI) must be at least 1.0 pixels/inch" m_createMayaSoftwareCommonGlobalsTab.kResolutionDPIWarn;
+displayString -replace -value "Resolution units:" m_createMayaSoftwareCommonGlobalsTab.kResolutionUnits;
+displayString -replace -value "Size units:" m_createMayaSoftwareCommonGlobalsTab.kSizeUnits;
+displayString -replace -value "Start frame:" m_createMayaSoftwareCommonGlobalsTab.kStartFrame;
+displayString -replace -value "Start number:" m_createMayaSoftwareCommonGlobalsTab.kStartNumber;
+displayString -replace -value "To" m_createMayaSoftwareCommonGlobalsTab.kTo;
+displayString -replace -value "Use custom extension:" m_createMayaSoftwareCommonGlobalsTab.kUseCustomExtension;
+displayString -replace -value "Use current date: " m_createMayaSoftwareCommonGlobalsTab.kVersionDate;
+displayString -replace -value "Version Label:" m_createMayaSoftwareCommonGlobalsTab.kVersionLabel;
+displayString -replace -value "Right click in the text field to use defaults names" m_createMayaSoftwareCommonGlobalsTab.kVersionLabelAnn;
+displayString -replace -value "Use number: " m_createMayaSoftwareCommonGlobalsTab.kVersionNumber;
+displayString -replace -value "Use current time: " m_createMayaSoftwareCommonGlobalsTab.kVersionTime;
+displayString -replace -value "Use this value:" m_createMayaSoftwareCommonGlobalsTab.kVersionTitle;
+displayString -replace -value "Width:" m_createMayaSoftwareCommonGlobalsTab.kWidth;
+displayString -replace -value "Width must be at least 2 pixels" m_createMayaSoftwareCommonGlobalsTab.kWidthWarning;

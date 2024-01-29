@@ -1,0 +1,527 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.// All rights reserved.//// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.//// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+//
+//	Script: mentalrayCustomNodeUI.mel
+//
+//	Purpose:
+//		This script contains code to add all mental ray custom shader 
+//		types to Maya's HyperShade UI.  There are 3 parts of the 
+//		HyperShade UI that are affected:
+//
+//		1) Create Bar: There is a new tab for creating mental
+//		   ray custom shaders, with an expandable frame
+//		   for each type of mental ray shader.  Nodes can
+//		   be created by either clicking on the buttons
+//		   in the frames, or by dragging and dropping from
+//		   the buttons into the Work Area.
+//
+//		2) Create Menu: There are new submenus for creating each type
+//		   of mental ray shader node.  Nodes are created by
+//		   selecting the menu items.
+//
+//		3) Create Render Node Window:
+//
+//	There is a new tab for mental ray shaders, with an
+//	expandable frame for each type of shader.  Nodes 
+//	can be created by clicking the buttons or by 
+//	dragging and dropping from the buttons into the Work Area.
+//
+//	Modified Files:
+//
+//	In addition to this file, modified versions of the following scripts
+//	are required in order for the HyperShade additions to work properly:
+//
+//		- createRenderNode.mel
+//		- hyperShadePanel.mel
+//		- renderCreateBarUI.mel
+//
+//	Limitations:	
+//
+//	- currently, there are no additional HyperShade tabs to display 
+//	  mental ray nodes.  They are all displayed in one of the existing
+//	  Maya tabs (Shaders, Textures, Lights, or Utilities).  This is an
+//	  area that we must explore to decide the best course of action.
+//
+//	- currently, mental ray light shaders do not show up in the "Lights"
+//	  tab (they should).  The cause of this is under investigation.
+//
+//	- currently, the UI does not dynamically update to reflect the load 
+//	  status of the mental ray for Maya plugin, nor does it react to the
+//	  addition/deletion of mental ray custom shader node types.  Make sure 
+//	  that any custom shaders are already loaded when the HyperShade is
+//	  created.
+//
+//	History:
+//
+//	02.05.02 steve:	add 'rendernode' prefix to mental ray classification
+//			to support correct default handling by Maya
+//	16.08.02 thasc:	integrate A|w changes
+//
+//
+//	To Do:
+//
+//		1) Augment mrCustomNodeUI proc to refresh Create menu and 
+//		   Create Render Node dialog as well as Create Bar.
+//		
+//
+//	Details:
+//
+//	In Maya, there are two mechanisms for classifying shading nodes, static
+//	classification and runtime classification.  Static classifications are
+//	per-class, and are declared when a new node type is loaded into Maya.
+//	These classifications are used to build all of Maya's shading node 
+//	creation UI.
+//
+//	Runtime classifications are per-node, and are assigned when a node is
+//	created.  A node can be created as a shader, texture, light, utility, or
+//	postprocess.  These classifications are assigned via the "shadingNode" 
+//	node creation command, and are implemented as a connection to one of the
+//	5 list nodes (one for each runtime classification type).  All the 
+//	rendering UI for displaying existing nodes (the HyperShade tabs, for 
+//	example) are built based on these runtime classifications.
+//
+//	To add mental ray nodes to Maya, we created a table listing all the
+//	mental ray node categories, along with static and runtime
+//	classifications for each category.  We then modified the appropriate
+//	UI scripts to add sections for all the mental ray node types.
+//	We were able to separate out the UI creation functionality into
+//	functions that live in this file, with a few calls to these functions
+//	inserted into the rendering UI scripts.
+//
+//	The scripts are set up so that all node creation filters back to the
+//	single function mrCreateCustomNode().  Any mental ray-specific
+//	functionality that needs to be done on node creation should probably
+//	be done there.
+//
+//	Though new static classifications were created, we have reused the
+//	existing Maya runtime classifications for now.  We are investigating
+//	how difficult it is to add new runtime classifications.
+//
+//
+
+//*****************************************************************************
+//
+//	1. Definition of mental ray node categories and classifications.
+//
+//*****************************************************************************
+
+//
+//	This table defines the mental ray node categories.
+//	Each category has 4 pieces of information:
+//
+//		1) a title string for the category
+//		2) a string that can be used as a basis for
+//		   naming Ui controls for the category
+//		3) the static classification for the category
+//		4) the Maya runtime classification for the category
+//
+//	The order of categories in the table dictates the order in which
+//	they will be displayed in the UI (currently just alphabetical).
+//	The global functions mrNumNodeCategories() and mrGetNodeCategory()
+//	are used to access the node category information.
+//	The categories should match mentalrayCustomNodeClassificationString.mel
+global string $mrNodeTypeInfo[] = 
+{
+	"Materials",
+		"mrMaterials",
+		"rendernode/mentalray/material","-asShader",
+	"Shadow Shaders",
+		"mrShadow",
+		"rendernode/mentalray/shadow","-asUtility",
+	"Volumetric Materials",
+		"mrVolume",
+		"rendernode/mentalray/volume","-asShader",
+	"Displacement Shaders",
+		"mrDisplacement",
+		"rendernode/mentalray/displace","-asUtility",
+	"Photonic Materials",
+		"mrPhoton",
+		"rendernode/mentalray/photon","-asUtility",
+	"Photon Volumetric Materials",
+		"mrPhotonVolume",
+		"rendernode/mentalray/photonvol","-asUtility",	
+	"Textures",
+		"mrTexture",
+		"rendernode/mentalray/texture","-asTexture",
+	"Environments",
+		"mrEnvironment",
+		"rendernode/mentalray/environment","-asShader",
+	"MentalRay Lights",
+		"mrLight",
+		"rendernode/mentalray/light","-asUtility",
+	"Photon Emitters",
+		"mrEmitter",
+		"rendernode/mentalray/emitter","-asUtility",
+	"Light Maps",
+		"mrLightmap",
+		"rendernode/mentalray/lightmap","-asUtility",
+	"Lenses",
+		"mrLens",
+		"rendernode/mentalray/lens","-asUtility",
+	"Output Shaders",
+		"mrOutput",
+		"rendernode/mentalray/output","-asUtility",
+	"Geometry",
+		"mrGeometry",
+		"rendernode/mentalray/geometry","-asUtility",
+	"Contour Store",
+		"mrContourStore",
+		"rendernode/mentalray/contour/store","-asUtility",
+	"Contour Contrast",
+		"mrContourContrast",
+		"rendernode/mentalray/contour/contrast","-asUtility",
+	"Contour Shader",
+		"mrContourShader",
+		"rendernode/mentalray/contour/shader","-asUtility",
+	"Contour Output",
+		"mrContourOutput",
+		"rendernode/mentalray/contour/output","-asUtility",
+	"Sample Compositing",
+		"mrCompositing",
+		"rendernode/mentalray/composite","-asUtility",
+	"Data Conversion",
+		"mrConversion",
+		"rendernode/mentalray/conversion","-asUtility",
+	"State Shaders",
+		"mrState",
+		"rendernode/mentalray/state","-asUtility",	
+	"Miscellaneous",
+		"mrMisc",
+		"rendernode/mentalray/misc","-asUtility"
+};
+
+
+global proc int mrNumNodeCategories()
+//
+//	Function:	mrNumNodeCategories()
+//	Purpose:	Returns the number of mental ray node categories.
+//
+{
+	global string $mrNodeTypeInfo[];
+
+	return( size($mrNodeTypeInfo)/4 );
+}
+
+global proc string[] mrGetNodeCategory( int $whichCat )
+//
+//	Function:	mrGetNodeCategory
+//	Purpose:	Retrieves information about the specified category.
+//	Arguments:	$whichCat - the numeric identifier for the category.
+//	Returns:	A 4-element string array containing the title string, 
+//				ui base name, static classification, and runtime classification
+//				for the category.
+//
+{
+	global string $mrNodeTypeInfo[];
+
+	string $categoryName = $mrNodeTypeInfo[4*$whichCat];
+	string $categoryUiName = $mrNodeTypeInfo[4*$whichCat+1];
+	string $categoryStaticClassification = $mrNodeTypeInfo[4*$whichCat+2];
+	string $categoryRuntimeClassification = $mrNodeTypeInfo[4*$whichCat+3];
+
+	return	{	$categoryName, 
+				$categoryUiName, 
+				$categoryStaticClassification, 
+				$categoryRuntimeClassification 
+			};
+}
+
+//*****************************************************************************
+//
+//	2. Node creation callback function.  All create actions from the various
+//	   parts of the UI (create bar, create menu, create render node window)
+//	   call this function to actually create nodes.
+//
+//*****************************************************************************
+
+global proc string mrCreateCustomNode(	string $runtimeClassification, 
+										string $postCommand , string $nodeType)
+//
+//	Function:	mrCreateCustomNode
+//	Purpose:	Callback routine to create a mental ray custom node.
+//	Arguments:
+//				$runtimeClassification - the runtime classification to be
+//										 assigned to the node
+//				$nodeType - the type of node to be created.
+//				$postCommand - command to be executed after node creation
+//
+//	Returns:	The name of the newly created node.
+//
+{
+	// Use the shadingNode command to create the node and assign its 
+	// runtime classification.
+	//
+	string $node = `shadingNode $runtimeClassification $nodeType`;
+
+	select $node;
+
+	if ($postCommand != "") {
+		string $cmd = substitute("%node",$postCommand,$node);
+		evalEcho $cmd;
+
+		if (`window -exists createRenderNodeWindow`)
+		{
+			window -e -vis false createRenderNodeWindow;
+		}
+	}
+
+	// attach shading group if the it is material shader and surface shader.
+	if( isClassified($node, "rendernode/mentalray/material") && isClassified($node, "shader/surface"))
+	{
+		string $cmd = "sets -renderable true -noSurfaceShader true -empty -name "+$node+"SG";
+		string $group = `evalEcho $cmd`;
+		$cmd = "connectAttr " + $node + ".message " + $group + ".miMaterialShader";
+		evalEcho $cmd;
+	}
+
+
+	return $node;
+}
+
+
+//*****************************************************************************
+//
+//	3. Create Render Node window functions.  In this window, we inserted a
+//	   new tab for mental ray nodes.  Each category has its own collapsable
+//	   frame layout containing buttons to create the various node types within
+//	   that category.
+//
+//	   The UI for this window is created in two stages - first the tabs are
+//	   built, which involves creating the layouts and buttons in the appropriate
+//	   style, then they are set up, which involves assigning the callback commands
+//	   for each button.  The setup routine can be invoked multiple times in order
+//	   to update the button callbacks to respond to the different contexts in
+//	   which the window may be invoked.
+//
+//	   We have created our own tab build and setup routines here, and added calls
+//	   to them to the createRenderNode.mel script.
+//
+//*****************************************************************************
+
+global proc mrCreateNodeWindow_BuildTab()
+//
+//	Function:	mrCreateNodeWindow_BuildTab()
+//	Purpose:	mental ray equivalent of the various build*() functions in
+//				createRenderNode.mel.  This function builds the mental ray
+//				node tab and all of its category sublayouts containing node
+//				creation buttons.
+//
+//	Notes:	When the function is invoked, it is inside a new tab that has
+//			been created for mental ray nodes.
+{
+	// we are inside the new tab, so create a layout for the node categories 
+	//
+	columnLayout -adj true mentalRayTab;
+
+		// iterate through the categories
+		//
+		int $numCategories = mrNumNodeCategories();
+		int $i;
+		for( $i = 0; $i < $numCategories; $i++ )
+		{
+			// get the info about this category
+			//
+			string $categoryInfo[] = mrGetNodeCategory( $i );
+			string $title = $categoryInfo[0];
+			string $uiBaseName = $categoryInfo[1];
+			string $staticClassification = $categoryInfo[2];
+			string $runtimeClassification = $categoryInfo[3];
+
+			// create a frame layout to hold the buttons for the nodes in
+			// this category.  Use the ui base name from the category info
+			// to name the layouts.
+			//
+			frameLayout -l $title -borderVisible true -collapsable true 
+				-borderStyle "etchedIn"
+				-marginWidth 5
+				-marginHeight 5
+				-collapse false	($uiBaseName + "F");	
+
+				columnLayout ($uiBaseName + "C");
+
+					// build the buttons for this category.  This function is
+					// in createRenderNode.mel.
+					//
+					refreshButtons($staticClassification,($uiBaseName+"RC"));
+
+				setParent ..;
+
+			setParent ..;
+		}
+
+		setParent ..;
+}
+
+
+global proc mrCreateNodeWindow_SetupTab( string $postCommand, string $flag )
+//
+//	Function:	mrCreateNodeWindow_SetupTab()
+//	Purpose:	mental ray equivalent of the various setup*() functions in
+//				createRenderNode.mel.  This function assigns the callback
+//				commands to the node creation buttons that were created in
+//				mrCreateNodeWindow_BuildTab().
+//
+//	Arguments:	
+//				$postCommand - a command to be executed after the node is
+//							   created.  One use for this function is to
+//							   establish a connection from the new node to 
+//							   an existing node (this is used when the 
+//							   window is invoked in response to a click
+//							   on the "texture" button in another node's
+//							   attribute editor).  For the moment, we 
+//							   ignore this command for mental ray nodes.
+//
+//				$flag - a flag that has specific meaning for certain 
+//						creation operations in Maya.  Some possible 
+//						values of the flag are "asBump" and "asDisplacement",
+//						which indicate that a bump or displacement node should
+//						be created and connected to the node that the user
+//						selects.  We also ignore this flag for mental ray
+//						nodes for the moment.
+//
+//	Notes:	When the function is invoked, it is inside the layout for the
+//			create render node window.
+//
+{
+	// go to the mental ray node tab
+	//
+    setParent mentalRayTab;
+
+	// set up the buttons for each mental ray node category
+	//
+	int $numCategories = mrNumNodeCategories();
+	int $i;
+	for( $i = 0; $i < $numCategories; $i++ )
+	{
+		string $categoryInfo[] = mrGetNodeCategory( $i );
+
+		string $staticClassification = $categoryInfo[2];
+		string $runtimeClassification = $categoryInfo[3];
+
+		// for each node type in this category, assign the callback
+		// command for its button to just call mrCreateCustomNode()
+		// with the appropriate node type and runtime classification.
+		//
+		string $nodes[] = `listNodeTypes $staticClassification`;
+		for( $name in $nodes ) 
+		{
+			if( `nodeIconButton -exists ($name+"Btn")` ) 
+			{
+				string $command =	("mrCreateCustomNode " 
+									+ $runtimeClassification 
+									+ " \"" + $postCommand + "\""
+									+ " " + $name);
+
+				nodeIconButton -e -command $command ($name+"Btn");
+			}
+		}
+	}
+}
+
+//*****************************************************************************
+//
+//	4. HyperShade Create Bar functions.  This UI looks much like the UI
+//	   in the Create Render Node window - a tab layout for mental ray with 
+//	   collapsable frame layouts for each of the node categories.  The 
+//	   mrRenderCreateBar_CreateTab() method mimics the create*Tab() routines
+//	   found in renderCreateBarUI.mel.
+//
+//*****************************************************************************
+
+
+global proc mrRenderCreateBar_CreateTab_Content(string $style, 
+    int $borderVisible, int $labelVisible, string $scrollLayoutName)
+//
+//	Function:	mrRenderCreateBar_CreateTab_Content()
+//	Purpose:	Does the actual job for mrRenderCreateBar_CreateTab.
+//				Refactored into a separate procedure
+//				so othat "Create All Nodes" tab shows
+//				both maya and mental ray nodes
+//
+
+{
+	// create a frame layout for each category
+	//
+	int $numCategories = mrNumNodeCategories();
+	int $i;
+	for( $i = 0; $i < $numCategories; $i++ )
+	{
+		string $categoryInfo[] = mrGetNodeCategory( $i );
+		string $title = $categoryInfo[0];
+		string $uiBaseName = $categoryInfo[1];
+		string $staticClassification = $categoryInfo[2];
+		string $runtimeClassification = $categoryInfo[3];
+
+		// create the frame layout
+		createCollapseGroup( $title, $labelVisible, $borderVisible, true , $scrollLayoutName);
+		
+		// add the buttons to it
+        //
+        hyperShadeCreateTabCreateButtons( 
+            $staticClassification, $runtimeClassification, "" );
+		setParent ..;
+	}
+}
+
+//*****************************************************************************
+//
+//	5. HyperShade Create menu functions.  To the Create menu, we add a set of
+//	   submenus, one for each category of mental ray node.  The 
+//	   mrHyperShadeCreateMenu_BuildMenu() function mimics the buildCreateSubmenu()
+//	   function that lives in hyperShadePanel.mel.
+//
+//*****************************************************************************
+
+global proc mrHyperShadeCreateMenu_BuildMenu()
+//
+//	Function:	mrHyperShadeCreateMenu_BuildMenu()
+//	Purpose:	Builds menu items for creating mental ray nodes, organized
+//				into submenus by category.
+//
+//	Notes:	When this function is invoked, it is inside of the Create menu.
+//			This function mimics the buildCreateSubmenu() function in 
+//			hyperShadePanel.mel, and in fact calls that function with a slightly
+//			different set of arguments than the other Maya node types.  For 
+//			mental ray nodes, the menu items are set up to call back to the
+//			mrCreateCustomNode() function for node creation.
+//
+{
+	// build a submenu for each node category
+	//
+	int $numCategories = mrNumNodeCategories();
+	int $i;
+	for( $i = 0; $i < $numCategories; $i++ )
+	{
+		string $categoryInfo[] = mrGetNodeCategory( $i );
+		string $title = $categoryInfo[0];
+		string $uiBaseName = $categoryInfo[1];
+		string $staticClassification = $categoryInfo[2];
+		string $runtimeClassification = $categoryInfo[3];
+		
+		menuItem -label ( "mental ray " + $title) -tearOff true -subMenu true;
+		
+		// call buildCreateSubMenu() to create the menu entries.  The specified 
+		// creation command is mrCreateCustomNode $runtimeClassification.  The
+		// buildCreateSubMenu will append to that argument list the name of the
+		// node type, thereby completing the correct argument list for the 
+		// creation routine.
+		//
+		buildCreateSubMenu( $staticClassification, 
+							("mrCreateCustomNode " + $runtimeClassification + " \"\" ") );
+		
+		setParent -menu ..;
+	}
+}

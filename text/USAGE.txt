@@ -1,0 +1,110 @@
+
+HOW TO USE
+----------
+
+Load the plugin into maya from the plugin manager.
+The plugin, at least for now, also relies on maya2mr being loaded and, 
+as such, loading mrLiquid will also load in maya2mr (if it has not been
+loaded yet).
+If you have rubyMEL installed, you might also want to optionally load it, too,
+so that mrLiquid can use ruby.
+Eventually, mrLiquid might evolve into being a full replacement of maya2mr
+and, as such, loading maya2mr will not be needed.
+If you like the plugin enough, you can set it to autoload.
+
+Currently, the plugin installs a single command by the name of "mental".
+This is a command that mimick's Mayatomr's main command.
+It supports most of the maya2mr flags with a similar syntax and it also adds
+one or two flags of its own.
+Of course, right now, "mental" does not yet support IPR and it does not yet
+support lightmapping.  IPR is tricky without raylib, but do expect to see
+lightmapping added at one point.
+
+To spit out an .mi file, you can just do:
+
+mental -mi;
+
+If you want to spit out multiple frames, you can use:
+
+mental -mi -sf 1 -ef 10
+(where -sf and -ef indicate the start and end frame respectively)
+
+If you want to spit out multiple frames onto a single file with incremental
+updates, you'd use the -perframe flag, as:
+
+mental -mi -sf 1 -ef 10 -pf 0;
+
+
+Render Passes
+-------------
+
+Loading the plugin will also install the support needed for proper rendering
+of passes.  The approach taken to rendering passes is relatively similar
+to Andrew Chapman's Render Pass plugin.  However, since the plugin was never
+made open source, mrLiquid uses its own variation of the approach.
+Just like in the original Render Pass plugin, render passes are modified 
+using overrides.
+Unlike Andrew's plugin, each pass and each override is a node in your scene,
+that is linked thru their message plugs.  This has the benefit that you can
+thus use all of maya's editors, including the Attribute Editor to manage your
+render passes.  Removing a pass is as simple as removing the node (albeit
+you can also turn off a pass so it does not get executed but remains in the
+scene).
+In addition to that, two panels (somewhat similar to maya's outliner but 
+simpler) are provided that will list all render passes and all render pass 
+overrides.
+In the render pass panel you can also control the order of how passes are
+run in batch mode and you can also turn passes off (without deleting them).
+The overrides panel is mainly to be used with the attribute editor of the
+render pass so as to add the overrides to the pass.
+Additional features to Andrew's plugin include the ability to run Ruby code
+instead of MEL code and the ability to turn on/off both some render passes as
+well as the overrides.
+Also, unlike Andrew's plugin, the order in which overrides are added to passes
+is important, too, as overrides will get executed exactly in that order (and
+the post commands will, logically, get executed in reverse order).
+Adding up to the suite of tools of mental, two useful commands are provided
+for saving and restoring both material assignments and objects' visibility,
+by the name of mentalMaterial and mentalVisibility.
+This allows relatively easy modification of both without having to copy/paste
+all the assignments for all the nodes in each override.  
+For a quick example of some mentalMaterial at least, the default loading of 
+mrLiquid creates an override to show mental ray tesselation.
+Another benefit of mrLiquid's render passes over is that each 
+pass takes full advantage of mental ray's incremental updates.  
+That is, mrLiquid's mental command internally keeps track of which nodes 
+have changed and how.
+As such, instead of respiting the geometry multiple times for each pass into
+multiple files, a single .mi file is generated for all passes, which is 
+smaller in comparison. If you ever have to render a big shot with many layers 
+you may find this feature quite useful (as film work has been limited by ribs 
+so far, I think people don't yet realize how useful this can potentially be).
+Note, however, that, if your rendering of layer passes is mostly to get
+diffuse, specular, shadow, etc. saved separately, it is still better to rely on 
+mray's multiple framebuffers and use custom shaders that spit out the proper
+calculation to the proper pass.  
+And, if that was not enough... mrLiquid's render passes are relatively safe
+for importing/exporting/merging into other scenes.  
+If you import two scenes with render passes in them, the passes will be 
+automatically sorted and merged without much user intervention.
+
+For more information about the original Render Pass plugin, and Andrew's
+webpages, you can check out:
+http://www.technolumiere.com/
+
+Albeit, as we said, the GUI is different due to mental using script panels,
+Andrew's tutorials and docs should still be of help:
+http://www.technolumiere.com/software/renderpassdocs/RenderPass_Tutorial.html
+http://www.technolumiere.com/software/renderpassdocs/RenderPass.html
+
+Lightmapping
+------------
+
+Particles
+---------
+
+Hair
+----
+
+Subdivision Surfaces
+--------------------

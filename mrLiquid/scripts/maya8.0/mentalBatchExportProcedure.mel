@@ -1,0 +1,13 @@
+
+global proc mentalBatchExportProcedure(
+	string $filename,				// mi file name
+	string $option					// optional arg to the export command 
+	)
+{
+	string $rootDir = miGetRootDir();
+
+	string $cmd = "mental -mi -project \"" + $rootDir + "\" -f \"" + $filename + "\" ";	
+	$cmd += $option;
+	
+	eval $cmd;
+}

@@ -1,0 +1,2557 @@
+// Copyright (C) 1997-2004 Alias Systems Corp.
+// 
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias license agreement, without fee.
+// 
+// ALIAS DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+
+//****************************************************************************
+//	UI for convertLightmapSetup command. Invoked from  Maya's
+//	"Batch Bake(mental ray)" when current renderer is set to mental ray.
+//****************************************************************************
+global string $gMentalBakeOptionBox = "";
+
+global string $temporaryBakeSetOverride = "";
+
+// Description:  This procedure is called to create the
+//      optionVars related to the vertex bake set.
+//
+proc createVertexBakeSetOptionVars(int $forceFactorySettings)
+{
+   // color mode
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeColorMode`) {
+      optionVar -intValue vertexBakeColorMode 1;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeOcclusionRays`) 
+   {
+      optionVar -intValue vertexBakeOcclusionRays 64;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeOcclusionFalloff`) 
+   {
+      optionVar -floatValue vertexBakeOcclusionFalloff 0;
+   }
+    
+   // use orthogonal reflection
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeOrthogonalReflection`) {
+      optionVar -intValue vertexBakeOrthogonalReflection 0;
+   }
+
+   // use face normals
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeUseFaceNormals`) {
+      optionVar -intValue vertexBakeUseFaceNormals 0;
+   }
+
+   // normal direction
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeNormalDirection`) {
+      optionVar -intValue vertexBakeNormalDirection 2;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeSharedVertices`) 
+   {
+      optionVar -intValue vertexBakeSharedVertices 0;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeBakeAlpha`) 
+   {
+      optionVar -intValue vertexBakeBakeAlpha 0;
+   }
+    
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeBakeColor`) 
+   {
+      optionVar -intValue vertexBakeBakeColor 1;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeAlphaMode`) 
+   {
+      optionVar -intValue vertexBakeAlphaMode 1;
+   }
+    
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeScaleRgba`) 
+   {
+      optionVar -floatValue vertexBakeScaleRgba 1.0;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeClampMin`) 
+   {
+      optionVar -intValue vertexBakeClampMin 0;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeMinColorR`) 
+   {
+      optionVar -floatValue vertexBakeMinColorR 0;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeMinColorG`) 
+   {
+      optionVar -floatValue vertexBakeMinColorG 0;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeMinColorB`) 
+   {
+      optionVar -floatValue vertexBakeMinColorB 0;
+   }
+    
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeMinAlpha`) 
+   {
+      optionVar -floatValue vertexBakeMinAlpha 0;
+   }
+    
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeClampMax`) 
+   {
+      optionVar -intValue vertexBakeClampMax 0;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeMaxColorR`) 
+   {
+      optionVar -floatValue vertexBakeMaxColorR 0;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeMaxColorG`) 
+   {
+      optionVar -floatValue vertexBakeMaxColorG 0;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeMaxColorB`) 
+   {
+      optionVar -floatValue vertexBakeMaxColorB 0;
+   }
+    
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeMaxAlpha`) 
+   {
+      optionVar -floatValue vertexBakeMaxAlpha 1;
+   }
+    
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeFilterSize`) 
+   {
+      optionVar -floatValue vertexBakeFilterSize 0.001;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeFilterNormalTolerance`) 
+   {
+      optionVar -floatValue vertexBakeFilterNormalTolerance 5; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeColorBlending`) 
+   {
+      optionVar -intValue vertexBakeColorBlending 0; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists vertexBakeAlphaBlending`) 
+   {
+      optionVar -intValue vertexBakeAlphaBlending 0; 
+   }
+}
+
+// Description:  This procedure is called to create the
+//      optionVars related to the texture bake set.
+//
+proc createTextureBakeSetOptionVars(int $forceFactorySettings)
+{	
+   // color mode
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeColorMode`) {
+      optionVar -intValue textureBakeColorMode 1;
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeOcclusionRays`) 
+   {
+      optionVar -intValue textureBakeOcclusionRays 64; 
+   }
+    
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeOcclusionFalloff`) 
+   {
+      optionVar -floatValue textureBakeOcclusionFalloff 0; 
+   }
+    
+   // use orthogonal reflection
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeOrthogonalReflection`) {
+      optionVar -intValue textureBakeOrthogonalReflection 0;
+   }
+
+   // normal direction
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeNormalDirection`) {
+      optionVar -intValue textureBakeNormalDirection 2;
+   }
+
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakePrefix`) 
+   {
+      optionVar -stringValue textureBakePrefix "baked"; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeXResolution`) 
+   {
+      optionVar -intValue textureBakeXResolution 512; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeYResolution`) 
+   {
+      optionVar -intValue textureBakeYResolution 512; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeFileFormat`) 
+   {
+      optionVar -intValue textureBakeFileFormat 1; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeBitsPerChannel`) 
+   {
+      optionVar -intValue textureBakeBitsPerChannel 1; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeSamples`) 
+   {
+      optionVar -intValue textureBakeSamples 1; 
+   }
+    
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeBakeToOneMap`) 
+   {
+      optionVar -intValue textureBakeBakeToOneMap 0; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeBakeAlpha`) 
+   {
+      optionVar -intValue textureBakeBakeAlpha 0; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeAlphaMode`) 
+   {
+      optionVar -intValue textureBakeAlphaMode 1; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeFinalGatherQuality`) 
+   {
+      optionVar -floatValue textureBakeFinalGatherQuality 1; 
+   }
+    
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeFinalGatherReflect`) 
+   {
+      optionVar -floatValue textureBakeFinalGatherReflect 0; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeUvRange`) 
+   {
+      optionVar -intValue textureBakeUvRange 0; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeUMin`) 
+   {
+      optionVar -floatValue textureBakeUMin 1.0; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeUMax`) 
+   {
+      optionVar -floatValue textureBakeUMax 1.0; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeVMin`) 
+   {
+      optionVar -floatValue textureBakeVMin 1.0; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeVMax`) 
+   {
+      optionVar -floatValue textureBakeVMax 1.0; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeFillTextureSeams`) 
+   {
+      optionVar -floatValue textureBakeFillTextureSeams 0.0; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeOverrideMeshUVSetAssignments`) 
+   {
+      optionVar -intValue textureBakeOverrideMeshUVSetAssignments 0; 
+   }
+
+   if ($forceFactorySettings || 
+       !`optionVar -exists textureBakeUvSetName`) 
+   {
+      optionVar -stringValue textureBakeUvSetName "uvSet1"; 
+   }
+}
+
+// Description:  This procedure is called to create the 
+//      bake set override related optionVars.
+//
+proc createBakeSetOverrideOptionVars(string $forceFactorySettings)
+{
+   // If these optionVars has already been created, then
+   // don't recreate it.
+   //
+   if (!`optionVar -exists useBakeSetOverride` || $forceFactorySettings)
+   {
+      // Create bake set override related optionVars.
+      //
+      optionVar -intValue useBakeSetOverride 0;
+   }
+    
+   createVertexBakeSetOptionVars($forceFactorySettings);
+   createTextureBakeSetOptionVars($forceFactorySettings);
+    
+}
+
+proc setOptionVars(int $forceFactorySettings)
+{
+   // scope
+   if ($forceFactorySettings || !`optionVar -exists v_mentalBakeScope`) {
+      optionVar -stringValue v_mentalBakeScope "Selected";
+   }
+
+   // animation
+   if( $forceFactorySettings || !`optionVar -query v_mentalBakeAnimation`)
+   {
+      optionVar -intValue v_mentalBakeAnimation 0;
+   }
+
+   // initial bake sets
+   if ($forceFactorySettings || !`optionVar -exists v_mentalSkipDefault`) {
+      optionVar -intValue v_mentalSkipDefault 0;
+   }
+
+   // Bake to vertex/texture mode
+   if ($forceFactorySettings || !`optionVar -exists v_mentalBakeTo`) {
+      optionVar -stringValue v_mentalBakeTo "Texture";
+   }
+
+   // bake shadows
+   if ($forceFactorySettings || !`optionVar -exists v_mentalBakeShadows`) {
+      optionVar -intValue v_mentalBakeShadows 0;
+   }
+
+   // camera
+   if ($forceFactorySettings || !`optionVar -exists v_mentalCamera`) {
+      optionVar -stringValue v_mentalCamera "persp";
+   }
+	
+   // keep the original shading network
+   if ($forceFactorySettings || !`optionVar -exists v_mentalKeepOrgSG`) {
+      optionVar -intValue v_mentalKeepOrgSG 0;
+   }
+
+   // Bake Set Override
+   //
+   createBakeSetOverrideOptionVars($forceFactorySettings);
+}
+
+// Description:  This procedure is called to convert the 
+//      vertex bake set node to the optionVars
+//      related to the vertex bake set. 
+//
+proc convertVertexBakeSetNodeToOptionVar (string $node)
+{
+   // If the node does not exist, then do not convert.
+   //
+   if (size(`ls $node`) == 0)
+   {
+      return;
+   }
+
+   int $intValue;
+   float $floatValue;
+   float $floatArray[];
+
+   // common bake set options
+	    
+   $intValue = `getAttr ($node+".colorMode")`; 
+   optionVar -intValue vertexBakeColorMode $intValue;
+    
+   $intValue = `getAttr ($node+".occlusionRays")`; 
+   optionVar -intValue vertexBakeOcclusionRays $intValue;
+ 
+   $floatValue = `getAttr ($node+".occlusionFalloff")`; 
+   optionVar -floatValue vertexBakeOcclusionFalloff $intValue;   
+
+   $intValue = `getAttr ($node+".orthogonalReflection")`;
+   optionVar -intValue vertexBakeOrthogonalReflection $intValue;
+	
+   $intValue = `getAttr ($node+".useFaceNormals")`;
+   optionVar -intValue vertexBakeUseFaceNormals $intValue;
+	
+   $intValue = `getAttr ($node+".normalDirection")`;
+   optionVar -intValue vertexBakeNormalDirection $intValue;
+	
+
+   //$intValue = `getAttr ($node+".sharedVertices")`; 
+   //optionVar -intValue vertexBakeSharedVertices $intValue;
+
+   $intValue = `getAttr ($node+".bakeAlpha")`; 
+   optionVar -intValue vertexBakeBakeAlpha $intValue;
+    
+   $intValue = `getAttr ($node+".bakeColor")`; 
+   optionVar -intValue vertexBakeBakeColor $intValue;
+ 
+   $intValue = `getAttr ($node+".alphaMode")`; 
+   optionVar -intValue vertexBakeAlphaMode $intValue; 
+
+   $floatValue = `getAttr ($node+".scaleRgba")`; 
+   optionVar -floatValue vertexBakeScaleRgba $floatValue;
+
+   $intValue = `getAttr ($node+".clampMin")`; 
+   optionVar -intValue vertexBakeClampMin $intValue;
+
+   $floatArray = `getAttr ($node+".minColor")`; 
+   optionVar -floatValue vertexBakeMinColorR $floatArray[0];
+   optionVar -floatValue vertexBakeMinColorG $floatArray[1];
+   optionVar -floatValue vertexBakeMinColorB $floatArray[2];
+    
+   $floatValue = `getAttr ($node+".minAlpha")`; 
+   optionVar -floatValue vertexBakeMinAlpha $floatValue;
+    
+   $intValue = `getAttr ($node+".clampMax")`; 
+   optionVar -intValue vertexBakeClampMax $intValue;
+
+   $floatArray = getAttr ($node+".maxColor"); 
+   optionVar -floatValue vertexBakeMaxColorR $floatArray[0];
+   optionVar -floatValue vertexBakeMaxColorG $floatArray[1];
+   optionVar -floatValue vertexBakeMaxColorB $floatArray[2];
+    
+   $floatValue = `getAttr ($node+".maxAlpha")`; 
+   optionVar -floatValue vertexBakeMaxAlpha $floatValue;
+    
+   $floatValue = `getAttr ($node+".filterSize")`; 
+   optionVar -floatValue vertexBakeFilterSize $floatValue;
+
+   $floatValue = `getAttr ($node+".filterNormalTolerance")`; 
+   optionVar -floatValue vertexBakeFilterNormalTolerance $floatValue;
+
+   $intValue = `getAttr ($node+".colorBlending")`; 
+   optionVar -intValue vertexBakeColorBlending $intValue;
+
+   $intValue = `getAttr ($node+".alphaBlending")`; 
+   optionVar -intValue vertexBakeAlphaBlending $intValue;
+}
+
+// Description:  This procedure is called to convert 
+//      texture bake set node to the optionVars
+//      related to the texture bake set. 
+//
+proc convertTextureBakeSetNodeToOptionVar (string $node)
+{
+   // If the node does not exist, then do not convert.
+   //
+   if (size(`ls $node`) == 0)
+   {
+      return;
+   }
+
+   string $text;
+   int $intValue;
+   float $floatValue;
+
+   $intValue = `getAttr ($node+".colorMode")`; 
+   optionVar -intValue textureBakeColorMode $intValue;
+    
+   $intValue = `getAttr ($node+".occlusionRays")`; 
+   optionVar -intValue textureBakeOcclusionRays $intValue;
+    
+   $floatValue = `getAttr ($node+".occlusionFalloff")`; 
+   optionVar -floatValue textureBakeOcclusionFalloff $floatValue;
+
+   $intValue = `getAttr ($node+".orthogonalReflection")`;
+   optionVar -intValue textureBakeOrthogonalReflection $intValue;
+	
+   $intValue = `getAttr ($node+".normalDirection")`;
+   optionVar -intValue textureBakeNormalDirection $intValue;
+	
+
+   $text = `getAttr ($node+".prefix")`; 
+   optionVar -stringValue textureBakePrefix $text;
+
+   $intValue = `getAttr ($node+".xResolution")`; 
+   optionVar -intValue textureBakeXResolution $intValue;
+
+   $intValue = `getAttr ($node+".yResolution")`; 
+   optionVar -intValue textureBakeYResolution $intValue;
+
+   $intValue = `getAttr ($node+".fileFormat")`; 
+   optionVar -intValue textureBakeFileFormat $intValue;
+
+   $intValue = `getAttr ($node+".bitsPerChannel")`; 
+   optionVar -intValue textureBakeBitsPerChannel $intValue;
+    
+   $intValue = `getAttr ($node+".samples")`; 
+   optionVar -intValue textureBakeSamples $intValue;
+
+   $intValue = `getAttr ($node+".bakeToOneMap")`; 
+   optionVar -intValue textureBakeBakeToOneMap $intValue;
+
+   $intValue = `getAttr ($node+".bakeAlpha")`; 
+   optionVar -intValue textureBakeBakeAlpha $intValue;
+
+   $intValue = `getAttr ($node+".alphaMode")`; 
+   optionVar -intValue textureBakeAlphaMode $intValue;
+
+   $floatValue = `getAttr ($node+".finalGatherQuality")`; 
+   optionVar -floatValue textureBakeFinalGatherQuality $floatValue;
+    
+   $floatValue = `getAttr ($node+".finalGatherReflect")`; 
+   optionVar -floatValue textureBakeFinalGatherReflect $floatValue;
+    
+   $intValue = `getAttr ($node+".uvRange")`; 
+   optionVar -intValue textureBakeUvRange $intValue;
+
+   $floatValue = `getAttr ($node+".uMin")`; 
+   optionVar -floatValue textureBakeUMin $floatValue;
+
+   $floatValue = `getAttr ($node+".uMax")`; 
+   optionVar -floatValue textureBakeUMax $floatValue;
+
+   $floatValue = `getAttr ($node+".vMin")`; 
+   optionVar -floatValue textureBakeVMin $floatValue;
+
+   $floatValue = `getAttr ($node+".vMax")`; 
+   optionVar -floatValue textureBakeVMax $floatValue;
+
+   $floatValue = `getAttr ($node+".fillTextureSeams")`; 
+   optionVar -floatValue textureBakeFillTextureSeams $floatValue;
+
+   $intValue = `getAttr ($node+".overrideUvSet")`; 
+   optionVar -intValue textureBakeOverrideMeshUVSetAssignments $intValue;
+
+   $text = `getAttr ($node+".uvSetName")`; 
+   optionVar -stringValue textureBakeUvSetName $text;
+
+}
+
+
+// Description:  This procedure is called to convert the optionVars
+//      related to the vertex bake set to a vertex bake set node.
+//
+proc string convertVertexBakeSetOptionVarToNode (string $nodeName)
+{
+   string $node = createBakeSet($nodeName, "vertexBakeSet"); 
+
+   // If the optionVars do not exist, then do not need to copy
+   // any optionVars to the node.
+   //
+   if (!`optionVar -exists vertexBakeSharedVertices`)
+   {
+      return $node;
+   }
+
+   int $intValue;
+   float $floatValue;
+   float $floatArray[];
+
+   $intValue = `optionVar -q vertexBakeColorMode`;
+   setAttr ($node+".colorMode") $intValue;
+
+   $intValue = `optionVar -q vertexBakeOcclusionRays`;
+   setAttr ($node+".occlusionRays") $intValue; 
+ 
+   $floatValue = `optionVar -q vertexBakeOcclusionFalloff`;
+   setAttr ($node+".occlusionFalloff") $floatValue; 
+    
+   $intValue = `optionVar -q vertexBakeOrthogonalReflection`;
+   setAttr ($node+".orthogonalReflection") $intValue;
+	
+	
+   $intValue = `optionVar -q vertexBakeUseFaceNormals`;
+   setAttr ($node+".useFaceNormals") $intValue;
+	
+   $intValue = `optionVar -q vertexBakeNormalDirection`;
+   setAttr ($node+".normalDirection") $intValue;
+	
+
+   //$intValue = `optionVar -q vertexBakeSharedVertices`;
+   //setAttr ($node+".sharedVertices") $intValue; 
+
+   $intValue = `optionVar -q vertexBakeBakeAlpha`;
+   setAttr ($node+".bakeAlpha") $intValue; 
+    
+   $intValue = `optionVar -q vertexBakeBakeColor`;
+   setAttr ($node+".bakeColor") $intValue; 
+ 
+   $intValue = `optionVar -q vertexBakeAlphaMode`;
+   setAttr ($node+".alphaMode") $intValue; 
+
+   $floatValue = `optionVar -q vertexBakeScaleRgba`;
+   setAttr ($node+".scaleRgba") $floatValue; 
+
+   $intValue = `optionVar -q vertexBakeClampMin`;
+   setAttr ($node+".clampMin") $intValue; 
+
+   $floatArray[0] = `optionVar -q vertexBakeMinColorR`;
+   $floatArray[1] = `optionVar -q vertexBakeMinColorG`;
+   $floatArray[2] = `optionVar -q vertexBakeMinColorB`;
+   setAttr ($node+".minColor") -type float3 
+   $floatArray[0] $floatArray[1] $floatArray[2]; 
+    
+   $floatValue = `optionVar -q vertexBakeMinAlpha`;
+   setAttr ($node+".minAlpha") $floatValue; 
+        
+   $intValue = `optionVar -q vertexBakeClampMax`;
+   setAttr ($node+".clampMax") $intValue; 
+
+   $floatArray[0] = `optionVar -q vertexBakeMaxColorR`;
+   $floatArray[1] = `optionVar -q vertexBakeMaxColorG`;
+   $floatArray[2] = `optionVar -q vertexBakeMaxColorB`;
+   setAttr ($node+".maxColor") -type float3 
+   $floatArray[0] $floatArray[1] $floatArray[2]; 
+    
+   $floatValue = `optionVar -q vertexBakeMaxAlpha`;
+   setAttr ($node+".maxAlpha") $floatValue; 
+        
+   $floatValue = `optionVar -q vertexBakeFilterSize`;
+   setAttr ($node+".filterSize") $floatValue; 
+
+   $floatValue = `optionVar -q vertexBakeFilterNormalTolerance`;
+   setAttr ($node+".filterNormalTolerance") $floatValue; 
+
+   $intValue = `optionVar -q vertexBakeColorBlending`;
+   setAttr ($node+".colorBlending") $intValue; 
+
+   $intValue = `optionVar -q vertexBakeAlphaBlending`;
+   setAttr ($node+".alphaBlending") $intValue; 
+
+   return $node;
+}
+
+// Description:  This procedure is called to convert the optionVars
+//      related to the texture bake set to a texture bake set node.
+//
+proc string convertTextureBakeSetOptionVarToNode (string $nodeName)
+{
+   string $node = createBakeSet($nodeName, "textureBakeSet"); 
+
+   // If the optionVars do not exist, then do not need to copy
+   // any optionVars to the node.
+   //
+   if (!`optionVar -exists textureBakePrefix`)
+   {
+      return $node;
+   }
+
+   string $text;
+   int $intValue;
+   float $floatValue;
+    
+    
+   $intValue = `optionVar -q textureBakeColorMode`;
+   setAttr ($node+".colorMode") $intValue;
+
+   $intValue = `optionVar -q textureBakeOcclusionRays`;
+   setAttr ($node+".occlusionRays") $intValue;
+    
+   $floatValue = `optionVar -q textureBakeOcclusionFalloff`;
+   setAttr ($node+".occlusionFalloff") $floatValue;
+    
+   $intValue = `optionVar -q textureBakeOrthogonalReflection`;
+   setAttr ($node+".orthogonalReflection") $intValue;
+	
+   $intValue = `optionVar -q textureBakeNormalDirection`;
+   setAttr ($node+".normalDirection") $intValue;
+	
+
+   $text = `optionVar -q textureBakePrefix`;
+   setAttr -type "string" ($node+".prefix") $text; 
+
+   $intValue = `optionVar -q textureBakeXResolution`;
+   setAttr ($node+".xResolution") $intValue; 
+
+   $intValue = `optionVar -q textureBakeYResolution`;
+   setAttr ($node+".yResolution") $intValue; 
+
+   $intValue = `optionVar -q textureBakeFileFormat`;
+   setAttr ($node+".fileFormat") $intValue; 
+
+   $intValue = `optionVar -q textureBakeBitsPerChannel`;
+   setAttr ($node+".bitsPerChannel") $intValue;
+
+   $intValue = `optionVar -q textureBakeSamples`;
+   setAttr ($node+".samples") $intValue; 
+    
+   $intValue = `optionVar -q textureBakeBakeToOneMap`;
+   setAttr ($node+".bakeToOneMap") $intValue; 
+
+   $intValue = `optionVar -q textureBakeBakeAlpha`;
+   setAttr ($node+".bakeAlpha") $intValue;
+
+   $intValue = `optionVar -q textureBakeAlphaMode`;
+   setAttr ($node+".alphaMode") $intValue;
+
+   $floatValue = `optionVar -q textureBakeFinalGatherQuality`;
+   setAttr ($node+".finalGatherQuality") $floatValue;
+    
+   $floatValue = `optionVar -q textureBakeFinalGatherReflect`;
+   setAttr ($node+".finalGatherReflect") $floatValue;
+    
+   $intValue = `optionVar -q textureBakeUvRange`;
+   setAttr ($node+".uvRange") $intValue;
+
+   $floatValue = `optionVar -q textureBakeUMin`;
+   setAttr ($node+".uMin") $floatValue;
+
+   $floatValue = `optionVar -q textureBakeUMax`;
+   setAttr ($node+".uMax") $floatValue;
+
+   $floatValue = `optionVar -q textureBakeVMin`;
+   setAttr ($node+".vMin") $floatValue;
+
+   $floatValue = `optionVar -q textureBakeVMax`;
+   setAttr ($node+".vMax") $floatValue;
+
+   $floatValue = `optionVar -q textureBakeFillTextureSeams`;
+   setAttr ($node+".fillTextureSeams") $floatValue;
+
+   $intValue = `optionVar -q textureBakeOverrideMeshUVSetAssignments`;
+   setAttr ($node+".overrideUvSet") $intValue;
+
+   $text = `optionVar -q textureBakeUvSetName`;
+   setAttr -type "string" ($node+".uvSetName") $text;
+
+   return $node;
+}
+
+// Description:  This procedure is called to convert the bake set
+//      option vars to a bake set node.  
+//
+global proc string convertBakeSetOptionVarToNode ()
+{
+   string $nodeType = "textureBakeSet"; 
+   string $bakeTo = `optionVar -q v_mentalBakeTo`; 
+
+   if ($bakeTo == "Vertices")
+   {
+      $nodeType = "vertexBakeSet";
+   }
+
+   // The suggested nodeName is a temporary node name.
+   //
+   string $nodeName = "tmp"+$bakeTo+"BakeSet";
+    
+   string $node;
+   if ($nodeType == "vertexBakeSet")
+   {
+      $node = convertVertexBakeSetOptionVarToNode ($nodeName);
+   }
+   else 
+   {
+      $node = convertTextureBakeSetOptionVarToNode ($nodeName);
+   }
+   return $node ;
+}
+
+
+//
+//  Procedure Name:
+//      mentalBakeCallback
+//
+//  Description:
+//		Update the option values with the current state of the option box UI.
+//
+//  Input Arguments:
+//      parent - Top level parent layout of the option box UI.  Required so
+//               that UI object names can be successfully resolved.
+//
+//	doIt   - Whether the command should execute.
+//
+//  Return Value:
+//      None.
+//
+global proc mentalBakeCallback(
+			       string $parent, 
+			       int $doIt )
+	
+{
+   setParent $parent;
+
+   //	Set the optionVar's from the control values, and then
+   //	perform the command.
+
+   optionVar -stringValue v_mentalBakeScope 
+   `optionMenuGrp -q -value mentalBakeScope`;
+
+   optionVar -intValue v_mentalSkipDefault 
+   `checkBoxGrp -q -v1 mentalSkipDefault`;
+
+   optionVar -stringValue v_mentalBakeTo 
+   `optionMenuGrp -q -value mentalBakeTo`;
+
+   optionVar -intValue v_mentalBakeAnimation
+   `checkBoxGrp -q -v1 mentalBakeAnimation`;
+
+   optionVar -intValue v_mentalBakeShadows
+   `checkBoxGrp -q -v1 mentalBakeShadows`;
+
+   optionVar -stringValue v_mentalCamera 
+   `optionMenuGrp -q -value mentalCamera`;
+
+   optionVar -intValue v_mentalKeepOrgSG 
+   `checkBoxGrp -q -v1 mentalKeepOrgSG`;
+
+   // Check to see if we are using the bake set override or not.
+   //
+   global string $temporaryBakeSetOverride; 
+   $temporaryBakeSetOverride = "";
+   if (`optionVar -exists useBakeSetOverride` &&
+       `optionVar -q useBakeSetOverride`) 
+   {
+      // Check which type of bake set is specified by bakeTo. 
+      // Copy the bake set option vars to a temporary bake set node.
+      //
+      $temporaryBakeSetOverride = convertBakeSetOptionVarToNode ();
+   }
+ 
+
+   if ($doIt) {
+      mentalBake( 0, 0 );
+      string $tmpCmd = "mentalBake(0,0)";
+      addToRecentCommandQueue $tmpCmd "mental ray Bake";
+   }
+
+   // Remove the temporary bake set.
+   //
+   if ($temporaryBakeSetOverride != "") 
+   {
+      delete $temporaryBakeSetOverride;
+   }
+   $temporaryBakeSetOverride = "";
+}
+
+
+//
+//  Procedure Name:
+//      mentalBakeSetup
+//
+//  Description:
+//		Update the state of the option box UI to reflect the option values.
+//
+//  Input Arguments:
+//      parent               - Top level parent layout of the option box UI.
+//                             Required so that UI object names can be 
+//                             successfully resolved.
+//
+//	forceFactorySettings - Whether the option values should be set to
+//                             default values.
+//
+//  Return Value:
+//      None.
+//
+global proc mentalBakeSetup(string $parent, int $forceFactorySettings)
+{
+   //	Retrieve the option settings
+   //
+   setOptionVars($forceFactorySettings);
+
+   setParent $parent;
+
+   //	Query the optionVar's and set the values into the controls.
+
+   optionMenuGrp -edit -value `optionVar -query v_mentalBakeScope` mentalBakeScope;
+   checkBoxGrp -edit -v1 `optionVar -query v_mentalBakeAnimation` mentalBakeAnimation;
+   checkBoxGrp -edit -v1 `optionVar -query v_mentalSkipDefault` mentalSkipDefault;
+   optionMenuGrp -edit -value `optionVar -query v_mentalBakeTo` mentalBakeTo;
+   checkBoxGrp -edit -v1 `optionVar -query v_mentalBakeShadows` mentalBakeShadows;
+	
+   // For cameras, we need to make sure first that the one in the
+   // optionvar is still valid.
+   string $cam = `optionVar -query v_mentalCamera`;
+   string $items[] = `optionMenuGrp -q -ill mentalCamera`;
+   for ($i=0 ; $i<size($items) ; $i++)
+      if ($cam == $items[$i])
+      {
+	 optionMenuGrp -edit -v $cam mentalCamera;
+	 break;
+      }
+
+   checkBoxGrp -edit -v1 `optionVar -query v_mentalKeepOrgSG` mentalKeepOrgSG;
+
+   refreshBakeSetOverrideFrame($parent, $forceFactorySettings);
+}
+
+
+        
+// Description:  This procedure is called when the 
+//      useBakeSetOverride check box changes status.
+//
+global proc useBakeSetOverrideChanged(string $parent)
+{
+   string $oldParent = `setParent -query`;
+   setParent $parent;
+
+   int $useOverride = `checkBoxGrp -q -v1 useBakeSetOverrideCtrl`;
+   optionVar -iv useBakeSetOverride $useOverride; 
+   refreshBakeSetOverrideFrame($parent, false);
+
+   setParent $oldParent;
+}
+
+// Description:  This procedure is called to create the 
+//      bake set override section in the bake set options window.
+//
+proc createBakeSetOverrideFrame(string $parent)
+{
+   setParent $parent;
+
+   checkBoxGrp -label1 "Use Bake Set Override" 
+   -cc ("useBakeSetOverrideChanged(\""+$parent+"\")")
+   useBakeSetOverrideCtrl; 
+
+   frameLayout
+   -label "Bake Set Override"
+   -collapsable true
+   -collapse true
+   bakeSetOverrideFrame;
+        
+   formLayout miSwitchBakeSetFormLayout;
+   setParent ..; // from miSwitchBakeSetFormLayout;
+
+   setParent ..;   // end of frameLayout
+            
+}
+
+// Description:  This procedure is called to create the
+//      vertex bake set override tabLayout.
+//
+proc createVertexBakeSetOverrideForm()
+{
+   //checkBoxGrp -label1 "Shared Vertices" 
+   //    -cc "vertexBakeSetOverrideCtrlChanged(\"sharedVertices\")"
+   //    sharedVerticesCtrl;
+
+   //separator;
+
+   optionMenuGrp -l "Color Mode" 
+   -cc "vertexBakeSetOverrideCtrlChanged(\"vertexBakeColorMode\")"
+   vertexBakeColorModeCtrl;
+   menuItem -l "Light and Color";
+   menuItem -l "Only Light";
+   menuItem -l "Only Global Illumination";
+   menuItem -l "Occlusion";
+   menuItem -l "Custom Shader";
+	
+   intSliderGrp -label "Occlusion Rays"
+   -min 0	-max 256 -value 64
+   -fieldMinValue 0 -fieldMaxValue 2048
+   -cc "vertexBakeSetOverrideCtrlChanged(\"vertexBakeOcclusionRays\")"
+   vertexBakeOcclusionRaysCtrl;
+
+   floatFieldGrp -label "Occlusion Falloff"
+   -cc "vertexBakeSetOverrideCtrlChanged(\"vertexBakeOcclusionFalloff\")"
+   vertexBakeOcclusionFalloffCtrl;		
+		
+   checkBoxGrp
+   -label ""
+   -label1 "Orthogonal Reflection"
+   -numberOfCheckBoxes 1
+   -value1 off
+   -cc "vertexBakeSetOverrideCtrlChanged(\"vertexBakeOrthogonalReflection\")"
+   vertexBakeOrthogonalReflectionCtrl;
+
+   optionMenuGrp -label "Normal Direction" 
+   -cc "vertexBakeSetOverrideCtrlChanged(\"vertexBakeNormalDirection\")"
+   vertexBakeNormalDirectionCtrl;
+   menuItem -label "Face Camera";
+   menuItem -label "Surface Front";
+   menuItem -label "Surface Back";
+	
+   //setParent -menu ..;
+	
+   separator; 
+    
+   checkBoxGrp -label1 "Bake Color" 
+   -cc "vertexBakeSetOverrideCtrlChanged(\"vertexBakeColor\")"
+   vertexBakeColorCtrl;
+        
+   checkBoxGrp -label1 "Bake Alpha" 
+   -cc "vertexBakeSetOverrideCtrlChanged(\"vertexBakeAlpha\")"
+   vertexBakeAlphaCtrl;
+          
+   separator;
+
+
+   floatSliderGrp -label "Scale Rgba"
+   -cc "vertexBakeSetOverrideCtrlChanged(\"scaleRgba\")"
+   -min 0.1
+   -max 2.1
+   -fieldMinValue 0.0
+   -fieldMaxValue 10000.0
+   scaleRgbaCtrl;
+
+   checkBoxGrp -label1 "Clamp Min"
+   -cc "vertexBakeSetOverrideCtrlChanged(\"clampMin\")"
+   clampMinCtrl; 
+    
+   colorSliderGrp -label "Min Color"
+   -cc "vertexBakeSetOverrideCtrlChanged(\"minColor\")"
+   minColorCtrl;
+
+   floatSliderGrp -label "Min Alpha"
+   -cc "vertexBakeSetOverrideCtrlChanged(\"minAlpha\")"
+   -min 0.0
+   -max 1.0
+   -fieldMinValue -1000.0
+   -fieldMaxValue 10000.0
+   minAlphaCtrl;
+        
+   checkBoxGrp -label1 "Clamp Max"
+   -cc "vertexBakeSetOverrideCtrlChanged(\"clampMax\")"
+   clampMaxCtrl; 
+    
+   colorSliderGrp -label "Max Color"
+   -cc "vertexBakeSetOverrideCtrlChanged(\"maxColor\")"
+   maxColorCtrl;
+
+   floatSliderGrp -label "Max Alpha"
+   -cc "vertexBakeSetOverrideCtrlChanged(\"maxAlpha\")"
+   -min 0.0
+   -max 1.0
+   -fieldMinValue -1000.0
+   -fieldMaxValue 10000.0
+   maxAlphaCtrl;
+        
+   separator;
+
+   optionMenuGrp -label "Color Blending"  
+   -cc "vertexBakeSetOverrideCtrlChanged(\"colorBlending\")"
+   colorBlendingCtrl;
+   menuItem -label "Overwrite";
+   menuItem -label "Add";
+   menuItem -label "Subtract";
+   menuItem -label "Multiply";
+   menuItem -label "Divide";
+   menuItem -label "Average";
+
+   optionMenuGrp -label "Alpha Blending"  
+   -cc "vertexBakeSetOverrideCtrlChanged(\"alphaBlending\")"
+   alphaBlendingCtrl;
+   menuItem -label "Overwrite";
+   menuItem -label "Add";
+   menuItem -label "Subtract";
+   menuItem -label "Multiply";
+   menuItem -label "Divide";
+   menuItem -label "Average";
+        
+   separator;
+
+   frameLayout -label "Vertex Color Filtering" 
+   -collapse false -collapsable false;
+   columnLayout -adjustableColumn true;
+
+   floatFieldGrp -label "Filter Size"
+   -cc "vertexBakeSetOverrideCtrlChanged(\"filterSize\")"
+   filterSizeCtrl;
+
+   floatSliderGrp -label "Filter Normal Tolerance"
+   -fieldMinValue 0 -fieldMaxValue 180
+   -cc "vertexBakeSetOverrideCtrlChanged(\"filterNormalTolerance\")"
+   filterNormalToleranceCtrl;
+
+   checkBoxGrp
+   -label ""
+   -label1 "Use Face Normals"
+   -numberOfCheckBoxes 1
+   -value1 off
+   -cc "vertexBakeSetOverrideCtrlChanged(\"vertexBakeUseFaceNormals\")"
+   vertexBakeUseFaceNormalsCtrl;            
+
+   setParent ..;  // from columnLayout 
+   setParent ..;  // from frameLayout 
+            
+}
+        
+global proc vertexBakeSetOverrideCtrlChanged(string $field)
+{
+   string $control = $field+"Ctrl";
+   int $intValue;
+   float $floatValue;
+   float $floatArray[];
+
+   switch ($field)
+   {
+      case "vertexBakeColorMode":
+	 $intValue = `optionMenuGrp -q -select $control`-1; 
+	 optionVar -intValue $field $intValue;
+	 if( $intValue == 3 )
+	 {
+	    intSliderGrp -edit -enable 1  vertexBakeOcclusionRaysCtrl;
+	    floatFieldGrp -edit -enable 1 vertexBakeOcclusionFalloffCtrl;
+	 }
+	 else if( $intValue == 4 )
+	 {
+	    intSliderGrp -edit -enable 0  vertexBakeOcclusionRaysCtrl;
+	    floatFieldGrp -edit -enable 0 vertexBakeOcclusionFalloffCtrl;
+	 }
+	 else 
+	 {
+	    intSliderGrp -edit -enable 0  vertexBakeOcclusionRaysCtrl;
+	    floatFieldGrp -edit -enable 0 vertexBakeOcclusionFalloffCtrl;
+	 }
+	 break;
+			
+      case "vertexBakeOcclusionRays":
+	 $intValue = `intSliderGrp -q -value $control`;
+	 optionVar -intValue $field $intValue;
+	 break;
+      case "vertexBakeOcclusionFalloff":
+	 $floatValue = `floatFieldGrp -q -value1 $control`;
+	 optionVar -floatValue $field $floatValue;
+	 break;
+      case "vertexBakeOrthogonalReflection" :
+	 $intValue = `checkBoxGrp -q -value1 $control`;
+	 optionVar -intValue $field $intValue;
+	 break;
+      case "vertexBakeUseFaceNormals":
+	 $intValue = `checkBoxGrp -q -value1 $control`;
+	 optionVar -intValue $field $intValue;
+	 break;
+      case "vertexBakeNormalDirection":
+	 $intValue = `optionMenuGrp -q -select $control`-1; 
+	 optionVar -intValue $field $intValue;
+	 break;
+		
+            
+	 //case "sharedVertices":
+	 //    $intValue = `checkBoxGrp -q -value1 $control`; 
+	 //    optionVar -intValue vertexBakeSharedVertices $intValue;
+	 //    break;
+
+      case "vertexBakeAlpha":
+	 $intValue = `checkBoxGrp -q -value1 $control`; 
+	 optionVar -intValue vertexBakeBakeAlpha $intValue;
+	 // disable alpha blending
+	 if( $intValue == 0 )
+	 {
+	    optionMenuGrp -edit -enable 0 alphaBlendingCtrl;
+	    floatSliderGrp -edit -enable 0 minAlphaCtrl;
+	    floatSliderGrp -edit -enable 0 maxAlphaCtrl;
+	 }
+	 else
+	 {
+	    int $clampMin = `optionVar -q vertexBakeClampMin`; 
+	    int $clampMax = `optionVar -q vertexBakeClampMax`; 
+	    optionMenuGrp -edit -enable 1 alphaBlendingCtrl;
+	    floatSliderGrp -edit -enable $clampMin minAlphaCtrl;
+	    floatSliderGrp -edit -enable $clampMax maxAlphaCtrl;
+	 }				
+	 break;
+
+      case "vertexBakeColor":
+	 $intValue = `checkBoxGrp -q -value1 $control`; 
+	 optionVar -intValue vertexBakeBakeColor $intValue;
+	 // disable color blending
+	 if( $intValue == 0 )
+	 {
+	    optionMenuGrp -edit -enable 0 colorBlendingCtrl;
+	    floatSliderGrp -edit -enable 0 minColorCtrl;
+	    floatSliderGrp -edit -enable 0 maxColorCtrl;
+	 }
+	 else
+	 {
+	    int $clampMin = `optionVar -q vertexBakeClampMin`; 
+	    int $clampMax = `optionVar -q vertexBakeClampMax`; 
+	    optionMenuGrp -edit -enable 1 colorBlendingCtrl;
+	    floatSliderGrp -edit -enable $clampMin minColorCtrl;
+	    floatSliderGrp -edit -enable $clampMax maxColorCtrl;
+	 }				
+	 break;
+
+      case "scaleRgba":
+	 $floatValue = `floatSliderGrp -q -value $control`; 
+	 optionVar -floatValue vertexBakeScaleRgba $floatValue;
+	 break;
+
+      case "vertexBakeOcclusionRays":
+	 $intValue = `intSliderGrp -q -value $control`; 
+	 optionVar -intValue vertexBakeOcclusionRays $intValue;
+	 break;
+        
+      case "vertexBakeOcclusionFalloff":
+	 $floatValue = `floatFieldGrp -q -value1 $control`; 
+	 optionVar -floatValue vertexBakeOcclusionFalloff $floatValue;
+	 break;  
+            
+      case "clampMin":
+	 $intValue = `checkBoxGrp -q -value1 $control`; 
+	 optionVar -intValue vertexBakeClampMin $intValue;
+	 if( $intValue == 0 )
+	 {
+	    floatSliderGrp -edit -enable 0 minAlphaCtrl;
+	    colorSliderGrp -edit -enable 0 minColorCtrl;
+	 }
+	 else
+	 {
+	    int $bakeAlpha = `optionVar -q vertexBakeBakeAlpha`;
+	    int $bakeColor = `optionVar -q vertexBakeBakeColor`;
+	    floatSliderGrp -edit -enable $bakeAlpha minAlphaCtrl;
+	    colorSliderGrp -edit -enable $bakeColor minColorCtrl;
+	 }
+	 break;
+
+      case "minColor":
+	 $floatArray = `colorSliderGrp -q -rgbValue $control`; 
+	 optionVar -floatValue vertexBakeMinColorR $floatArray[0]; 
+	 optionVar -floatValue vertexBakeMinColorG $floatArray[1]; 
+	 optionVar -floatValue vertexBakeMinColorB $floatArray[2]; 
+	 break;
+          
+      case "minAlpha":
+	 $floatValue = `floatSliderGrp -q -value $control`; 
+	 optionVar -floatValue vertexBakeMinAlpha $floatValue;
+	 break;     
+
+      case "clampMax":
+	 $intValue = `checkBoxGrp -q -value1 $control`; 
+	 optionVar -intValue vertexBakeClampMax $intValue;
+	 if( $intValue == 0 )
+	 {
+	    floatSliderGrp -edit -enable 0 maxAlphaCtrl;
+	    colorSliderGrp -edit -enable 0 maxColorCtrl;
+	 }
+	 else
+	 {
+	    int $bakeAlpha = `optionVar -q vertexBakeBakeAlpha`;
+	    int $bakeColor = `optionVar -q vertexBakeBakeColor`;
+	    floatSliderGrp -edit -enable $bakeAlpha maxAlphaCtrl;
+	    colorSliderGrp -edit -enable $bakeColor maxColorCtrl;
+	 }
+	 break;
+
+      case "maxColor":
+	 $floatArray = `colorSliderGrp -q -rgbValue $control`; 
+	 optionVar -floatValue vertexBakeMaxColorR $floatArray[0]; 
+	 optionVar -floatValue vertexBakeMaxColorG $floatArray[1]; 
+	 optionVar -floatValue vertexBakeMaxColorB $floatArray[2]; 
+	 break;
+        
+      case "maxAlpha":
+	 $floatValue = `floatSliderGrp -q -value $control`; 
+	 optionVar -floatValue vertexBakeMaxAlpha $floatValue;
+	 break;    
+                
+      case "filterSize":
+	 $floatValue = `floatFieldGrp -q -value1 $control`; 
+	 optionVar -floatValue vertexBakeFilterSize $floatValue;
+
+	 // When the filterSize is smaller than zero, disable filtering.
+	 // Therefore, dim the filter normal tolerance control.
+	 //
+	 int $enableFiltering = ($floatValue >= 0);
+
+	 global string $gMentalBakeOptionBox;
+	 setParent $gMentalBakeOptionBox;
+	 floatSliderGrp -edit -enable $enableFiltering
+	 filterNormalToleranceCtrl;
+	 break;
+
+      case "filterNormalTolerance":
+	 $floatValue = `floatSliderGrp -q -value $control`; 
+	 optionVar -floatValue vertexBakeFilterNormalTolerance $floatValue;
+	 break;
+
+      case "colorBlending":
+	 $intValue = `optionMenuGrp -q -select $control`-1; 
+	 optionVar -intValue vertexBakeColorBlending $intValue;
+	 break;
+
+      case "alphaBlending":
+	 $intValue = `optionMenuGrp -q -select $control`-1; 
+	 optionVar -intValue vertexBakeAlphaBlending $intValue;
+   }
+}
+
+// Description:  This procedure is call to refresh the 
+//      vertex bake set override controls to reflect the current
+//      values of the related optionVars.
+//      
+proc refreshVertexBakeSetOverride (string $parent)
+{
+
+   string $oldParent = `setParent -q`;
+   setParent $parent;
+
+   if (!`checkBoxGrp -exists vertexBakeAlphaCtrl`)
+   {
+      // If the controls are not created yet, then no need to 
+      // refresh them.
+      //
+      return;
+   }
+
+   int $intValue;
+   float $floatValue;
+   float $floatArray[];
+
+   $intValue =	`optionVar -q vertexBakeColorMode`;
+   optionMenuGrp -edit -select ($intValue + 1 ) vertexBakeColorModeCtrl;
+   vertexBakeSetOverrideCtrlChanged("vertexBakeColorMode");
+    
+   $intValue = `optionVar -q vertexBakeOcclusionRays`;
+   intSliderGrp -edit -value $intValue vertexBakeOcclusionRaysCtrl;
+   vertexBakeSetOverrideCtrlChanged("vertexBakeOcclusionRays");
+    
+   $floatValue = `optionVar -q vertexBakeOcclusionFalloff`;
+   floatFieldGrp -edit -value1 $floatValue vertexBakeOcclusionFalloffCtrl;
+   vertexBakeSetOverrideCtrlChanged("vertexBakeOcclusionFalloff");
+			
+   $intValue = `optionVar -q vertexBakeOrthogonalReflection`;
+   checkBoxGrp -edit -value1 $intValue vertexBakeOrthogonalReflectionCtrl;
+   vertexBakeSetOverrideCtrlChanged("vertexBakeOrthogonalReflection");
+		
+   $intValue = `optionVar -q vertexBakeUseFaceNormals`;
+   checkBoxGrp -edit -value1 $intValue vertexBakeUseFaceNormalsCtrl;
+   vertexBakeSetOverrideCtrlChanged("vertexBakeUseFaceNormals");
+		
+   $intValue = `optionVar -q vertexBakeNormalDirection`;
+   optionMenuGrp -edit -select ($intValue + 1) vertexBakeNormalDirectionCtrl;
+   vertexBakeSetOverrideCtrlChanged("vertexBakeNormalDirection");
+		
+
+   //$intValue = `optionVar -q vertexBakeSharedVertices`;
+   //checkBoxGrp -edit -value1 $intValue sharedVerticesCtrl;
+
+   $intValue = `optionVar -q vertexBakeBakeAlpha`;
+   checkBoxGrp -edit -value1 $intValue vertexBakeAlphaCtrl;
+   vertexBakeSetOverrideCtrlChanged("vertexBakeAlpha");
+ 
+   $intValue = `optionVar -q vertexBakeBakeColor`;
+   checkBoxGrp -edit -value1 $intValue vertexBakeColorCtrl;
+   vertexBakeSetOverrideCtrlChanged("vertexBakeColor");
+ 
+   $floatValue = `optionVar -q vertexBakeScaleRgba`;
+   floatSliderGrp -edit -value $floatValue scaleRgbaCtrl;
+    
+   $intValue = `optionVar -q vertexBakeOcclusionRays`;
+   intSliderGrp -edit -value $intValue vertexBakeOcclusionRaysCtrl;
+
+   $floatValue = `optionVar -q vertexBakeOcclusionFalloff`;
+   floatFieldGrp -edit -value1 $floatValue vertexBakeOcclusionFalloffCtrl;
+
+   $intValue = `optionVar -q vertexBakeClampMin`;
+   checkBoxGrp -edit -value1 $intValue clampMinCtrl;
+   vertexBakeSetOverrideCtrlChanged("clampMin");
+
+   $floatArray[0] = `optionVar -q vertexBakeMinColorR`;
+   $floatArray[1] = `optionVar -q vertexBakeMinColorG`;
+   $floatArray[2] = `optionVar -q vertexBakeMinColorB`;
+   colorSliderGrp -edit 
+   -rgbValue $floatArray[0] $floatArray[1] $floatArray[2] 
+   minColorCtrl;
+        
+   $floatValue = `optionVar -q vertexBakeMinAlpha`;
+   floatSliderGrp -edit -value $floatValue minAlphaCtrl;
+        
+   $intValue = `optionVar -q vertexBakeClampMax`;
+   checkBoxGrp -edit -value1 $intValue clampMaxCtrl;
+   vertexBakeSetOverrideCtrlChanged("clampMax");
+
+   $floatArray[0] = `optionVar -q vertexBakeMaxColorR`;
+   $floatArray[1] = `optionVar -q vertexBakeMaxColorG`;
+   $floatArray[2] = `optionVar -q vertexBakeMaxColorB`;
+   colorSliderGrp -edit 
+   -rgbValue $floatArray[0] $floatArray[1] $floatArray[2] 
+   maxColorCtrl;
+        
+   $floatValue = `optionVar -q vertexBakeMaxAlpha`;
+   floatSliderGrp -edit -value $floatValue maxAlphaCtrl;
+        
+   $floatValue = `optionVar -q vertexBakeFilterSize`;
+   floatFieldGrp -edit -value1 $floatValue filterSizeCtrl;
+
+   $floatValue = `optionVar -q vertexBakeFilterNormalTolerance`;
+   floatSliderGrp -edit -value $floatValue filterNormalToleranceCtrl;
+
+   $intValue = `optionVar -q vertexBakeColorBlending` + 1;
+   optionMenuGrp -edit -select $intValue colorBlendingCtrl;
+
+   $intValue = `optionVar -q vertexBakeAlphaBlending` + 1;
+   optionMenuGrp -edit -select $intValue alphaBlendingCtrl;
+
+   // Update the controls related to filterSize
+   //
+   vertexBakeSetOverrideCtrlChanged("filterSize");
+
+   setParent $oldParent;
+}
+
+proc string mentalBakeSetOverrideFormName(string $type)
+{
+   string $formName = $type+"BakeSetOverrideForm";
+   return $formName;
+}
+
+        
+// Description:  This procedure is called to create the
+//      texture bake set override formLayout.
+//
+proc createTextureBakeSetOverrideForm()
+{
+   optionMenuGrp -l "Color Mode" 
+   -cc "textureBakeSetOverrideCtrlChanged(\"textureBakeColorMode\")"
+   textureBakeColorModeCtrl;
+   menuItem -l "Light and Color";
+   menuItem -l "Only Light";
+   menuItem -l "Only Global Illumination";
+   menuItem -l "Occlusion";
+   menuItem -l "Custom Shader"
+   ;
+	
+   intSliderGrp -label "Occlusion Rays"
+   -min 0	-max 256 -value 64
+   -fieldMinValue 0 -fieldMaxValue 2048
+   -cc "textureBakeSetOverrideCtrlChanged(\"textureBakeOcclusionRays\")"
+   textureBakeOcclusionRaysCtrl;
+
+   floatFieldGrp -label "Occlusion Falloff"
+   -cc "textureBakeSetOverrideCtrlChanged(\"textureBakeOcclusionFalloff\")"
+   textureBakeOcclusionFalloffCtrl;		
+		
+   checkBoxGrp
+   -label ""
+   -label1 "Orthogonal Reflection"
+   -numberOfCheckBoxes 1
+   -value1 off
+   -cc "textureBakeSetOverrideCtrlChanged(\"textureBakeOrthogonalReflection\")"
+   textureBakeOrthogonalReflectionCtrl;
+
+   optionMenuGrp -label "Normal Direction" 
+   -cc "textureBakeSetOverrideCtrlChanged(\"textureBakeNormalDirection\")"
+   textureBakeNormalDirectionCtrl;
+   menuItem -label "Face Camera";
+   menuItem -label "Surface Front";
+   menuItem -label "Surface Back";
+	
+   //setParent -menu ..;
+	
+   separator; 
+    
+   textFieldGrp -label "Prefix" 
+   -cc "textureBakeSetOverrideCtrlChanged(\"prefix\")"
+   prefixCtrl;
+	
+   intSliderGrp -label "X Resolution" 
+   -min 128 -max 1024
+   -fieldMinValue 1 -fieldMaxValue 16384
+   -cc "textureBakeSetOverrideCtrlChanged(\"xResolution\")"
+   xResolutionCtrl;
+
+   intSliderGrp -label "Y Resolution" 
+   -min 128 -max 1024
+   -fieldMinValue 1 -fieldMaxValue 16384
+   -cc "textureBakeSetOverrideCtrlChanged(\"yResolution\")"
+   yResolutionCtrl;
+
+   optionMenuGrp -label "File Format"
+   -cc "textureBakeSetOverrideCtrlChanged(\"fileFormat\")"
+   fileFormatCtrl;
+   menuItem -label "TIFF"; 
+   menuItem -label "IFF"; 
+   menuItem -label "JPG"; 
+   menuItem -label "RGB"; 
+   menuItem -label "RLA"; 
+   menuItem -label "TGA"; 
+   menuItem -label "BMP"; 
+
+   optionMenuGrp -label "Bits Per Channel"
+   -cc "textureBakeSetOverrideCtrlChanged(\"bitsPerChannel\")"
+   bitsPerChannelCtrl;
+   menuItem -label "8 bits"; 
+   menuItem -label "16 bits"; 
+   menuItem -label "32 bits"; 
+       
+   intSliderGrp -label "Number Of Samples" 
+   -min 1 -max 4
+   -fieldMinValue 1 -fieldMaxValue 64
+   -cc "textureBakeSetOverrideCtrlChanged(\"textureBakeSamples\")"
+   textureBakeSamplesCtrl;    
+
+   checkBoxGrp -label1 "Bake To One Map"  
+   -cc "textureBakeSetOverrideCtrlChanged(\"textureBakeToOneMap\")"
+   textureBakeToOneMapCtrl; 
+
+   checkBoxGrp -label1 "Bake Alpha"  
+   -cc "textureBakeSetOverrideCtrlChanged(\"textureBakeAlpha\")"
+   textureBakeAlphaCtrl; 
+
+   optionMenuGrp -label "Alpha Mode"
+   -cc "textureBakeSetOverrideCtrlChanged(\"textureAlphaMode\")"
+   textureAlphaModeCtrl;
+   menuItem -label "Pass Through";
+   menuItem -label "Surface Transparency";
+   menuItem -label "Luminance of Surface Color";
+   menuItem -label "Coverage";
+
+   separator;
+   floatSliderGrp -label "Final Gather Quality"
+   -min 0	-max 2 -value 1
+   -fieldMinValue 0 -fieldMaxValue 100
+   -cc "textureBakeSetOverrideCtrlChanged(\"finalGatherQuality\")"
+   finalGatherQualityCtrl;
+   floatSliderGrp -label "Final Gather Reflect"
+   -min 0	-max 1 -value 0
+   -fieldMinValue 0 -fieldMaxValue 1
+   -cc "textureBakeSetOverrideCtrlChanged(\"finalGatherReflect\")"
+   finalGatherReflectCtrl;	
+   separator;
+
+   optionMenuGrp -label "UV Range"
+   -cc "textureBakeSetOverrideCtrlChanged(\"uvRange\")"
+   uvRangeCtrl;
+   menuItem -label "Normal (0 to 1)"; 
+   menuItem -label "Entire Range"; 
+   menuItem -label "User Specified"; 
+
+   floatSliderGrp -label "U Min"
+   -min 0 -max 1
+   -fieldMinValue -10000 -fieldMaxValue 10000
+   -cc "textureBakeSetOverrideCtrlChanged(\"uMin\")"
+   uMinCtrl;
+
+   floatSliderGrp -label "U Max"
+   -min 0 -max 1
+   -fieldMinValue -10000 -fieldMaxValue 10000
+   -cc "textureBakeSetOverrideCtrlChanged(\"uMax\")"
+   uMaxCtrl;
+
+   floatSliderGrp -label "V Min"
+   -min 0 -max 1
+   -fieldMinValue -10000 -fieldMaxValue 10000
+   -cc "textureBakeSetOverrideCtrlChanged(\"vMin\")"
+   vMinCtrl;
+
+   floatSliderGrp -label "V Max"
+   -min 0 -max 1
+   -fieldMinValue -10000 -fieldMaxValue 10000
+   -cc "textureBakeSetOverrideCtrlChanged(\"vMax\")"
+   vMaxCtrl;
+
+   floatSliderGrp -label "Fill Texture Seams"
+   -min 0 -max 3
+   -fieldMinValue 0 -fieldMaxValue 32
+   -cc "textureBakeSetOverrideCtrlChanged(\"fillTextureSeams\")"
+   fillTextureSeamsCtrl;
+
+   separator;
+
+   checkBoxGrp -label1 "Override mesh UV set assignments"
+   -cc "textureBakeSetOverrideCtrlChanged(\"overrideMeshUVSetAssignments\")"
+   overrideMeshUVSetAssignmentsCtrl;
+
+   textFieldGrp -label "Uv Set Name"
+   -cc "textureBakeSetOverrideCtrlChanged(\"uvSetName\")"
+   uvSetNameCtrl;
+}
+
+global proc textureBakeSetOverrideCtrlChanged(string $field)
+{
+   string $control = $field+"Ctrl";
+   int $intValue;
+   float $floatValue;
+   float $floatArray[];
+   string $text;
+
+   switch ($field)
+   {
+      case "textureBakeColorMode":
+	 $intValue = `optionMenuGrp -q -select $control`-1; 
+	 optionVar -intValue $field $intValue;
+	 if( $intValue == 3 )
+	 {
+	    intSliderGrp -edit -enable 1  textureBakeOcclusionRaysCtrl;
+	    floatFieldGrp -edit -enable 1 textureBakeOcclusionFalloffCtrl;
+	 }
+	 else if( $intValue == 4 )
+	 {
+	    intSliderGrp -edit -enable 0  textureBakeOcclusionRaysCtrl;
+	    floatFieldGrp -edit -enable 0 textureBakeOcclusionFalloffCtrl;
+	 }
+	 else 
+	 {
+	    intSliderGrp -edit -enable 0  textureBakeOcclusionRaysCtrl;
+	    floatFieldGrp -edit -enable 0 textureBakeOcclusionFalloffCtrl;
+	 }
+	 break;
+			
+      case "textureBakeOcclusionRays":
+	 $intValue = `intSliderGrp -q -value $control`;
+	 optionVar -intValue $field $intValue;
+	 break;
+      case "textureBakeOcclusionFalloff":
+	 $floatValue = `floatFieldGrp -q -value1 $control`;
+	 optionVar -floatValue $field $floatValue;
+	 break;
+      case "textureBakeOrthogonalReflection" :
+	 $intValue = `checkBoxGrp -q -value1 $control`;
+	 optionVar -intValue $field $intValue;
+	 break;
+      case "textureBakeNormalDirection":
+	 $intValue = `optionMenuGrp -q -select $control`-1; 
+	 optionVar -intValue $field $intValue;
+	 break;
+            
+      case "prefix":
+	 $text = `textFieldGrp -q -text $control`; 
+	 optionVar -stringValue textureBakePrefix $text;
+	 break;
+
+      case "xResolution":
+	 $intValue = `intSliderGrp -q -value $control`; 
+	 optionVar -intValue textureBakeXResolution $intValue;
+	 break;
+
+      case "yResolution":
+	 $intValue = `intSliderGrp -q -value $control`; 
+	 optionVar -intValue textureBakeYResolution $intValue;
+	 break;
+
+      case "fileFormat":
+	 $intValue = `optionMenuGrp -q -select $control`; 
+	 optionVar -intValue textureBakeFileFormat $intValue;
+            
+	 // only tif supports 16/32 bits per channel
+	 if( $intValue == 1 )
+	 {
+	    optionMenuGrp -edit -enable true bitsPerChannelCtrl;
+	 }
+	 else
+	 {
+	    optionVar -intValue textureBakeBitsPerChannel 1;
+	    optionMenuGrp -edit -select 1 bitsPerChannelCtrl;
+	    optionMenuGrp -edit -enable false bitsPerChannelCtrl;
+	 }
+        
+	 break;
+
+      case "bitsPerChannel":
+	 $intValue = `optionMenuGrp -q -select $control`; 
+	 if ($intValue == 3)
+	 {
+	    // The "32 bits" choice corresponds to 
+	    // bitsPerChannel = 4.
+	    //
+	    $intValue = 4;
+	 }
+	 optionVar -intValue textureBakeBitsPerChannel $intValue;
+	 break;
+
+      case "textureBakeSamples":
+	 $intValue = `intSliderGrp -q -value $control`; 
+	 optionVar -intValue $field $intValue;
+	 break;
+            
+      case "textureBakeToOneMap":
+	 $intValue = `checkBoxGrp -q -value1 $control`; 
+	 optionVar -intValue textureBakeBakeToOneMap $intValue;
+	 break;
+
+      case "textureBakeAlpha":
+	 $intValue = `checkBoxGrp -q -value1 $control`; 
+	 optionVar -intValue textureBakeBakeAlpha $intValue;
+	 optionMenuGrp -edit -enable $intValue textureAlphaModeCtrl;
+	 break;
+
+      case "textureAlphaMode":
+	 $intValue = `optionMenuGrp -q -select $control`-1; 
+	 optionVar -intValue textureBakeAlphaMode $intValue;
+	 break;
+
+      case "finalGatherQuality":
+	 $floatValue = `floatSliderGrp -q -value $control`; 
+	 optionVar -floatValue textureBakeFinalGatherQuality $floatValue;
+	 break;
+        
+      case "finalGatherReflect":
+	 $floatValue = `floatSliderGrp -q -value $control`; 
+	 optionVar -floatValue textureBakeFinalGatherReflect $floatValue;
+	 break;
+            
+      case "textureBakeOcclusionRays":
+	 $intValue = `intSliderGrp -q -value $control`; 
+	 optionVar -intValue textureBakeOcclusionRays $intValue;
+	 break;
+        
+      case "textureBakeOcclusionFalloff":
+	 $floatValue = `floatFieldGrp -q -value1 $control`; 
+	 optionVar -floatValue textureBakeOcclusionFalloff $floatValue;
+	 break;    
+                
+      case "uvRange":
+	 $intValue = `optionMenuGrp -q -select $control`-1; 
+	 optionVar -intValue textureBakeUvRange $intValue;
+	 floatSliderGrp -edit -enable ($intValue==2) uMinCtrl;
+	 floatSliderGrp -edit -enable ($intValue==2) uMaxCtrl;
+	 floatSliderGrp -edit -enable ($intValue==2) vMinCtrl;
+	 floatSliderGrp -edit -enable ($intValue==2) vMaxCtrl;
+	 break;
+
+      case "uMin":
+	 $floatValue = `floatSliderGrp -q -value $control`; 
+	 optionVar -floatValue textureBakeUMin $floatValue;
+	 break;
+
+      case "uMax":
+	 $floatValue = `floatSliderGrp -q -value $control`; 
+	 optionVar -floatValue textureBakeUMax $floatValue;
+	 break;
+
+      case "vMin":
+	 $floatValue = `floatSliderGrp -q -value $control`; 
+	 optionVar -floatValue textureBakeVMin $floatValue;
+	 break;
+
+      case "vMax":
+	 $floatValue = `floatSliderGrp -q -value $control`; 
+	 optionVar -floatValue textureBakeVMax $floatValue;
+	 break;
+
+      case "fillTextureSeams":
+	 $floatValue = `floatSliderGrp -q -value $control`; 
+	 optionVar -floatValue textureBakeFillTextureSeams $floatValue;
+	 break;
+
+      case "overrideMeshUVSetAssignments":
+	 $intValue = `checkBoxGrp -q -value1 $control`; 
+	 optionVar -intValue textureBakeOverrideMeshUVSetAssignments $intValue;
+	 textFieldGrp -edit -enable $intValue uvSetNameCtrl;
+	 break;
+
+      case "uvSetName":
+	 $text = `textFieldGrp -q -text $control`; 
+	 optionVar -stringValue textureBakeUvSetName $text;
+	 break;
+   }
+}
+
+// Description:  This procedure is call to refresh the 
+//      texture bake set override controls to reflect the current
+//      values of the related optionVars.
+//      
+proc refreshTextureBakeSetOverride(string $parent)
+{
+   setParent $parent;
+
+   if (!`textFieldGrp -exists prefixCtrl`)
+   {
+      // If the controls are not created yet, then no need to 
+      // refresh them.
+      //
+      return;
+   }
+
+   string $text;
+   int $intValue;
+   float $floatValue;
+    
+   $intValue =	`optionVar -q textureBakeColorMode`;
+   optionMenuGrp -edit -select ($intValue + 1 ) textureBakeColorModeCtrl;
+   textureBakeSetOverrideCtrlChanged("textureBakeColorMode");
+    
+   $intValue = `optionVar -q textureBakeOcclusionRays`;
+   intSliderGrp -edit -value $intValue textureBakeOcclusionRaysCtrl;
+   textureBakeSetOverrideCtrlChanged("textureBakeOcclusionRays");
+    
+   $floatValue = `optionVar -q textureBakeOcclusionFalloff`;
+   floatFieldGrp -edit -value1 $floatValue textureBakeOcclusionFalloffCtrl;
+   textureBakeSetOverrideCtrlChanged("textureBakeOcclusionFalloff");
+			
+   $intValue = `optionVar -q textureBakeOrthogonalReflection`;
+   checkBoxGrp -edit -value1 $intValue textureBakeOrthogonalReflectionCtrl;
+   textureBakeSetOverrideCtrlChanged("textureBakeOrthogonalReflection");
+		
+   $intValue = `optionVar -q textureBakeNormalDirection`;
+   optionMenuGrp -edit -select ($intValue + 1) textureBakeNormalDirectionCtrl;
+   textureBakeSetOverrideCtrlChanged("textureBakeNormalDirection");
+
+   $text = `optionVar -q textureBakePrefix`;
+   textFieldGrp -edit -text $text prefixCtrl;
+
+   $intValue = `optionVar -q textureBakeXResolution`;
+   intSliderGrp -edit -value $intValue xResolutionCtrl;
+
+   $intValue = `optionVar -q textureBakeYResolution`;
+   intSliderGrp -edit -value $intValue yResolutionCtrl;
+
+   $intValue = `optionVar -q textureBakeFileFormat`;
+   optionMenuGrp -edit -select $intValue fileFormatCtrl;
+
+   $intValue = `optionVar -q textureBakeBitsPerChannel`;
+   if ($intValue == 4)
+   {
+      // The bitsPerChannel attribute being 4 corresponds to
+      // the choice of "32 bits", which is item 3 in the optionMenuGrp.
+      //
+      $intValue = 3;
+   }
+   optionMenuGrp -edit -select $intValue bitsPerChannelCtrl;
+   textureBakeSetOverrideCtrlChanged("fileFormat");
+    
+   $intValue = `optionVar -q textureBakeSamples`;
+   intSliderGrp -edit -value $intValue textureBakeSamplesCtrl;
+
+   $intValue = `optionVar -q textureBakeBakeToOneMap`;
+   checkBoxGrp -edit -value1 $intValue textureBakeToOneMapCtrl;
+
+   $intValue = `optionVar -q textureBakeBakeAlpha`;
+   checkBoxGrp -edit -value1 $intValue textureBakeAlphaCtrl;
+   textureBakeSetOverrideCtrlChanged("textureBakeAlpha");
+
+   $intValue = `optionVar -q textureBakeAlphaMode` + 1;
+   optionMenuGrp -edit -select $intValue textureAlphaModeCtrl;
+    
+   $floatValue = `optionVar -q textureBakeFinalGatherQuality`;
+   floatSliderGrp -edit -value $floatValue finalGatherQualityCtrl;
+
+   $floatValue = `optionVar -q textureBakeFinalGatherReflect`;
+   floatSliderGrp -edit -value $floatValue finalGatherReflectCtrl;
+
+   $intValue = `optionVar -q textureBakeOcclusionRays`;
+   intSliderGrp -edit -value $intValue textureBakeOcclusionRaysCtrl;
+
+   $floatValue = `optionVar -q textureBakeOcclusionFalloff`;
+   floatFieldGrp -edit -value1 $floatValue textureBakeOcclusionFalloffCtrl;
+    
+   $intValue = `optionVar -q textureBakeUvRange` + 1;
+   optionMenuGrp -edit -select $intValue uvRangeCtrl;
+   textureBakeSetOverrideCtrlChanged("uvRange");
+
+   $floatValue = `optionVar -q textureBakeUMin`;
+   floatSliderGrp -edit -value $floatValue uMinCtrl;
+
+   $floatValue = `optionVar -q textureBakeUMax`;
+   floatSliderGrp -edit -value $floatValue uMaxCtrl;
+
+   $floatValue = `optionVar -q textureBakeVMin`;
+   floatSliderGrp -edit -value $floatValue vMinCtrl;
+
+   $floatValue = `optionVar -q textureBakeVMax`;
+   floatSliderGrp -edit -value $floatValue vMaxCtrl;
+
+   $floatValue = `optionVar -q textureBakeFillTextureSeams`;
+   floatSliderGrp -edit -value $floatValue fillTextureSeamsCtrl;
+
+   $intValue = `optionVar -q textureBakeOverrideMeshUVSetAssignments`;
+   checkBoxGrp -edit -value1 $intValue overrideMeshUVSetAssignmentsCtrl;
+   textureBakeSetOverrideCtrlChanged("overrideMeshUVSetAssignments");
+
+   $text = `optionVar -q textureBakeUvSetName`;
+   textFieldGrp -edit -text $text uvSetNameCtrl;
+}
+
+// Description:  This procedure is called to show the bake set override
+//      preset menu.
+//
+global proc mentalBakeSetOverrideShowPresetMenu (
+						 string $presetMenu, string $ntype)
+{
+   setParent -menu $presetMenu;
+
+   int $i = 0;
+   string $mI;
+
+   popupMenu -e -deleteAllItems $presetMenu;
+
+   menuItem
+   -l ("Save " + $ntype + " Preset...")
+   -c ("saveAttrPresetWin \"convertBakeSetOptionVarToNode()\"");
+   string $tmpNode = "convertBakeSetOptionVarToNode()"; 
+   menuItem
+   -l ("Edit Presets...")
+   -c ("attrPresetEditWin " + $ntype);
+
+   menuItem -d true;
+   int $numPresets = 0;
+   int $numPresetsInMenu[] = { 0 };
+   int $numNonLocalPresets = 0;
+
+   string $node = "";
+   string $createNodeProc = "convertBakeSetOptionVarToNode()";
+   string $deleteNodeProc = "convertNodeToOptionVarAndDeleteNode";
+
+   // first show the released presets
+   string $fpath = `getenv "MAYA_LOCATION"`;
+   $fpath = $fpath + "/presets/attrPresets/" + $ntype;
+   $numPresets = presetMenuForDir( 
+				  $numPresetsInMenu, $fpath, $node,1, 
+				  $createNodeProc, $deleteNodeProc);
+
+
+   $numNonLocalPresets += $numPresets;
+   if($numPresets > 0)
+      menuItem -d true;
+
+   // then show any presets specified by MAYA_PRESET_PATH
+   // each entry in the path points at equivalents to the presets direc
+
+   string $mayaPresetPath = `getenv MAYA_PRESET_PATH`;
+   string $presetPaths[];
+   if (`about -nt`)
+      tokenize $mayaPresetPath ";" $presetPaths;
+   else
+      tokenize $mayaPresetPath ":" $presetPaths;
+   for($presetPath in $presetPaths) {
+      $fpath = $presetPath;
+      $fpath = $fpath + "/attrPresets/" + $ntype;
+      $numPresets = presetMenuForDir( 
+				     $numPresetsInMenu, $fpath, $node, 1, 
+				     $createNodeProc, $deleteNodeProc);
+
+
+      $numNonLocalPresets += $numPresets;
+      if($numPresets > 0)
+	 menuItem -d true;
+   }
+   menuItem -d true;
+
+   // finally show any local presets that the user has created
+   string $ppath = `internalVar -userPrefDir`;
+   $ppath = substitute( "prefs", $ppath, "presets/attrPresets");
+   $ppath  = $ppath + $ntype;
+   presetMenuForDir( 
+		    $numPresetsInMenu, $ppath, $node, 0, 
+		    $createNodeProc, $deleteNodeProc);
+}
+
+// Description:  This procedure is called to create the
+//      bake set override section preset button.
+//
+proc createPresetButton(string $parent, string $type)
+{
+   setParent $parent;
+
+   string $nodeType = "textureBakeSet";
+   if ($type == "Vertices")
+   {
+      $nodeType = "vertexBakeSet";
+   }    
+
+   rowLayout 
+   -numberOfColumns 3 
+   -columnAlign3 "center" "center" "center"
+   presetButtonRowLayout;
+       
+   string $presetMenu = 
+   $parent+"|presetButtonRowLayout|bakeSetOverridePresetButton|menu"; 
+    
+   text -visible false; 
+   button
+   -annotation "Attribute presets for this node"
+   -al center
+   -w 60
+   -h 20
+   -l "Presets"
+   bakeSetOverridePresetButton;
+   popupMenu -button 1 
+   -pmc ("mentalBakeSetOverrideShowPresetMenu \""+$presetMenu+"\" \""+$nodeType+"\"")
+   menu;
+   setParent -m ..;
+   text -visible false;
+
+   setParent ..; // from rowLayout
+}
+
+// Description:  This procedure is called to create the formLayout for
+//      a $type of bake set override.
+//
+proc string createBakeSetOverrideFormLayout(string $type, string $form)
+{
+   setParent $form;
+
+   string $formLayout = mentalBakeSetOverrideFormName($type);
+   string $formLayoutFullPath = $form+"|"+$formLayout;
+   if (`formLayout -exists $formLayoutFullPath`)
+   {
+      return $formLayout;
+   }
+
+   // The tab layout does not exist yet, create it.
+   //
+   setUITemplate -pushTemplate attributeEditorTemplate;
+   formLayout -visible false $formLayout;
+   columnLayout -adjustableColumn true;
+
+   string $currentParent = `setParent -q`;
+   createPresetButton($currentParent, $type);
+
+   if ($type == "Vertices")
+   {
+      createVertexBakeSetOverrideForm(); 
+   }
+   else
+   {
+      createTextureBakeSetOverrideForm(); 
+   }
+
+   setParent ..; // from columnLayout
+   setParent ..; // from formLayout
+   setUITemplate -popTemplate; 
+
+   return $formLayout;
+}
+
+// Description:  This procedure is called to make the specified
+//      formLayout visible, and make all the other formLayouts not visible.
+//      which are children of the miSwitchBakeSetFormLayout.
+//
+proc mentalManageBakeSetOverrideForms(string $parent, string $formLayoutName)
+{
+   string $oldParent = `setParent -q`;
+   setParent $parent;
+
+   // Change the tabForm to show only the formLayout associated with the
+   // specified bake set override type. 
+   //
+   string $formLayouts[] = 
+   `formLayout -query -childArray miSwitchBakeSetFormLayout`;
+
+   // Make all the children formLayout not visible.
+   //
+   int $i;
+   for ($i = 0; $i < size($formLayouts); $i++)
+   {
+      formLayout -edit -visible false $formLayouts[$i];
+   }
+
+   // Manage the formLayout for the specified bake set override type.
+   //
+   formLayout -edit -visible true $formLayoutName; 
+
+   setParent $oldParent;
+}
+
+// Description:  This procedure is called to switch the content of
+//      the override bake set frame to the override bake set 
+//      of the specified $type.  
+//
+proc mentalSwitchOverrideToBakeToType (string $type, string $parent)
+{
+   string $oldParent = `setParent -q`;
+   setParent $parent;
+
+   // Check if the correct type of bake set override is displayed
+   // in the frame.
+   //
+   string $frameLabel = $type +" Bake Set Override";
+   string $oldFrameLabel = `frameLayout -q -label bakeSetOverrideFrame`;
+
+   if ($frameLabel == $oldFrameLabel)
+   {
+      // The correct type of bake set override is already displayed
+      // in the frame.
+      //  
+      return;
+   }
+
+   // Update the label of the bake set override frame.
+   //
+   frameLayout -edit -label $frameLabel
+   -collapse false bakeSetOverrideFrame;
+
+   // If the tabLayout associated to this $type of bake set override
+   // does not exist, then create it.
+   //
+   setParent miSwitchBakeSetFormLayout;
+   string $currentParent = `setParent -q`;
+
+   string $formLayout = mentalBakeSetOverrideFormName($type);
+   string $formLayoutFullPath = $currentParent +"|" + $formLayout; 
+   if (!`layout -exists $formLayoutFullPath`)
+   {
+      createBakeSetOverrideFormLayout($type, "miSwitchBakeSetFormLayout");
+   }
+
+   mentalManageBakeSetOverrideForms($parent, $formLayout);
+
+   setParent $oldParent;
+}
+
+global proc mentalBakeToChanged(
+				string $parent, int $forceFactorySettings){
+   string $bakeToType = `optionMenuGrp -q -value mentalBakeTo`;
+   int $isTexture=false;
+   if( $bakeToType == "Texture" ) 
+   {
+      $isTexture = true;
+   }
+
+   setParent $parent;
+   checkBoxGrp -edit -enable $isTexture mentalKeepOrgSG;
+
+   refreshBakeSetOverrideFrame ($parent, $forceFactorySettings);
+}
+
+// Description:  This procedure is called when we need to refresh
+//          the bake set override frame in the bake set option window.
+//
+global proc refreshBakeSetOverrideFrame(
+					string $parent, int $forceFactorySettings)
+{
+   string $oldParent = `setParent -query`;
+   setParent $parent;
+
+   // Update the v_mentalBakeTo optionVar.
+   //
+   optionVar -stringValue v_mentalBakeTo 
+   `optionMenuGrp -q -value mentalBakeTo`;
+
+   // Check the override status.
+   //
+   int $useOverride = `optionVar -q useBakeSetOverride`; 
+   checkBoxGrp -edit -value1 $useOverride useBakeSetOverrideCtrl;
+
+   // Enable/Disable the bakeSetOverideFrame.
+   //
+   frameLayout -edit -enable $useOverride bakeSetOverrideFrame;  
+
+   // If we are forcing the factory setting, then we need to refresh
+   // the vertex and texture bake set override forms.
+   //
+   if ($forceFactorySettings)
+   {
+      refreshVertexBakeSetOverride($parent);
+      refreshTextureBakeSetOverride($parent);
+   }
+
+   // If the bake set override is used, then refresh
+   // the rest of the bake set override parameters.
+   //
+   string $bakeToType = `optionMenuGrp -q -value mentalBakeTo`;
+   mentalSwitchOverrideToBakeToType ($bakeToType, $parent);
+    
+   // Enable/Disable the bakeSetOverrideFrame.
+   //
+   frameLayout -edit -enable $useOverride bakeSetOverrideFrame;    
+    
+   if ($useOverride)
+   {
+      // Refresh the bake set override controls.
+      //
+      if ($bakeToType == "Vertices")
+      {
+	 refreshVertexBakeSetOverride($parent);
+      }
+      else
+      {
+	 refreshTextureBakeSetOverride($parent);
+      }
+   }
+    
+
+
+   setParent $oldParent;
+}
+
+
+global proc mentalBakeOptions()
+{
+   // Global from setDefaultTemplates.mel
+   global int $kSingleWidgetWidthIndex;
+   int $minMaxWidth = ($kSingleWidgetWidthIndex * 3) / 4;
+
+   //	Name of the command for this option box.
+   //
+   string $commandName = "mentalBake";
+
+   //	Build the option box actions.
+   //
+   string $callback = ($commandName + "Callback");
+   string $setup = ($commandName + "Setup");
+
+   //	STEP 1:  Get the option box.
+   //	============================
+   //
+   //	The value returned is the name of the layout to be used as
+   //	the parent for the option box UI.
+   //
+   string $layout = getOptionBox();
+   global string $gMentalBakeOptionBox;
+   $gMentalBakeOptionBox = $layout;
+   setParent $layout;
+	
+   //	STEP 2:  Pass the command name to the option box.
+   //	=================================================
+   //
+   //	Any default option box behaviour based on the command name is set 
+   //	up with this call.  For example, updating the 'Help' menu item with
+   //	the name of the command.
+   //
+   setOptionBoxCommandName($commandName);
+	
+   //	STEP 3:  Activate the default UI template.
+   //	==========================================
+   //
+   //	Activate the default UI template so that the layout of this 
+   //	option box is consistent with the layout of the rest of the 
+   //	application.
+   //
+   setUITemplate -pushTemplate DefaultTemplate;
+
+   //	STEP 4: Create option box contents.
+   //	===================================
+   //	
+   //	This, of course, will vary from option box to option box.	
+	
+   //	Turn on the wait cursor.
+   //
+   waitCursor -state 1;
+
+   //	RECOMMENDATION:  Place the UI in a 'scrollable' layout.  A 
+   //	scrollable layout ensures that if the option box window is ever
+   //	resized such that it's entire contents is not visible then the 
+   //	scroll bars provided by the scrollable layout will allow the user
+   //	to access the hidden UI.  Two layouts currently supporting 
+   //	scrollable behaviour are the 'scrollLayout' and the 'tabLayout'.
+   //
+   //	scrollLayout;
+   //
+   //	or...
+   //
+   tabLayout -tabsVisible 0 -scrollable 1;
+	
+   string $parent = `columnLayout -adjustableColumn 1`;
+	
+   //	RECOMMENDATION:  Use the 'Grp' commands where possible because
+   //	they obey the formatting specified in the default template.
+   //	This will result in a more consistent look throughout the
+   //	application.
+   //	
+
+
+   separator -height 10 -style "none";
+
+   optionMenuGrp -l "Objects to Bake" mentalBakeScope;
+   menuItem -l "All";
+   menuItem -l "Selected";
+	
+   checkBoxGrp
+   -label ""
+   -label1 "Skip objects in initialBakeSets"
+   -numberOfCheckBoxes 1
+   -value1 off
+   mentalSkipDefault;
+
+   separator -height 15;
+
+   checkBoxGrp
+   -label ""
+   -label1 "Bake Animation Sequence (Timeline)"
+   -numberOfCheckBoxes 1
+   -value1 off
+   mentalBakeAnimation;
+
+   separator -height 15;
+
+   optionMenuGrp -l "Bake To" 
+   -cc ("mentalBakeToChanged(\""+$parent+"\", false)") mentalBakeTo;
+   menuItem -l "Texture";
+   menuItem -l "Vertices";
+
+   checkBoxGrp
+   -label ""
+   -label1 "Bake Shadows"
+   -numberOfCheckBoxes 1
+   -value1 off
+   mentalBakeShadows;
+
+   setParent -menu ..;
+
+   string $cameras[] = `listCameras`;
+   string $curCam;
+
+   optionMenuGrp -l "Camera" mentalCamera;
+   for ( $curCam in $cameras )
+   {
+      menuItem -l $curCam;
+   }
+   optionMenuGrp -e -v "persp" mentalCamera;
+
+   checkBoxGrp
+   -label ""
+   -label1 "Keep Original Shading Network"
+   -numberOfCheckBoxes 1
+   -value1 off
+   mentalKeepOrgSG;
+
+   separator -height 15;
+
+   // Bake set overrides.
+   //
+   createBakeSetOverrideFrame(`setParent -query`);
+
+
+   setParent $parent;
+
+   //	Turn off the wait cursor.
+   //
+   waitCursor -state 0;
+	
+   //	Step 5: Deactivate the default UI template.
+   //	===========================================
+   //
+   setUITemplate -popTemplate;
+
+   //	Step 6: Customize the buttons.  
+   //	==============================
+   //
+   //	Provide more descriptive labels for the buttons.  This is not 
+   //	necessary, but in some cases, for example, a button labelled 
+   //	'Create' may be more meaningful to the user than one labelled
+   //	'Apply'.
+   //
+   //	Disable those buttons that are not applicable to the option box.
+   //
+   //	Attach actions to those buttons that are applicable to the option
+   //	box.  Note that the 'Close' button has a default action attached 
+   //	to it that will hide the window.  If a a custom action is
+   //	attached to the 'Close' button then be sure to call the 'hide the
+   //	option box' procedure within the custom action so that the option
+   //	box is hidden properly.
+
+   //	'Apply' button.
+   //
+   string $applyBtn = getOptionBoxApplyBtn();
+   button -edit
+   -label "Convert"
+   -command (
+	     $callback 
+	     + " " 
+	     + $parent 
+	     + " " 
+	     + 1 )
+   $applyBtn;
+
+   string $applyAndCloseBtn = getOptionBoxApplyAndCloseBtn();
+   button -edit
+   -label "Convert and Close"
+   $applyAndCloseBtn;
+
+   //	'Save' button.
+   //
+   string $saveBtn = getOptionBoxSaveBtn();
+   button -edit 
+   -command (
+	     $callback 
+	     + " " 
+	     + $parent 
+	     + " " 
+	     + 0 
+	     + " " 
+	     + "; hideOptionBox")
+   $saveBtn;
+
+   //	'Reset' button.
+   //
+   string $resetBtn = getOptionBoxResetBtn();
+   button -edit 
+   -command ($setup + " " + $parent + " " + 1)
+   $resetBtn;
+
+   //	Step 7: Set the option box title.
+   //	=================================
+   //
+   setOptionBoxTitle("mental ray Baking Options");
+
+   //	Step 8: Customize the 'Help' menu item text.
+   //	============================================
+   //
+   setOptionBoxHelpTag( "MentalBakeText" );
+
+   //	Step 9: Set the current values of the option box.
+   //	=================================================
+   //
+   eval (($setup + " " + $parent + " " + 0));	
+	
+   //	Step 10: Show the option box.
+   //	=============================
+   //
+   showOptionBox();
+}	
+
+
+
+// Returns a string containing convertLightmapSetup command line parameters 
+// which are constant over everything in the selection list.
+proc string assembleCmdOptions()
+{
+   setOptionVars( false );
+
+   string $cmd = "";
+
+   // Bake animation
+   if( `optionVar -query v_mentalBakeAnimation`)
+   {
+      $startFrame = `playbackOptions -q -min`;
+      $endFrame   = `playbackOptions -q -max`;
+      $cmd += " -sf " + $startFrame + " -ef " + $endFrame;
+   }
+
+   string $cam = `optionVar -query v_mentalCamera`;
+   $cmd += ( " -camera " + $cam );
+	
+   if( `optionVar -query v_mentalBakeShadows` )
+   {
+      $cmd += " -sh ";
+   }
+
+   string $storage = `optionVar -query v_mentalBakeTo`;
+   if( $storage == "Vertices" )
+   {
+      $cmd += " -vm";
+   }
+
+   global string $temporaryBakeSetOverride; 
+   if( size($temporaryBakeSetOverride)>0 )
+   {
+      $cmd += " -bakeSetOverride " + $temporaryBakeSetOverride ;
+   } 
+
+   // the rest of the command UI
+   // that does not apply to convertLightmap
+
+   string $option = `optionVar -query v_mentalBakeScope`;
+   if( $option != "Selected" )
+   {
+      $cmd += " -bakeAll";
+   }
+
+   // Skip Initial Bakeset
+   if( `optionVar -query v_mentalSkipDefault`)
+   {
+      $cmd += " -ignoreDefaultBakeSet";
+   }
+
+   // Keep original shading network / apply baked texture
+   if( `optionVar -query v_mentalKeepOrgSG`)
+   {
+      $cmd += " -keepOrgSG";
+   }
+
+   // Display Option
+   if( `optionVar -query polyAutoShowColorPerVertex`)
+   {
+      $cmd += " -showcpv";
+   }
+
+   return $cmd;
+}
+
+
+global proc string mentalBake( int $action,
+			       int $useMultiListerHighlighted )
+{
+   if( size(`ls initialTextureBakeSet`) < 1)
+   {
+      createBakeSet( "initialTextureBakeSet", "textureBakeSet" );
+   }
+   if( size(`ls initialVertexBakeSet`) < 1)
+   {
+      createBakeSet( "initialVertexBakeSet", "vertexBakeSet" );
+   }
+	
+   global string $temporaryBakeSetOverride; 
+   string $cmd = "";
+
+   miCreateDefaultNodes();
+	
+   switch( $action )
+   {
+      case 0:
+
+	 $cmd = "mentalConvertLightmapSetup " ;
+	 $cmd += `assembleCmdOptions`;
+				
+	 print("cmd : " + $cmd + "\n");
+	 eval($cmd);
+			
+	 break;
+
+      case 1:
+	 mentalBakeOptions;
+	 break;
+
+      case 2:
+	 $cmd = `assembleCmdOptions`;
+	 break;
+   }
+
+   return $cmd;
+}
+
+// Description:  This procedure is called to convert a bake set node to
+//     its related optionVar's and then the node is deleted.
+// 
+global proc convertNodeToOptionVarAndDeleteNode(string $node)
+{
+   string $nodeType = `nodeType $node`;
+   if ($nodeType == "vertexBakeSet")
+   {
+      convertVertexBakeSetNodeToOptionVar ($node);
+   }
+   else  if ($nodeType == "textureBakeSet")
+   {
+      convertTextureBakeSetNodeToOptionVar ($node);
+   }
+   else
+   {
+      Warning("Node should be of type vertexBakeSet or textureBakeSet"); 
+   }
+   delete $node;
+
+   // Refresh the mentalBake optionBox.
+   //
+   global string $gMentalBakeOptionBox;
+   if (`layout -exists $gMentalBakeOptionBox`)
+   {
+      refreshVertexBakeSetOverride($gMentalBakeOptionBox);
+      refreshTextureBakeSetOverride($gMentalBakeOptionBox);
+   } 
+}

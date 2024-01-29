@@ -1,0 +1,46 @@
+
+source "gg_mray_aux.mel";
+source "gg_tiff_aux.mel";
+
+
+//
+//  Procedure Name:
+//	AEgg_tiffTemplate
+//
+
+
+global proc AEgg_tiffTemplate ( string $nodeName )
+{
+   AEswatchDisplay $nodeName;
+   editorTemplate -beginScrollLayout;
+   editorTemplate -beginLayout "File Attributes" -collapse 0;
+   editorTemplate -callCustom "AEgg_tiffFilterNew"  "AEgg_tiffFilterReplace" "filter";
+   editorTemplate -l "S Filter Width" -addControl "swidth";
+   editorTemplate -l "T Filter Width" -addControl "twidth";
+   editorTemplate -l "Samples" -addControl "samples";
+   editorTemplate -addSeparator;
+   editorTemplate -callCustom "AEgg_tiffNameNew" 
+						"AEgg_tiffNameReplace" 
+						"filename";
+
+   editorTemplate -beginLayout "Blur" -collapse 0;
+   editorTemplate -l "S Blur" -addControl "sblur";
+   editorTemplate -l "T Blur" -addControl "tblur";
+   editorTemplate -endLayout;
+   
+   editorTemplate -beginLayout "UV Coordinates" -collapse 0;
+   editorTemplate -l "UV Set" -addControl "uvSet";
+   editorTemplate -endLayout;
+   
+   // suppressed attributes
+   editorTemplate -suppress "filename";
+   editorTemplate -suppress "filter";
+   editorTemplate -suppress "swidth";
+   editorTemplate -suppress "twidth";
+   editorTemplate -suppress "sblur";
+   editorTemplate -suppress "tblur";
+   editorTemplate -suppress "uvSet";
+   
+   editorTemplate -addExtraControls;
+   editorTemplate -endScrollLayout;
+}

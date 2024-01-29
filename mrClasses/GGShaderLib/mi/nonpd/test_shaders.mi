@@ -1,0 +1,256 @@
+
+# External shaders:
+#   - gg_velvet                          (2001)
+#   - gg_orennayar                       (2002)
+#   - gg_fakefur                         (2003)
+#   - gg_shaderstate_peek               (3026)
+#   - gg_pfxhair
+
+declare shader
+	color 			 #: shortname "os"
+	"gg_shaderstate_peek"
+	(
+		color "passthru" #: default 1 1 1  min 0 0 0
+				 #: shortname "pt"
+	)
+	#:
+	#: nodeid 3026
+	#:
+	apply texture, material
+	version 1
+end declare
+
+
+declare shader
+	color  			#: shortname "oc"
+	"gg_lambert" (
+		color		"ambience",  #: shortname "ac"
+					     #: default 0.2 0.2 0.2
+		color		"ambient",   #: shortname "a"
+					     #: default 0.2 0.2 0.2
+		color 		"diffuse",   #: shortname "d"
+					     #: default 0.5 0.5 0.5
+		color 		"backside",  #: shortname "b"
+					     #: default 0.5 0.5 0.5
+		integer		"mode",      #: shortname "m"
+					     #: enum "All Lights=0:Inclusive=1:Exclusive=2"
+					     #: default 0 min 0 max 2
+		array light	"lights"     #: shortname "l"
+	)
+	#:
+	#: nodeid 3022
+	#:
+	version 2
+	apply material, shadow, texture
+end declare
+
+
+declare shader 
+	scalar 	                #: shortname "oa"
+	"gg_threads"
+	(
+	scalar "Km",            #: shortname "km" default 0.1
+	scalar "frequency",     #: shortname "f"  default 5.0
+	scalar "phase",         #: shortname "p"  default 0.0
+	scalar "offset",        #: shortname "o"  default 0.0
+	scalar "dampzone"       #: shortname "dz" default 0.05
+	)
+  	#:
+	#: nodeid 3029
+	#:
+	apply texture, displace
+	version 1
+end declare
+
+declare shader
+ 	color 			#: shortname "oc"
+ 	"gg_skin" 
+ 	(
+   		color "skinColor",		#: default 0.80 0.50 0.50
+						#: shortname "skc"
+   		color "sheenColor",		#: default 1.00 1.00 1.00
+						#: shortname "shc"
+ 		scalar "eta", 			#: default 1.4 min 1.00 max 2.0
+						#: shortname "e"
+ 		scalar "thickness", 		#: default 0.5 min 0.0 max 1.0
+						#: shortname "t"
+   		integer "mode",			#: default 0 min 0 max 2
+						#: enum "All Lights=0:Inclusive=1:Exclusive=2"
+						#: shortname "m"
+ 		array light "lights"		#: shortname "l"
+ 	)
+ 	#:
+	#: nodeid 3028
+	#:
+	#:
+	apply material, texture
+	version 1
+end declare
+
+declare shader
+  	color #: shortname "oc"
+  	"gg_velvet" 
+  	(
+    		color "surfaceColor",		#: default 0.00 0.25 1.00
+					 	#: shortname "sfc"
+    		color "sheenColor",		#: default 0.25 0.25 0.25
+					 	#: shortname "shc"
+  		scalar "diffuse", 		#: default 0.5 min 0 max 1
+					 	#: shortname "d"
+  		scalar "backscatter", 		#: default 0.1 min 0 max 1
+					 	#: shortname "b"
+		scalar "edginess", 		#: default 10  min 0 max 100
+					 	#: shortname "e"
+    		scalar "roughness",		#: default 0.1 min 0 max 1
+					 	#: shortname "r"
+    		integer "mode",			#: default 0   min 0 max 2
+					     	#: enum "All Lights=0:Inclusive=1:Exclusive=2"
+					 	#: shortname "m"
+  		array light "lights"		#: shortname "l"
+  	)
+  	#:
+	#: nodeid 2001
+	#:
+	apply material, texture
+	version 1
+end declare
+
+
+
+declare shader
+  	color  #: shortname "oc"
+  	"gg_orennayar" 
+  	(
+  		color 		"surfaceColor",	 #: default 0.0 1.0 0.25 
+						 #: shortname "sfc"
+  		scalar 		"diffuse", 	 #: default 1.0 min 0 max 1
+						 #: shortname "d"
+  		scalar 		"roughness", 	 #: default 0.15 min 0 max 1
+						 #: shortname "r"
+  		scalar 		"opacity", 	 #: default 1.0  min 0 max 1
+						 #: shortname "o"
+  		integer		"mode",		 #: default 0 min 0 max 2
+					     	 #: enum "All Lights=0:Inclusive=1:Exclusive=2"
+						 #: shortname "m"
+  		array light 	"lights"	 #: shortname "l"
+  	)
+  	#:
+	#: nodeid 2002
+	#:
+	apply material, texture
+	version 1
+end declare
+
+declare shader
+	color				      #: shortname "oc"
+	"gg_strauss" (
+		color "ambientColor",         #: shortname "ac"
+					      #: default 0.0 0.0 0.0
+		color "diffuseColor",         #: shortname "dc"
+					      #: default 0.75 0.75 0.75
+		scalar "smoothness",          #: shortname "ss" 
+					      #: default 0.5 min 0.0 max 1.0
+		scalar "metalness",           #: shortname "ms"
+					      #: default 0.0 min 0.0 max 1.0
+		array light "lights"          #: shortname "l"
+		  )
+	#:
+	#: nodeid 3024
+	#:
+	#:
+	version 1
+	apply material, shadow, texture
+end declare
+
+
+
+declare shader
+        color #: shortname "oc"
+        "gg_fakefur" (
+                color "skinColor",            #: shortname "sc"
+                                              #: default 0.23 0.17 0.13
+                color "diffuseColor",         #: shortname "dc"
+                                              #: default 1.00 1.00 1.00
+                color "specular1Color",       #: shortname "s1c"
+                                              #: default 0.95 0.85 0.85
+                scalar "specular1Exponent",   #: shortname "s1e"
+                                              #: default 50 min 1 max 1500
+                color "specular2Color",       #: shortname "s2c"
+                                              #: default 0.60 0.50 0.30
+                scalar "specular2Exponent",   #: shortname "s2e"
+                                              #: default 50 min 1 max 1500
+                scalar "hairDensity",         #: shortname "hd"
+                                              #: default 100 min 1 max 1000
+                scalar "backwardScatering",   #: shortname "bs"
+                                              #: default 0.80 min 0 max 1
+                scalar "forwardScattering",   #: shortname "fs"
+                                              #: default 0.20 min 0 max 1
+                scalar "hairOverHairShadow",  #: shortname "hhs"
+                                              #: default 0.50 min 0 max 1
+                scalar "shadowAttenuation",   #: shortname "sa"
+                                              #: default 0.50 min 0 max 1
+                scalar "startShadowCos",      #: shortname "wi"
+                                              #: default 0.00 min 0 max 1
+                scalar "endShadowCos",        #: shortname "wf"
+                                              #: default 0.50 min 0 max 1
+                scalar "hairLength",          #: shortname "len"
+                                              #: default 0.15 min 0 max 1
+                scalar "hairBaseRadius",      #: shortname "rb"
+                                              #: default 0.02 min 0 max 1
+                scalar "hairTipRadius",       #: shortname "rt"
+                                              #: default 0.00 min 0 max 1
+                scalar "tangentBreakupAmt",   #: shortname "tba"
+                                              #: default 0.05 min 0.0 max 1.0
+                scalar "tangentBreakup",      #: shortname "tb"
+                                              #: default 100.0
+                                              #: min 0.01 max 100.0
+
+                integer "mode",               #: shortname "m" min 0 max 2
+					      #: enum "All Lights=0:Inclusive=1:Exclusive=2"
+                                              #: default 0
+                array light "lights"          #: shortname "l"
+                  )
+        #:
+        #: nodeid 2003
+        #:
+        version 1
+        apply material, shadow, texture
+end declare
+
+declare shader
+	color #: shortname "oc"
+	"gg_pfxhair" (
+		color "ambientColor",         #: shortname "ac"
+					      #: default 0.0 0.0 0.0
+		scalar "backlight",           #: shortname "bl"
+				 	      #: default 0.0 min 0.0 max 1.0
+		color "specular1Color",       #: shortname "s1c"
+				 	      #: default 0.95 0.85 0.85
+		scalar "specular1Exponent",   #: shortname "s1e"
+					      #: default 50 min 1 max 1500
+		scalar "specular1BreakupAmt", #: shortname "s1ba"
+					      #: default 1.0  min 0.0 max 1.0
+		scalar "specular1Breakup",    #: shortname "s1b"
+					      #: default 4.0  
+					      #: min 0.01 max 100.0
+		color "specular2Color",       #: shortname "s2c"
+				 	      #: default 0.6 0.5 0.3
+		scalar "specular2Exponent",   #: shortname "s2e"
+					      #: default 50 min 1 max 1500
+		scalar "specular2BreakupAmt", #: shortname "s2ba"
+					      #: default 1.0  min 0.0 max 1.0
+		scalar "specular2Breakup",    #: shortname "s2b"
+					      #: default 8.0  
+					      #: min 0.01 max 100.0
+		scalar "opacity",             #: shortname "op"
+					      #: default 1.0  min 0.0 max 1.0
+		color  "irradianceColor",     #: shortname "ic"
+					      #: default 0.0 0.0 0.0
+		array light "lights"          #: shortname "l"
+		  )
+	#:
+	#: nodeid 3023
+	#:
+	version 1
+	apply material, shadow, texture
+end declare

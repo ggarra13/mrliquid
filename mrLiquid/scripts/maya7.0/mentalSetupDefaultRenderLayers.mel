@@ -1,0 +1,469 @@
+//
+//  Copyright (c) 2004-2006, Gonzalo Garramuno
+//
+//  All rights reserved.
+//
+//  Redistribution and use in source and binary forms, with or without
+//  modification, are permitted provided that the following conditions are
+//  met:
+//  *       Redistributions of source code must retain the above copyright
+//  notice, this list of conditions and the following disclaimer.
+//  *       Redistributions in binary form must reproduce the above
+//  copyright notice, this list of conditions and the following disclaimer
+//  in the documentation and/or other materials provided with the
+//  distribution.
+//  *       Neither the name of Gonzalo Garramuno nor the names of
+//  its other contributors may be used to endorse or promote products derived
+//  from this software without specific prior written permission. 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+//  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+//  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+//  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+//  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+//  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+//  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+//  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+source "mentalIsLoaded";
+
+
+proc mentalOverride( string $plug, string $value )
+{
+   string $cmd;
+   // Get current render layer
+   string $layer = mentalGetCurrentRenderLayer();
+
+   // Get default value for attribute
+   mentalSwitchRenderLayer defaultRenderLayer;
+   string $oldValue = `getAttr $plug`;
+
+   // Set new value for attribute in render layer
+   mentalSwitchRenderLayer $layer;
+   $cmd = "setAttr " + $plug + " " + $value;
+   eval($cmd);
+   
+   // Store as render layer override
+   editRenderLayerAdjustment $plug;   
+
+   // Restore default value for attribute
+   mentalSwitchRenderLayer defaultRenderLayer;
+   $cmd = "setAttr " + $plug + " " + $oldValue;
+   eval($cmd);
+
+   // Go back to original current layer
+   mentalSwitchRenderLayer $layer;
+}
+
+
+global proc mentalRenderLayerAddAttrs( string $layer )
+{
+   addAttr -ln "frequency" -sn "frq" -at "enum" -en "All Frames:At Start" 
+            $layer;
+   addAttr -ln "mrOverrides" -sn "mro" -at message -multi $layer;
+}
+
+
+global proc string mentalCreateRenderLayer( string $layer )
+{
+   string $nodes[] = `ls -tr`;
+   string $pass = `createRenderLayer -name $layer -number 1 -noRecurse $nodes`;
+   mentalRenderLayerAddAttrs( $pass );
+   return $pass;
+}
+
+
+global proc string _mentalCreateInformationPass( string $name )
+{
+   mentalSwitchRenderLayer defaultRenderLayer;
+
+   string $pass = mentalCreateRenderLayer( $name );
+   mentalSwitchRenderLayer $pass;
+
+   //
+   // Create tesselation material
+   //
+   string $type = "gg_showinfo";  // use mrClasses' gg_showinfo
+   string $material, $sg;
+   string $shader = "SHDR_" + $name;
+   $test = `ls $shader`;
+   if ( size($test) < 1 )
+   {
+      $material = `shadingNode -n $shader -asShader $type`;
+      $sg = `sets -renderable true -noSurfaceShader true 
+      -empty -name ($material + "SG")`;
+   
+      defaultNavigation 
+      -connectToExisting 
+      -source $material
+      -destination $sg;
+   }
+   
+   string $override = "OVER_" + $name;
+   string $over = `createNode -n $override mentalRenderLayerOverride`;
+   setAttr -type "string" ($over + ".preCommands")
+   "mentalMaterial -save;\nmentalAssignSGToAll \"SHDR_tesselation\";";
+   setAttr -type "string" ($over + ".postCommands")
+   "mentalMaterial -restore;";
+
+   connectAttr ($over + ".message") ($pass + ".mrOverrides[0]");
+
+   mentalMaterial -save;
+   mentalSwitchRenderLayer defaultRenderLayer;
+   mentalSwitchRenderLayer $pass;
+   return $pass;
+}
+
+
+
+global proc string mentalCreateInformationPass()
+{
+   return _mentalCreateInformationPass("information");
+}
+
+global proc string mentalCreateTesselationPass()
+{
+   return _mentalCreateInformationPass("tesselation");
+}
+
+
+global proc string mentalCreateBeautyPass()
+{
+   mentalSwitchRenderLayer defaultRenderLayer;
+   string $pass = mentalCreateRenderLayer("beauty");
+   mentalSwitchRenderLayer $pass;
+   return $pass;
+}
+
+
+global proc string mentalCreateCastShadowsPass()
+{
+   mentalSwitchRenderLayer defaultRenderLayer;
+
+   string $pass = mentalCreateRenderLayer("cast_shadows");
+   mentalSwitchRenderLayer $pass;
+
+   mentalOverride("miDefaultOptions.shadowMethod", 3); 
+   mentalOverride("miDefaultOptions.shadowMaps", 1); 
+
+   // @TODO: handle cast shadow material assignment here 
+
+
+   return $pass;
+}
+
+
+global proc string mentalCreateCompositingPass()
+{
+   mentalSwitchRenderLayer defaultRenderLayer;
+   string $pass = mentalCreateRenderLayer("comp");
+   mentalSwitchRenderLayer $pass;
+
+   // @TODO: handle adding compositing stuff...
+
+   return $pass;
+}
+
+
+global proc string mentalCreateAmbOcclPass()
+{
+   mentalSwitchRenderLayer defaultRenderLayer;
+
+   string $pass = mentalCreateRenderLayer("amboccl");
+
+   //
+   // Create tesselation material
+   //
+   $type = "gg_ambientocclusion";  // use mrClasses' gg_ambientocclusion
+   $test = `ls SHDR_amboccl`;
+   if ( size($test) < 1 )
+   {
+      $material = `shadingNode -n SHDR_amboccl -asShader $type`;
+      $sg = `sets -renderable true -noSurfaceShader true 
+      -empty -name ($material + "SG")`;
+   
+      defaultNavigation 
+      -connectToExisting 
+      -source $material
+      -destination $sg;
+   }
+   
+   $over = `createNode -n OVER_amboccl mentalRenderLayerOverride`;
+   setAttr -type "string" ($over + ".preCommands")
+   "mentalMaterial -save;\nmentalAssignSGToAll \"SHDR_amboccl\";";
+   setAttr -type "string" ($over + ".postCommands")
+   "mentalMaterial -restore;";
+
+   connectAttr ($over + ".message") ($pass + ".mrOverrides[0]");
+
+   mentalMaterial -save;
+   mentalSwitchRenderLayer defaultRenderLayer;
+   mentalSwitchRenderLayer $pass;
+   return $pass;
+}
+
+
+global proc string mentalCreateFinalGatherPass()
+{
+   mentalSwitchRenderLayer defaultRenderLayer;
+
+
+   string $attr[] = `listAttr -st finalGatherOnly miDefaultOptions`;
+   if ( size($attr) == 0 )
+   {
+      addAttr -ln finalGatherOnly -at "bool" miDefaultOptions;
+   }
+
+   string $pass = mentalCreateRenderLayer("fg_only");
+
+
+   mentalSwitchRenderLayer $pass;
+
+   mentalOverride("miDefaultOptions.finalGather", 1);
+   mentalOverride("miDefaultOptions.finalGatherOnly", 1);
+   mentalOverride("miDefaultOptions.finalGatherRebuild", 1);
+
+
+   mentalSwitchRenderLayer defaultRenderLayer;
+
+   string $file = `getAttr miDefaultOptions.finalGatherFilename`;
+   if ( $file == "" )
+   {
+      string $file = `file -q -sn`;
+      if ( $file != "" )
+      {
+	 $file = "$SCN.@.fg";
+      }
+      else
+      {
+	 $file = "unnamed";
+      }
+      setAttr miDefaultOptions.finalGatherFilename $file;
+   }
+
+   mentalSwitchRenderLayer $pass;
+   return $pass;
+}
+
+
+global proc string mentalCreateStaticShadowMapPass()
+{
+   mentalSwitchRenderLayer defaultRenderLayer;
+
+   string $attr[] = `listAttr -st shadowMapOnly miDefaultOptions`;
+   if ( size($attr) == 0 )
+   {
+      addAttr -ln shadowMapOnly -at "bool" miDefaultOptions;
+   }
+
+   string $pass = mentalCreateRenderLayer("static_shadowmaps");
+
+   mentalSwitchRenderLayer $pass;
+
+   mentalOverride("miDefaultOptions.shadowMaps", 1);
+   mentalOverride("miDefaultOptions.shadowMapOnly", 1);
+   mentalOverride("miDefaultOptions.rebuildShadowMaps", 1);
+
+
+   // Get list of geometries
+   string $dags[] = `ls -l -dag`;
+   string $shapes[] = `ls -l -s $dags`;
+   string $transforms[] = `ls -l -tr $dags`;
+
+   string $lights[] = `ls -type light`;
+   string $shadowLights[];
+   for ( $lgt in $lights )
+     {
+       string $parents[] = `listRelatives -p $lgt`;
+       string $parent = $parents[0];
+
+       // Ignore hidden lights
+       int $visible = `getAttr ($parent + ".visible")`;
+       if ( $visible == 0 ) continue;
+
+       int $shadow = `getAttr ($lgt + ".useDepthMapShadows")`;
+       if ( $shadow == 0 ) $shadow = `getAttr ($lgt + ".shadowMap")`;
+
+       // Ignore lights with no shadowmaps
+       if ( $shadow == 0 ) continue;
+
+       // check light/shadow linking is attached to something
+       float $version = `about -version`;
+       string $plug;
+       string $plugs[] = `listConnections -p on ( $lgt + ".message" )`;
+       string $attrs[];
+       string $conn[];
+       int $animated;
+       if ( $version == 7.0 )
+	 {
+	   for ( $plug in $plugs )
+	     {
+	       tokenize $plug "." $attrs;
+	       int $last = size($attrs) - 1;
+	       string $object;
+	       if ( $attrs[$last] == "lightIgnored" )
+		 {
+		   $attrs[$last] = "objectIgnored";
+		   $plug = stringArrayToString( $attrs, "." );
+		   $conn = `listConnections $plug`;
+		   if ( size($conn) == 0 ) continue;
+
+		   $object = $conn[0];
+		 }
+	       else if ( $attrs[$last] == "light" )
+		 {
+		   $attrs[$last] = "object";
+		   $plug = stringArrayToString( $attrs, "." );
+		   $conn = `listConnections $plug`;
+		   if ( size($conn) == 0 ) continue;
+
+		   $object = $conn[0];
+		   // check instance animation
+		   $animated = `mentalIsAnimated $object`;
+		   if ($animated) break;
+
+		   // Check shape(s) animation
+		   $conn = `listRelatives $object`;
+		   for ( $c in $conn )
+		     {
+		       $animated = `mentalIsAnimated $conn`;
+		       if ($animated) break;
+		     }
+
+		   if ( $animated ) break;
+		 }
+	     }
+
+	   // Ignore lights linked to animated objects
+	   if ( $animated ) continue;
+	   $shadowLights[size($shadowLights)] = $lgt;
+	 }
+       else
+	 {
+	 }
+     }
+
+   return $pass;
+}
+
+global proc string mentalCreateShadowMapPass()
+{
+   mentalSwitchRenderLayer defaultRenderLayer;
+
+   string $attr[] = `listAttr -st shadowMapOnly miDefaultOptions`;
+   if ( size($attr) == 0 )
+   {
+      addAttr -ln shadowMapOnly -at "bool" miDefaultOptions;
+   }
+
+   string $pass = mentalCreateRenderLayer("shadowmaps");
+
+   mentalSwitchRenderLayer $pass;
+
+   mentalOverride("miDefaultOptions.shadowMaps", 1);
+   mentalOverride("miDefaultOptions.shadowMapOnly", 1);
+   mentalOverride("miDefaultOptions.rebuildShadowMaps", 1);
+
+   return $pass;
+}
+
+
+global proc mentalCreateDefaultRenderLayers()
+{
+  string $origPass = mentalGetCurrentRenderLayer();
+
+  string $pass;
+  string $sel[] = `ls -sl`;
+
+   ////////////// Create render pass for shadow map creation
+   
+   ////////////// Create render pass for hair shadow map creation
+   
+   ////////////// Create render pass for hair beauty
+   
+   ////////////// Create render pass for ambient occlusion
+   
+   ////////////// Create render pass for beauty renders
+   /////////////// ( this will include all other stuff: spec, diffuse, etc)
+   
+   ////////////// Create render pass for shadow maps only
+   $pass = mentalCreateShadowMapPass();
+   setAttr ($pass + ".renderable") 0;
+
+   ////////////// Create render pass for cast shadows
+
+
+   ////////////// Create auxiliary render pass for checking tesselation
+   ////////////// if user has installed my GGShaderLib from mrClasses.
+   int $has_gg = 0;
+   int $i;
+
+   string $plugin = mrLiquidPlugin();
+
+   if ( `pluginInfo -q -l $plugin` )
+   {
+      string $shaders[] = `pluginInfo -q -dn $plugin`;
+      for ( $i = 0; $i < size($shaders); $i++ )
+      {
+	 if ($shaders[$i] == "gg_showinfo")
+	 {
+	    $has_gg = 1; break;
+	 }
+      }
+   }
+
+   if (!$has_gg && `pluginInfo -q -l "Mayatomr"`)
+   {
+      $shaders = `pluginInfo -q -dn "Mayatomr"`;
+      for ( $i = 0; $i < size($shaders); $i++ )
+      {
+	 if ($shaders[$i] == "gg_showinfo")
+	 {
+	    $has_gg = 1; break;
+	 }
+      }
+   }
+
+   if ( !$has_gg )
+   {
+      select -noExpand $sel;
+      return;
+   }
+
+
+   //////////////////////////////////////////////////////////
+   // Create tesselation pass
+   //////////////////////////////////////////////////////////
+   $pass = mentalCreateTesselationPass();
+   setAttr ($pass + ".renderable") 0;
+
+   //////////////////////////////////////////////////////////
+   // Create ambient occlusion pass
+   //////////////////////////////////////////////////////////
+   $pass = mentalCreateAmbOcclPass();
+   setAttr ($pass + ".renderable") 0;
+
+
+   //////////////////////////////////////////////////////////
+   // Restore original selection and render layer
+   //////////////////////////////////////////////////////////
+   select -noExpand $sel;
+   mentalSwitchRenderLayer $origPass;
+}
+
+
+
+global proc mentalSetupDefaultRenderLayers()
+{
+   miCreateDefaultNodes();
+
+   string $test[] = `ls -type renderLayer`;
+   if ( size($test) != 1 )
+      return;
+
+   mentalCreateDefaultRenderLayers();
+}
+

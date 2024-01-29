@@ -1,0 +1,31 @@
+
+global proc mentalStartImrRender(string $editor, int $resX, int $resY, 
+                                 string $camera)
+{
+   if ( eval("mental -q -imr") )
+   {
+      error("IPR already active.");
+      return;
+   }
+
+   eval("mental -imr on -prg off -x " + $resX + " -y " + $resY + 
+        " -cam " + $camera);
+   if ( `menu -exists mentalMenu` )
+   {
+      menuItem -e -en off mentalIPRStart;
+      menuItem -e -en on  mentalIPROptions;
+      menuItem -e -en on  mentalIPRProgressive;
+      menuItem -e -en on  mentalIPRStop;
+      menuItem -e -en on  mentalIPRPause;
+      menuItem -e -en off mentalIPRContinue;
+   } 
+
+    renderWindowRefreshLayout($editor);
+
+    // Prompt the user to select a region to begin tuning
+    //
+    renderWindowEditor 
+        -edit
+        -caption "Select a region to begin tuning"
+        $editor;
+}

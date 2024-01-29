@@ -1,0 +1,201 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+//****************************************************************************
+//	Maintains the mental ray instance flags on Maya instance nodes.
+//****************************************************************************
+
+global proc AEmrInstanceFlagsCreate(string $messagePlug)
+{
+	warning("Calling an obsolete mel procedure AEmrInstanceFlagsCreate.");
+}
+
+global proc AEmrInstanceFlagsFlagsUpdate(string $node, int $flag)
+{
+	warning("Calling an obsolete mel procedure AEmrInstanceFlagsFlagsUpdate.");
+}
+
+global proc AEmrInstanceFlagsFlagsNew(string $messagePlug)
+{
+	warning("Calling an obsolete mel procedure AEmrInstanceFlagsFlagsNew.");
+}
+
+global proc AEmrInstanceFlagsFlagsReplace(string $messagePlug)
+{
+	warning("Calling an obsolete mel procedure AEmrInstanceFlagsFlagsReplace.");
+}
+// ===========================================================================
+proc mrl_add_instance_flags( string $node )
+{
+   string $children[] = `listRelatives -s -f -ni $node`;
+   int $valid = 0;
+   for ( $child in $children )
+   {
+      string $type = `objectType $child`;
+      if ( $type == "mesh" ||
+	   $type == "nurbsSurface" ||
+	   $type == "subdiv" ||
+	   $type == "mentalFileObjectShape" ||
+	   $type == "renderBox" ||
+	   $type == "renderSphere" ||
+	   $type == "stroke" ||
+	   $type == "pfxHair" )
+      {
+	 $valid = 1; break;
+      }
+   }
+   if ( $valid == 0 ) return;
+
+   string $attr[];
+   string $globs[] = `ls -type mentalrayGlobals`;
+   if ( size($globs) == 0 ) return;
+   $globs = `listConnections -d on ($globs[0] + ".options")`;
+   if ( size($globs) == 0 ) return;
+
+   int $active = `getAttr ($globs[0] + ".finalGather")`;
+
+   // Add new mrLiquid miFlags if they don't exist in node,
+   // but only if render globals is set to render those.
+   if ( $active )
+   {
+      $attr = `listAttr -st miFinalGather $node`;
+      if ( size($attr) == 0 )
+      {
+	 addAttr -ln miFinalGather -sn fng -at enum -min 0 -max 5 -dv 5
+	 -en "Hidden:Disabled:Cast only:Receive only:Cast+Receive:Use Inherited" $node;
+      }
+   }
+
+   int $active = `getAttr ($globs[0] + ".rayTracing")`;
+   if ( $active )
+   {
+      $attr = `listAttr -st miReflection $node`;
+      if ( size($attr) == 0 )
+      {
+	 addAttr -ln miReflection -sn rfl  -at enum -min 0 -max 5 -dv 5
+	 -en "Hidden:Disabled:Cast only:Receive only:Cast+Receive:Use Inherited" $node;
+      }
+      $attr = `listAttr -st miRefraction $node`;
+      if ( size($attr) == 0 )
+      {
+	 addAttr -ln miRefraction -sn rfr  -at enum -min 0 -max 5 -dv 5
+	 -en "Hidden:Disabled:Cast only:Receive only:Cast+Receive:Use Inherited" $node;
+      }
+   }
+
+}
+
+global proc AEmrInstanceFlagsFlagsActivate(string $node)
+{
+   mrl_add_instance_flags( $node );
+
+	int $dfm = `getAttr ($node + ".miDeriveFromMaya")`;
+	editorTemplate -dimControl $node "miHide" $dfm;
+	editorTemplate -dimControl $node "miVisible" $dfm;
+	editorTemplate -dimControl $node "miTrace" $dfm;
+	editorTemplate -dimControl $node "miShadow" $dfm;
+	editorTemplate -dimControl $node "miCaustic" $dfm;
+	editorTemplate -dimControl $node "miGlobillum" $dfm;
+	editorTemplate -dimControl $node "miReflection" $dfm;
+	editorTemplate -dimControl $node "miRefraction" $dfm;
+	editorTemplate -dimControl $node "miFinalGather" $dfm;
+}
+
+// ===========================================================================
+
+global proc AEmrInstanceFlagsGeometryActivate(string $node)
+{
+	if( `attrNavigationControlGrp -ex geometryShaderCtrl`)
+	{
+		int $gs = `getAttr ($node + ".miExportGeoShader")`;
+		attrNavigationControlGrp -edit -enable $gs
+			geometryShaderCtrl;
+	}
+}
+
+global proc AEmrInstanceFlagsGeometryNew(string $messagePlug)
+{
+	setUITemplate -pushTemplate attributeEditorTemplate;
+	attrNavigationControlGrp -label (uiRes("m_AEmentalrayInstanceFlags.kGeometryShader"))  geometryShaderCtrl;
+	setUITemplate -popTemplate;
+	
+	AEmrInstanceFlagsGeometryReplace($messagePlug);
+}
+
+global proc AEmrInstanceFlagsGeometryReplace(string $messagePlug)
+{
+	string $node;
+	string $buffer[];
+	tokenize($messagePlug, ".", $buffer);
+	$node = (size($buffer) > 0) ? $buffer[0] : "";
+
+	string $createNewCmd = "mrCreateRenderNodeWindow (\"" + $node + ".miGeoShader" + "\")";
+	
+	attrNavigationControlGrp
+			-edit -attribute ($node + ".miGeoShader") 
+			-createNew $createNewCmd
+			geometryShaderCtrl;
+
+	AEmrInstanceFlagsGeometryActivate($node);
+}
+
+// ===========================================================================
+
+global proc AEmentalrayInstanceFlags(string $node)
+{
+	editorTemplate -beginLayout (uiRes("m_AEmentalrayInstanceFlags.kMentalRay"))  -collapse true;
+
+	editorTemplate -beginLayout (uiRes("m_AEmentalrayInstanceFlags.kFlags"))  -collapse false;
+		editorTemplate -beginNoOptimize;
+
+		editorTemplate
+			-label (uiRes("m_AEmentalrayInstanceFlags.kDeriveFromMaya")) 
+			-addControl "miDeriveFromMaya"
+				"AEmrInstanceFlagsFlagsActivate";
+		editorTemplate
+			-label (uiRes("m_AEmentalrayInstanceFlags.kHide")) 
+			-addControl "miHide";
+		editorTemplate -label (uiRes("m_AEmentalrayInstanceFlags.kVisible"))  -addControl "miVisible";
+		editorTemplate -label (uiRes("m_AEmentalrayInstanceFlags.kTrace"))  -addControl "miTrace";
+		editorTemplate -label (uiRes("m_AEmentalrayInstanceFlags.kShadow"))  -addControl "miShadow";
+		editorTemplate -label (uiRes("m_AEmentalrayInstanceFlags.kCaustic"))  -addControl "miCaustic";
+		editorTemplate -label (uiRes("m_AEmentalrayInstanceFlags.kGlobillum"))  -addControl "miGlobillum";
+
+		editorTemplate -endNoOptimize;
+	editorTemplate -endLayout;
+
+	editorTemplate -beginLayout (uiRes("m_AEmentalrayInstanceFlags.kGeometryShader2"))  -collapse false;
+		editorTemplate
+			-label (uiRes("m_AEmentalrayInstanceFlags.kEnableGeometryShader")) 
+				-addControl
+				"miExportGeoShader"
+				"AEmrInstanceFlagsGeometryActivate";
+		editorTemplate -callCustom 
+			"AEmrInstanceFlagsGeometryNew"
+			"AEmrInstanceFlagsGeometryReplace"
+			"message";
+		editorTemplate -suppress "miGeoShader";
+	editorTemplate -endLayout;
+
+	editorTemplate -suppress mentalRayControls;
+	editorTemplate -endLayout;
+
+}

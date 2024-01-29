@@ -1,0 +1,401 @@
+//
+//  Copyright (c) 2004, Gonzalo Garramuno
+//  All rights reserved.
+//
+//  Original MEL code this files is based on
+//  Copyright Andrew Chapman 2003-2004 - chapman AT technolumiere.com
+//  Used by permission from the author.
+//
+//  Redistribution and use in source and binary forms, with or without
+//  modification, are permitted provided that the following conditions are
+//  met:
+//  *       Redistributions of source code must retain the above copyright
+//  notice, this list of conditions and the following disclaimer.
+//  *       Redistributions in binary form must reproduce the above
+//  copyright notice, this list of conditions and the following disclaimer
+//  in the documentation and/or other materials provided with the
+//  distribution.
+//  *       Neither the name of Gonzalo Garramuno nor the names of
+//  its other contributors may be used to endorse or promote products derived
+//  from this software without specific prior written permission. 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+//  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+//  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+//  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+//  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+//  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+//  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+//  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+
+proc string passSelectionMenu()
+{
+   return "|setPassForm|currMenu";
+}
+
+proc string overridesList()
+{
+   return "|overridesFrame|overridesList";
+}
+
+
+
+proc string[] mentalGetRenderLayerOverrides()
+{
+   float  $sortedIndices[];
+   string $sortedOverrides[];
+   string $overrides[] = `ls -type mentalRenderLayerOverride`;
+   int $nOverrides = size($overrides);
+   int $j;
+   // When several scenes with overrides are merged,
+   // our priorities may end up screwed up.
+   // Sort them up and make them sequential
+   // As maya does not support hashes, we do a clever trick
+   // here of using a float to encode priority.index
+   for ($j = 0; $j < $nOverrides; $j++ )
+   {
+     string $plug = $overrides[$j] + ".priority";
+     int $priority = `getAttr $plug`;
+     string $tmp = $priority + "." + ($j + 1);
+     $sortedIndices[$j] = $tmp;
+   }
+   $sortedIndices = sort($sortedIndices);
+   for ($j = 0; $j < $nOverrides; $j++ )
+   {
+      string $tmp = $sortedIndices[$j];
+      int $idx = substitute("[0-9]*.", $tmp, "");
+      string $pass = $overrides[$idx-1];
+      $sortedOverrides[$j] = $pass;
+      string $plug = $pass + ".priority";
+      setAttr $plug $j;
+   }
+   
+   return $sortedOverrides;
+}
+
+proc string getPassName( string $pass )
+{
+   string $plug = $pass + ".nodeState";
+   int $state = `getAttr $plug`;
+   if ( $state != 0 )  $pass += "      OFF";
+   return $pass;
+}
+
+proc string[] mentalGetRenderLayerOverrides()
+{
+   return `ls -type mentalRenderLayerOverride`;
+}
+
+global proc mentalSelectOverride( string $main )
+{
+   string $listControl = $main + overridesList();
+   int $selected[] = `textScrollList -query -selectIndexedItem $listControl`;
+   if ((size($selected) == 0) || ($selected[0] == -1)) {
+      return;
+   }
+
+   string $overrides[] = mentalGetRenderLayerOverrides();
+
+   int $i, $j;
+   int $numSel = size($selected);
+   string $text;
+   select -clear;
+   for ($i = 0; $i < $numSel; $i++ )
+   {
+      int $idx = $selected[$i] - 1;
+      select -add $overrides[$idx];
+   }
+}
+
+
+global proc mentalDeleteAllType( string $type )
+{
+   int $i;
+   string $pass[] = `ls -type $type`;
+   int $numOverrides = size($pass);
+   for ( $i = 0; $i < $numOverrides; $i++)
+      delete $pass[$i];
+}
+
+global proc mentalDeleteAllRenderLayerOverrides( string $main )
+{
+   mentalDeleteAllType("mentalRenderLayerOverride");
+   mentalRefreshRenderLayerOverridePanel($main);
+}
+
+global proc mentalDeleteRenderLayerOverride( string $main )
+{
+   mentalSelectOverride( $main );
+   delete;
+   mentalRefreshRenderLayerOverridePanel($main);
+}
+
+global proc mentalCopyRenderLayerOverride( string $main )
+{
+   mentalSelectOverride( $main );
+   duplicate;
+   mentalRefreshRenderLayerOverridePanel($main);
+}
+
+global proc mentalNewRenderLayerOverride( string $main )
+{
+   createNode -n override mentalRenderLayerOverride;
+   mentalRefreshRenderLayerOverridePanel($main);
+}
+
+global proc string[] mentalGetSelectedOverrides()
+{
+   string $selOverrides[];
+   global string $gRenderLayerOverridePanel;
+   if ( ! `formLayout -exists $gRenderLayerOverridePanel` )
+      return $selOverrides;
+   
+   string $main = $gRenderLayerOverridePanel;
+   string $listControl = $main + overridesList();
+   int $selected[] = `textScrollList -query -selectIndexedItem $listControl`;
+   if ((size($selected) == 0) || ($selected[0] == -1)) {
+      return $selOverrides;
+   }
+   
+   string $overrides[] = mentalGetRenderLayerOverrides();
+   int $numSel = size($selected);
+   string $text;
+   for ($i = 0; $i < $numSel; $i++ )
+   {
+      int $idx = $selected[$i] - 1;
+      $selOverrides[$i] = $overrides[$idx];
+   }
+   return $selOverrides;
+}
+
+global proc mentalChangeStatusRenderLayerOverride( string $main )
+{
+   string $listControl = $main + overridesList();
+   int $selected[] = `textScrollList -query -selectIndexedItem $listControl`;
+   if ((size($selected) == 0) || ($selected[0] == -1)) {
+      return;
+   }
+   string $sel[] = `textScrollList -query -selectItem $listControl`;
+
+   string $overrides[] = mentalGetRenderLayerOverrides();
+
+   int $i, $j;
+   int $numSel = size($selected);
+   string $text;
+   for ($i = 0; $i < $numSel; $i++ )
+   {
+      int $idx = $selected[$i] - 1;
+      string $plug = $overrides[$idx] + ".nodeState";
+      $idx++;
+      int $state = `getAttr $plug`;
+      if ( $state == 0 )
+      {
+	 $text = $sel[$i] + "      OFF";
+	 setAttr $plug 1;
+      }
+      else
+      {
+	 $text = substitute("      OFF", $sel[$i], "");
+	 setAttr $plug 0;
+      }
+      textScrollList -e -removeIndexedItem $idx $listControl;
+      textScrollList -e -appendPosition $idx $text $listControl;
+      textScrollList -e -selectIndexedItem $idx $listControl;
+   }
+}
+
+
+
+global proc mentalRefreshRenderLayerOverridePanel( string $main )
+{
+   int $i;
+   
+   // update list of overrides and pass selection dropdown menu
+   string $overridesControl = $main + overridesList();
+   string $overrides[] = mentalGetRenderLayerOverrides();
+   
+   int $numOverrides = size($overrides);
+   textScrollList -edit -removeAll $overridesControl;
+   
+   for($i=0; $i<$numOverrides; $i++)
+   {
+      string $name = $overrides[$i];
+      textScrollList -edit -append ($name) $overridesControl;
+   }
+
+}
+
+
+global proc mentalRenderLayerOverrideCreateCallback(string $panelName)
+{ 
+  //  
+  //  Description: 
+  //      Create any editors unparented here and do 
+  //      any other initialization required.  
+  //
+  //      In this example we will only declare a global array to
+  //	  maintain some state information.
+  //
+} 
+
+ 
+global proc mentalRenderLayerOverrideInitCallback(string $panelName)
+{ 
+  //  
+  //  Description:  
+  //      Re-initialize the panel on file -new or file -open.
+  //
+  //      In this example we will only re-init the global array.
+  //
+   mentalRenderLayerOverridePanel();
+}
+
+ 
+global proc mentalRenderLayerOverrideAddCallback(string $panelName)
+{
+   //
+   //  Description:  Create UI and parent any editors.
+   //
+   global string $gRenderLayerOverridePanel;
+   string $main = `formLayout renderLayerEditorMainForm`;
+   $gRenderLayerOverridePanel = $main;
+   
+    
+  frameLayout
+    -borderStyle "etchedIn"
+    -labelAlign "center"
+    -label "Render Overrides" overridesFrame;
+    
+      textScrollList overridesList;
+      
+      popupMenu overridesListPopup;
+        menuItem -l "Turn On/Off Override"
+	-c ("mentalChangeStatusRenderLayerOverride(\"" + $main + "\")");
+        menuItem -l "Select Override"
+	-c ("mentalSelectOverride(\"" + $main + "\")");
+        menuItem -divider on;
+	menuItem -l "Refresh Panel"
+	-c ("mentalRefreshRenderLayerOverridePanel(\""+$main+"\")");
+        menuItem -divider on;
+        menuItem -l "Copy Override"
+	-c ("mentalCopyRenderLayerOverride(\"" + $main + "\")");
+        menuItem -divider on;
+        menuItem -l "Create New Override"
+	-c ("mentalNewRenderLayerOverride(\"" + $main + "\")");
+        menuItem -divider on;
+        menuItem -l "Delete Override"
+	-c ("mentalDeleteRenderLayerOverride(\"" + $main + "\")");
+      setParent ..;
+      
+    formLayout passButtonsForm;
+      button
+      -height 25
+      -label "New"
+      -command ("mentalNewRenderLayerOverride(\""+$main+"\")")
+      pAddButton;
+      
+      button
+      -height 25
+      -label "Refresh"
+      -command ("mentalRefreshRenderLayerOverridePanel(\""+$main+"\")")
+      pRefreshButton;
+      
+      button
+      -height 25
+      -label "Delete All"
+      -command ("mentalDeleteAllRenderLayerOverrides(\""+$main+"\")")
+      pDelButton;
+    setParent ..;
+    
+    formLayout -edit
+    -af pAddButton "left" 0
+    -ap pAddButton "right" 0 33
+    
+    -ac pRefreshButton "left" 0 pAddButton
+    -ap pRefreshButton "right" 0 66
+    
+    -ac pDelButton "left" 0 pRefreshButton
+    -af pDelButton "right" 0
+    passButtonsForm;
+
+  
+    formLayout -edit
+    
+    -ap overridesFrame "left" 0 0
+    -ap overridesFrame "right" 0 100
+    -ap overridesFrame "top" 0 0
+    -ac overridesFrame "bottom" 0 passButtonsForm
+    
+    -ap passButtonsForm "left" 0 0
+    -ap passButtonsForm "right" 0 100
+    -af passButtonsForm "bottom" 0
+    renderLayerEditorMainForm;
+    
+    // fill in the content
+    mentalRefreshRenderLayerOverridePanel($main);
+}
+
+ 
+global proc mentalRenderLayerOverrideRemoveCallback(string $panelName)
+{ 
+   //
+   //  Description:
+   //		Unparent any editors and save state if required.
+   //
+
+   string $control = `scriptedPanel -q -control $panelName`;
+   setParent $control;
+} 
+
+ 
+global proc mentalRenderLayerOverrideDeleteCallback(string $panelName)
+{
+   //
+   //  Description:
+   //		Delete any editors and do any other cleanup required.
+} 
+
+ 
+global proc string mentalRenderLayerOverrideSaveStateCallback(string $panelName)
+{ 
+  //
+  //  Description:
+  //		Return a string that will restore the current state
+  //		when it is executed.
+   return "";
+}
+
+
+global proc mentalRenderLayerOverridePanel()
+{
+   if ( ! `scriptedPanelType -exists mentalRenderLayerOverridePanelType` )
+   {
+      // define callbacks for this type and make it a unique type 
+      // as we don't want two panels sharing the same global data.
+      scriptedPanelType 
+      -ccb mentalRenderLayerOverrideCreateCallback
+      -icb mentalRenderLayerOverrideInitCallback
+      -acb mentalRenderLayerOverrideAddCallback
+      -rcb mentalRenderLayerOverrideRemoveCallback
+      -dcb mentalRenderLayerOverrideDeleteCallback
+      -scb mentalRenderLayerOverrideSaveStateCallback
+      -unique true
+      mentalRenderLayerOverridePanelType;
+   }
+
+   if ( `scriptedPanel -exists mentalRenderLayerOverridesPanel` )
+      return;
+   
+   //
+   // Add panel to list of scripted panels
+   //
+   scriptedPanel -unParent
+   -type mentalRenderLayerOverridePanelType
+   -label "Render Pass Overrides"
+   mentalRenderLayerOverridesPanel;
+
+} 

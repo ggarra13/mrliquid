@@ -1,0 +1,442 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+//
+//  Alias Script File
+//  MODIFY THIS AT YOUR OWN RISK
+//
+//  Creation Date:  Oct 6, 2000
+//
+//  Description:
+//      This script creates menu items to add shaders to an object.  
+//
+
+global proc assignSG (string $material, string $item)
+{
+	string $assignString = $item;
+	string $nodes[] = (`listHistory -future true $material`);
+    string $shadingGroup = "";
+	for ($node in $nodes) {
+		if(( `nodeType $node` == "shadingEngine" )
+		 ||( `nodeType $node` == "materialFacade" ))
+        {
+            $shadingGroup = $node;
+		}
+	}
+
+    // No shading group ?
+
+    if ($shadingGroup == "") {
+        $shadingGroup = `sets -renderable true -noSurfaceShader true
+            -empty -name ($material+"SG")`;
+
+        defaultNavigation -connectToExisting
+            -source $material -destination $shadingGroup;
+    }
+
+	string $objs[];
+
+	//
+	// The $item is always an object, never a component (ie face).
+	// If the current selection contains faces of the specified item, then
+	// we would rather assign the new shader to the specifically selected
+	// faces rather than the object as a whole. In particular, this allows
+	// users to select faces of a poly object and use the RMB menu to
+	// assign shaders to them.
+	// 
+
+	string $selection[] = `ls -selection`;
+	int $i;
+
+	for ($i = 0; $i < size($selection); $i++)
+	{
+		if (`match ($item + "\\.f\\[.*\\]") $selection[$i]` != "")
+		{
+			// One part of the currently selection is faces of the
+			// specified item. We will add the selected faces to the list
+			// of objects to which the shader will be assigned.
+			//
+			$objs[size($objs)] = $selection[$i];
+			$assignString = ("the selected faces of " + $item);
+		}
+	}
+
+	if (size($objs) == 0)
+	{
+		// Try again with the shape. Face selection will be names
+		// after the shape when other shapes are parented below the
+		// transform.
+		string $shapes[] = `listRelatives -s $item`;
+		if (size($shapes) > 0 )
+		{
+			string $shape = $shapes[0];
+			for ($i = 0; $i < size($selection); $i++)
+			{
+				if (`match ($shape + "\\.f\\[.*\\]") $selection[$i]` != "")
+				{
+					$objs[size($objs)] = $selection[$i];
+					$assignString = ("the selected faces of " + $shape);
+				}
+			}
+		}
+	}
+
+	if (size($objs) == 0)
+	{
+		// There were no faces of the specified item in the current
+		// selection. Therefore, we will assign the shader to the entire
+		// object specified.
+		//
+		$objs[0] = $item;
+	}
+
+    sets -e -forceElement $shadingGroup $objs;
+
+    print (
+		"// Result: Assigned " 
+		+ $shadingGroup 
+		+ " to " 
+		+ $assignString 
+		+ "//\n");
+}
+
+proc string[] classificationsSuitableFor(string $item)
+{
+	//
+	// Description:
+	//	This procedure is called when building a menu of existing shaders or
+	//	shader types of a new shader to assign. In some cases, the shader is to
+	//	be assigned to a particular item, in which case $item != "". In other
+	//	cases the shader is to be assigned to the selected objects.
+	//
+	//	This procedure determines the classifications of shaders or shader
+	//	types most appropriate to display in the menu. In the situation where
+	//	$item is specified, the classifications returned will be the
+	//	classifications of shaders which are most appropriate to assign to the
+	//	specified item. If $item is not specified, the classifications returned
+	//	will be the most commonly appropriate classifications.
+	//
+	// Returns: 
+	//	A string array of classifications.
+	//
+	string $shapes[] = `ls -shapes -dag -ni -visible $item`;
+	if( size( $shapes ) > 0 ){
+		$item = $shapes[0];
+	} 
+
+	int $itemRenderType = -1;
+	int $particleRenderType = -1;
+	if ($item != "")
+	{
+		//
+		// An item has been specified to which the new shader should be
+		// assigned. We will attempt to determine its render type and/or
+		// particle render type.
+		//
+
+		string $lsResult[];
+
+		$lsResult = `ls ($item + ".renderType")`;
+
+
+		if (size($lsResult) > 0)
+		{
+			// The item has a renderType attribute, so we will query its
+			// value.
+			//
+			$itemRenderType = `getAttr ($item + ".renderType")`;
+		}
+
+		clear($lsResult);
+
+		$lsResult = `ls ($item + ".particleRenderType")`;
+
+		if (size($lsResult) > 0)
+		{
+			// The item has a particleRenderType attribute, so we will 
+			// query its value.
+			//
+			$particleRenderType = `getAttr ($item + ".particleRenderType")`;
+		}
+	}
+
+	// The $classificationArray variable will be used to store the
+	// classification strings of shaders which would be appropriate to
+	// show in the menu. We will determine the classifications based on the
+	// renderType and/or particleRenderType of the item.
+	//
+	string $classificationArray[];
+
+	if (	($particleRenderType == 8)
+		|| 	($particleRenderType == 9))
+	{
+		// The object is a cloud or tube particle render type.
+		// Only particle shaders are valid for this type.
+		//
+		$classificationArray[0] = "shader/volume/particle";
+	}
+	else if ($itemRenderType == 0)
+	{
+		// The object is a "surface" render type.
+		//
+		$classificationArray[0] = "shader/surface";
+	}
+	else if ($itemRenderType == 1)
+	{
+		// The object is a "volume" render type.
+		//
+		$classificationArray[0] = "shader/volume/fog";
+	}
+	else
+	{
+		// The object is neither a "surface" nor "volume" render type.
+		// Most likely we got to here because no $item was specified.
+		//
+		$classificationArray[0] = "shader/surface";
+		$classificationArray[1] = "shader/volume";
+	}
+
+	return $classificationArray;
+}
+
+global proc buildAssignShaderMenu(string $parent, string $item)
+{
+	//
+	// Description:
+	//	This procedure is called to build a menu of existing shaders which can
+	//	be assigned to the specified $item or to the current selection.
+	//
+
+	setParent -menu $parent;
+	menu -edit -deleteAllItems $parent;
+
+	// Determine the classifications of shaders which would be most appropriate
+	// to assign to the specified $item. If $item is unspecified, this will
+	// return the most commonly appropriate classifications. 
+	//
+	string $classificationArray[] = classificationsSuitableFor($item);
+
+	int $i;
+
+	for ($i = 0; $i < size($classificationArray); $i++)
+	{
+		// Insert a divider if we are about to add a second section of
+		// shaders to this menu. This divider will separate, for example, all
+		// surface shaders from all volume shaders.
+		//
+		if ($i != 0) menuItem -divider true;
+
+		// Get a list of all node types which are classified according to the
+		// current classification
+		//
+		string $types[] = `listNodeTypes $classificationArray[$i]`;
+
+		for ($type in $types) 
+		{
+			// Get a list of all material nodes which have the current node type
+			//
+			string $material;
+			string $materialArray[] = `ls -exactType $type`;
+
+			for ( $material in $materialArray ) 
+			{
+				//
+				// Add a menu item to assign the current material to the
+				// specified item, or to the current selection if item is
+				// unspecified.
+				//
+
+                string $assignMaterialAnnotationFormat = (uiRes("m_buildShaderMenus.kAssignMaterial"));
+                string $assignMaterialAnnotation = `format -stringArg $material $assignMaterialAnnotationFormat `;
+				$menu = 
+					`menuItem -label $material 
+						-annotation $assignMaterialAnnotation`;
+
+				if ($item == "") 
+				{
+					if( nodeType($material) == "oceanShader" )
+					{
+						menuItem 
+							-edit 
+							-command ("assignOceanShader " + $material) 
+							$menu;
+					} else {
+						menuItem 
+							-edit 
+							-command ("hyperShade -assign " + $material) 
+							$menu;
+					}
+				} 
+				else 
+				{
+					menuItem 
+						-edit 
+						-command ("assignSG " + $material + " " + $item) 
+						$menu;
+				}
+
+				// Add an option box to the menu item which will bring up the
+				// material in the attribute editor
+				//
+                string $assignMaterialOptionBoxLabelFormat = (uiRes("m_buildShaderMenus.kAssignMaterialOptionBoxLabel"));
+                string $assignMaterialOptionBoxLabel = `format -stringArg $material $assignMaterialOptionBoxLabelFormat `;
+                string $assignMaterialOptionBoxAnnotationFormat = (uiRes("m_buildShaderMenus.kAssignMaterialOptionBoxAnnotation"));
+                string $assignMaterialOptionBoxAnnotation = `format -stringArg $material $assignMaterialOptionBoxAnnotationFormat `;
+				menuItem 
+					-optionBox true 
+					-annotation $assignMaterialOptionBoxAnnotation 
+					-label $assignMaterialOptionBoxLabel 
+					-command ( "showEditor " + $material );
+			}
+		}
+	}
+}
+
+global proc updateAssignShaderMenu()
+{
+// Make sure checkbox is in correct state
+//
+	menuItem -edit
+		-checkBox (`optionVar -q AEpopupWhenCreatingShaders`)
+		attrEdPopupItem;
+}
+
+global proc buildShaderMenus (string $item)
+//
+//	Creates 2 menus. One for assiging shaders using existing shaders and
+//	the other by creating a new one.
+//
+//	$item = object to act on, or null string if selection list should be used
+//
+{
+	// First menu creates the shader and then assigns it.
+	//
+	menuItem 
+		-label (uiRes("m_buildShaderMenus.kAssignNewMaterial"))  
+		-subMenu true 
+		-tearOff true
+		-postMenuCommand "updateAssignShaderMenu";
+
+		string $classificationArray[] = classificationsSuitableFor($item);
+
+		int $i;
+		int $showMentalRayCustomShaders = 0;
+
+		for ($i = 0; $i < size($classificationArray); $i++)
+		{
+			// Insert a divider if we are about to add a second section of
+			// shaders to this menu. This divider will separate, for example, 
+			// all surface shaders from all volume shaders.
+			//
+			if ($i != 0) menuItem -d true;
+
+			// Get a list of all node types which are classified according to 
+			// the current classification
+			//
+			string $types[] = `listNodeTypes -ex "rendernode/mentalray" $classificationArray[$i]`;
+
+			for ($type in $types) 
+			{
+				// Check whether node should appear in this UI, based on 
+				// certain variables			
+				if (!shouldAppearInNodeCreateUI($type)) {
+					continue;
+				}
+
+				//
+				// Add a menu item to create and assign a material of the
+				// current type to the specified item, or to the current 
+				// selection if item is unspecified.
+				//
+				string $typeString = `nodeTypeNiceName $type`;
+                string $createMaterialAnnotationFormat = (uiRes("m_buildShaderMenus.kCreateNewMaterialAnnotation"));
+                string $createMaterialAnnotation = `format -stringArg $typeString $createMaterialAnnotationFormat `;
+				menuItem 
+					-label $typeString 					
+                    -annotation $createMaterialAnnotation
+					-command 
+						("createAndAssignShader "
+							+ $type 
+							+ " \""
+							+ $item
+							+ "\"");
+			}
+
+			if( $classificationArray[$i] == "shader/surface" )
+				$showMentalRayCustomShaders = 1;
+		}
+		menuItem -divider true;
+
+		// If shader/surface is in the menu, add mental ray material nodes here
+		if( $showMentalRayCustomShaders == 1 && mentalIsLoaded() )
+		{
+			string $types[] = `listNodeTypes "rendernode/mentalray:shader/surface"`;
+			for ($type in $types) 
+			{
+				//
+				// Add a menu item to create and assign a material of the
+				// current type to the specified item, or to the current 
+				// selection if item is unspecified.
+				//
+				string $typeString = `nodeTypeNiceName $type`;
+                string $mrCreateMaterialAnnotationFormat = (uiRes("m_buildShaderMenus.kMrCreateNewMaterialAnnotation"));
+                string $mrCreateMaterialAnnotation = `format -stringArg $typeString $mrCreateMaterialAnnotationFormat `;
+				menuItem 
+					-label $typeString  					
+                    -annotation $mrCreateMaterialAnnotation
+					-command 
+						("createAndAssignShader "
+							+ $type 
+							+ " \""
+							+ $item
+							+ "\"");
+			}
+			menuItem -divider true;			
+		}
+
+
+		menuItem 
+			-label (uiRes("m_buildShaderMenus.kAutomaticAttributeEditor"))  
+			-annotation (uiRes("m_buildShaderMenus.kAutomaticAttributeEditorAnnoation"))
+			-checkBox (`optionVar -q AEpopupWhenCreatingShaders`)
+			-command "optionVar -intValue AEpopupWhenCreatingShaders #1"
+			attrEdPopupItem;
+
+	setParent -menu ..;
+
+	// Second menu assigns from existing scene shaders. 
+	//
+	string $menuAssign = 
+		`menuItem -label (uiRes("m_buildShaderMenus.kAssignExistingMaterial"))  
+			-subMenu true 
+			-allowOptionBoxes true 
+			assignSGitem`;
+	menuItem 
+		-edit 
+		-postMenuCommand 
+			("buildAssignShaderMenu "
+				+ $menuAssign 
+				+ " \""
+				+ $item 
+				+ "\"")
+		assignSGitem;
+	setParent -menu ..;
+}

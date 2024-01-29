@@ -1,0 +1,11 @@
+#
+# .mi file that contains auxiliary libraries for shaders.  These libraries
+# are files that use static constructors and rely on module_init/exit
+# functions.
+#
+
+#
+# so that the mr_info() C++ streams are inited properly.
+#
+
+link "libmrLibrary.so"

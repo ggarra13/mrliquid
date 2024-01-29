@@ -1,0 +1,6 @@
+
+
+global proc int mentalIsRunningImr()
+{
+    return eval("mental -q -imr");
+}

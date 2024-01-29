@@ -1,0 +1,22 @@
+
+This is a list of contributors, detailing their contribution:
+
+Imre Tuske 
+Both provided really the motivation for me to get off my butt and do this.
+
+Martin Leguizamón
+Provided some changes for compatability with MSVC6 and the Intel Compiler.
+The amount of work he did for trying, debugging and finding bugs in the 
+converter was staggering. 
+
+Andrew Chapman
+Provided the idea of render passes done thru overrides thru his own
+free plugin and gently offered the use of his MEL code for whatever I
+wanted.  
+Code now being used in mental shares a lot of similarities to Andrew's.
+Albeit giving credit where it is due, the override idea was
+also something present in XSI at the time, so perhaps the original idea
+should be credited to someone there, too.
+
+Pavel Ledin
+Provided some useful bug reports for debugging some silly bugs.

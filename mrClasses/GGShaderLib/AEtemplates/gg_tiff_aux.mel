@@ -1,0 +1,60 @@
+
+//
+//  Procedure Name:
+//	AEgg_tiffNameNew 
+//
+
+global proc AEgg_tiffNameNew (string $fileAttribute)
+{
+	setUITemplate -pst attributeEditorTemplate;
+	rowLayout -nc 3 textureNameLayout;
+		text -l "Image Name";
+		textField textureNameField;
+			symbolButton -image "navButtonBrowse.xpm" browser;
+	setParent ..;
+	setUITemplate -ppt;
+	
+    AEgg_tiffNameReplace $fileAttribute;
+}
+
+//
+//  Procedure Name:
+//	AEgg_tiffNameReplace
+//
+
+global proc AEgg_tiffNameReplace (string $fileAttribute)
+{
+	connectControl -fileName textureNameField $fileAttribute;
+
+    string $command = "AEgg_assignTextureCB "+" "+$fileAttribute;
+
+    button -e -c
+		("AEgg_fileTextureBrowser \"" + $command + "\"" ) browser;
+}
+
+global proc AEgg_tiffFilterNew( string $plug )
+{
+      
+   attrEnumOptionMenuGrp
+              -l "Filter"
+              -at $plug
+              -ei  0 "Box"
+              -ei  1 "Triangle"
+              -ei  2 "Gaussian"
+              -ei  3 "Sinc"
+              -ei  4 "Disk"
+              -ei  5 "CatmullRom"
+              -ei  6 "Mitchell"
+              -ei  7 "Bessel"
+	tiffFilterCtrl
+	;
+}
+
+
+//
+// Routine to replace a pulldown of whats
+//
+global proc AEgg_tiffFilterReplace( string $plug )
+{
+  attrEnumOptionMenuGrp -e -at $plug tiffFilterCtrl;
+}

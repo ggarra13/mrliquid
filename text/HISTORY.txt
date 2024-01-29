@@ -1,0 +1,2316 @@
+
+
+0.8	 Bug fixes:
+	   - Fixed the spitting of instance names when used as shader 
+	     parameters.
+	   - Fixed the tangent values for animation curves when spitting
+	     scenes with motion blur.  Previously, motion blur of textures
+	     was exagerated.
+	   - Fixed a rare bug during IPR updates that could turn a shading
+	     group connected as a shader parameter into a new shader 
+	     resulting in errors being spit out to the maya console.
+	   - Fixed several bugs that would happen if trying to open a new
+	     scene while IPR was on:
+	     * A crashing bug due to an iterator pointing to old camera.
+	       This bug would show a message about an iterator being 
+	       found but not pointing to the right element.
+	     * Opening a new scene was not clearing the mental ray
+	       database properly.  Fixed.
+	   - mrLiquid was adding 3 redundant "delete" commands at the end of
+	     spitting the .mi file when not in IPR.  Fixed.
+	   - Fixed shading groups' "Export with Shading Engine" feature for
+	     custom shaders that have a single parameter. 
+	   - Fixed a bunch of problems with running mrLiquid without
+	     mayatomr (ie. doing putenv("MRL_NO_MAYA2MR", "1") before loading
+	     mrLiquid) and created a bunch of replacement MEL scripts for
+	     supporting this properly.
+	   - Fixed a minor bug in mrl_hairshader that would make the
+	     hsv noises (like satRand) not work correctly.
+	   - Fixed a silly warning regarding opacityGain in ramps and 
+	     surface luminance shaders.
+	   - Fixed a silly bug in the point constructor of mrClasses
+	     with different spaces.
+	   - Hardware particles now properly show in reflections/refractions.
+	   - Fixed some problems with region rendering in render view panel.
+	   - Fixed a bug that would set the translators' internal
+	     frame number to the next frame after the IPR was run once.
+	     This could effect IPRing of particles and some hair types.
+	   - Fixed a bug that would prevent refraction/transparency in
+	     particle instances.
+	   - Fixed a visibility problem in reflections/refractions
+ 	     that would happen in particle instancer when some particles 
+	     were made invisible.
+	   - Particle's instancer up vector/aim direction was flipped.
+	     Fixed.
+	   - Fixed an exception that would get raised if a particle
+	     instancer node was hidden during IPR.
+	   - The name of attributes in maya7 for user frame buffers changed
+	     their name.  mrOptions was failing to find them properly.
+	   - Starting the IPR no longer selects MRAY_customPass when it is
+	     first created.  Actually, MRAY_customPass no longer exists.
+	   - mrLiquid's render passes can now modify miDefaultOptions.
+	     Previously, if the first layer tried to modify it, the change
+	     for that layer would not get spit out.
+	   - When multiple render cameras were active, IPR would incorrectly
+	     preview all of them.  Fixed.
+	   - finalgather file was incorrectly listing the file twice and
+	     was not triggering IPR updates when changed.  Fixed.
+	   - Phenomenizer (mentalrayPhenomenon) nodes were not being spit 
+ 	     out properly for phenomena. Now they are.
+	   - Fixed two horrible memory corruption problems in .mi parser,
+	     due to incorrect use of realloc.  This could show up in 
+	     parsing of large .mi files.
+	   - color/scalar/vector texture parameters in shaders are now
+	     created as message parameters, instead of string parameters.
+	   - Phenomenon spitting could end up with an infinite loop and hang
+	     maya.  Fixed.
+	   - Fixed a bug in rubyMEL's melUI/melCallbacks.rb referring to 
+	     obsolete MEL() command.
+	   - Fixed a bug in rubyEditor which could lead to idle callback
+	     failing atrociously if rubyEditor was invoked without loading
+	     rubyMEL.
+	   - Phenomenon nodes were incorrectly being spit with a link line
+	     for them.  mrLiquid's shader factory now properly 
+	     recognizes them and avoids adding link statements for them.
+	   - mentalrayTexture nodes were not being mipmapped automatically.
+	     Now they are.
+	   - During unloading of the plug-in sometimes you could get
+	     an "invalid host: localhost" message.  Fixed.
+	   - exportVerbosity and renderVerbosity can now be properly
+	     overriden using the -v and -rv flags.
+	   - Progressive IPR would not update properly with rapid motion
+	     blur and visibility samples of 0.  Fixed.
+	   - envFog and lightFog were not being recognized as maya shaders
+	     and were creating some dummy $include lines.  Fixed.
+	   - Shader Factory could read enums incorrectly in some cases.
+	   - Uninstaller was not removing AETemplates.
+	   - Shadow Map Only flag was not being turned off after being turned
+	     on once.
+	   - During IPR, switching from one layer with one camera to a layer
+	     with another camera now works properly.
+	   - Changed some rare errors from exceptions to normal LOG_ERRORS()
+	     to avoid stopping IPR renders.
+	   - Installer was not including all the rubyMEL demos.  Fixed.
+	   - Fixed a potential bug with switch nodes.
+	   - Fixed a database bug when updating name of particle nodes.
+	   - Fixed a potential crash in mrl_geo_hair generator when 
+	     there were no hair guides in file.
+	   - mentalrayTextures now support the scalar/color/vector switch 
+	     properly.
+	   - [MAYA2MR BUG]
+	     Mayatomr's maya_file shaders are 100% BROKEN when fed
+	     a .map file, either made with -p or -r options.
+	     To work around it, we try to turn off texture filtering,
+	     which at least works with -p.
+	     We now also provide a mrl_exr_file shader that solves the
+	     problems with maya shaders, but using OpenEXR files instead
+	     of .map files.  This is more efficient in render times,
+	     disk space and more.
+	   - Fixed mapVizShape to read and display properly final gather 
+	     points and normals.
+	   - Fixed smoothPolygonDerivatives setting.  Previously, it was
+	     not being properly taken into account.
+	   - Multi-point/streak particles srand seed is now taken from
+             the particle id.  This avoids multi-point/streaks from jumping
+	     around when some particle dies.
+	   - Area lights were being subsampled inefficiently during 
+	     progressive IPR.  Fixed.
+	   - miCustomTex* and trilists works okay now.
+	   - Volume lights were not spitting out the volumetric material
+	     properly, when parented under a light instance.  Fixed.
+	   - Fixed a bug of attaching an instance that was not an object
+	     instance to a shader parameter.
+	   - Fixed a bug in the lookup of .mi files on Unix systems.
+	   - Trilist meshes are now spit without repeating identical vertices,
+	     leading to smaller .mi files.
+	   - Fixed a typo in hierarchical subds.
+	   - Bug fixed file objects' motion box not being read properly.
+	   - Ran converter thru valgrind to verify memory usage.
+	   - Fixed a bug with multiple uvsets when some uvs were unused in
+	     some meshes.
+	   - Fixed a bug with crease edges in CC meshes.
+	   - Fixed a horrible bug in vertex motion blur of meshes.
+	   - Fixed some putenv() calls that would then delete the string
+	     passed to it.
+	   - Renamed yy lexer/parser to mrl_yy to avoid conflicts with
+	     Maya's own yy parser in libTranslator (Unix issue, mainly).
+	   - Removed tons of compiler warnings (both on linux and windows).
+	   - Fixed a bunch of typos that showed up when all warnings
+	     were switched on.
+	   - Fixed build process to use different compilers on windows.
+
+	 TODO:
+	   - Use of SFIO on some sample test leads to text being written
+	     3 secs. faster on a simple 200Mb fprintf file.
+	     This needs merging with mrLiquid, as 3secs on a latest AMD
+	     machine is HUGE.  SFIO is also thread safe.
+
+	 Improvements:
+	   - Still faster than mayatomr - even maya2008 :)
+	   - Trilist meshes are now spit several times faster.
+	   - Meshes with and without subdivision are now spit several times
+	     faster.
+	   - Meshes with holes are now spit out faster.
+	   - Meshes in general now take less space in .mi files.
+	   - Ruby has now proper bindings to latest FLTK2.0.
+	   - Sped up mrLiquid's hash function by using SDBM's algorithm and 
+	     mrLiquid's hash class by using dense_hash_map.
+	     This improves hash look ups by about 60% on complex scenes
+	     (will shave 2 to 0.5 seconds per frame on modern machines). 
+	   - Sped up mrHash on windows.
+	   - Sped up spitting and updating of shading networks.
+	   - Smooth meshes automatically render as subdivision surface meshes.
+	   - mrLiquid can now function and has been tested to work
+	     properly without Mayatomr.  
+	     Set the environment variable MRL_NO_MAYA2MR before 
+	     loading mrLiquid or Mayatomr.  Then load mrLiquid.
+	     You can also do this from the maya script editor, with:
+		  putenv("MRL_NO_MAYA2MR", "1");
+	     This is useful in spitting .mi files in batch as it loads
+	     scenes faster.
+	     NOTE:  once in this mode, you CANNOT load Mayatomr or it will
+		    crash maya.
+	   - Added code to calculate ray differentials in mrClasses
+	     (pixel footprints on all ray types).
+	   - Translator now consumes even less memory due to tighter packing
+	     of data.
+	   - mrClasses now ships with a new mrl_exr_file texture shader.  This
+	     shader mimics all of maya's maya_file shader functionality but
+	     uses pyramid OpenEXR images instead, with its own caching 
+	     mechanism, with very good texture filtering on all rays (camera, 
+	     reflection, refraction, etc).
+	     This shader will also often render faster than maya_file using 
+	     .map files.
+	   - Added a makeEXR() function to mrLiquid to create tiled .exr files
+	     from any file that maya supports.
+	     Set miDefaultOptions.makeMipMaps to true to create EXR ripmaps
+	     that mrl_exr_file can then read.
+	   - mrClasses filter functions now use tables for faster calculation.
+	   - Added a new image viewer called mrViewer.  This viewer
+	     allows the loading and displaying of .exr, mental ray shadow maps
+	     (.shmap), mental ray stub images and movie files with sound.  
+	     It should allow you to use mrViewer as a replacement of imf_disp.
+	     Additional features to imf_disp include:
+	     * gamma and gain (exposure) controls.
+	     * ICC profiles and CTL 3D Luts
+	     * Images are internally kept in floating point.
+	     * mental ray stub connections are transmitted in full float
+	       precision.
+	     * R, G, B, A and Luminance display.
+	     * arbitrary display of channels and simultaneous preview of
+	       multiple mental ray frame buffers.
+	     * support for previewing/switching between multiple images.
+	     * fast image zooming/scrolling.
+	     * pixel color display (RGBA/HSV/Luma).
+	     * mousewheel support.
+	     * automatic non-destructive compositing over background image.
+	     * 2D and 3D LUT support.
+	     * Automatic update/reload of images as they change on disk.
+	     * AVI/Quicktime support.
+	     * EDL support.
+	   - mrLiquid's IPR previews are now done in full float precision
+	     and get saved to .exr files.
+	   - mentalrayUserBuffer and mentalrayOutputPass nodes are now
+	     properly supported to allow spitting arbitrary frame buffers,
+	     unlike Mayatomr (and previous mrLiquid versions).
+
+	     Example:
+
+createNode  mentalrayUserBuffer;
+createNode  mentalrayOutputPass;
+connectAttr mentalrayOutputPass1.message perspShape.miOutputShaderList[0];
+connectAttr mentalrayUserBuffer1.message miDefaultOptions.frameBufferList[0];
+connectAttr mentalrayUserBuffer1.message mentalrayOutputPass1.userBuffers[0];
+setAttr "mentalrayOutputPass1.fileMode" 1;
+setAttr -type "string" "crap.@.iff" 
+
+	    will output (for frame 1):
+
+		 options "miDefaultOptions"
+		 # ....
+		 frame buffer 0
+		 end options
+
+		 camera "persp"
+		    output "+rgba,fb0" "iff" "crap.1.iff"
+		 end
+
+           - Added proper support for custom frame buffers and output passes
+	     of those frame buffers.  Updated mrLiquid's menu to support
+	     the creation of frame buffers/output passes easily.
+	   - Maya Fur is now supported through an emulation.
+	     This fur emulation supports textures, curve attractors, and
+	     all maya fur parameters.
+	     Baking of textures is only done on demand when needed.
+	     This will generate faster fur than mayatomr, albeit the shape
+	     and look of the fur will not match maya exactly.
+	   - PaintFX support is now *MUCH* more solid:
+	       * paintfx meshes are now properly supported.
+	       * materials match maya much more closely and proper 
+		 branch/leaf/flower textures/ramps are read.
+	       * main branch nodes can now be also shaded as cylinders, not 
+		 flat.
+	       * IPR material updates are now much faster.  
+		 Changing material parameters in paint fx node does not
+		 lead to a full refresh of the geometry.
+	   - Particle sprite rendering is now fully supported using squares
+	     instead of hair and particles are textured with mrLiquid's
+	     mrl_geo_pdc_sprite and mrl_pdc_particlesprite shaders.
+	     The geo_pdc_sprite is smart enough to split the particle object
+	     into multiple objects (bounding boxes) if you have more than 
+	     1,000,000 particles.
+	   - Particle instancer's position/scale/shear/visibility/order/etc.
+	     attribute mappings can now be changed during IPR.
+ 	   - Hair material changes are now done faster without re-creating
+	     all the hairs during IPR if miHairType is not 3 (paintfx hairs)
+	   - Added gg_tracegroup and gg_select_tracegroup shaders to 
+	     mrClasses.  
+	     These shaders allow you to create trace groups (ie. have some
+	     objects excluded from some reflection/refraction/finalgather 
+	     on other objects), by linking either objects, sets,
+	     or materials lists.
+	     This is similar but more powerful than prman's trace sets.
+	   - Updated MEL Interface to support trace groups easily (ie.
+	     selective reflections/refractions).
+	     Usage:
+		Create a scene with a ball, a cube and 
+		a plane reflecting the ball and cube.
+
+		Select the ball to reflect/exclude.
+		Go to Trace Group->Create Trace Group.
+		Rename the trace group to something meaningful.
+
+		Select the plane's material or object to have it recognize
+		the previous trace group.  
+		Use Trace Groups->Use Trace Group-><name>
+		Play with the trace group settings (try excluding it to see
+		the ball's reflection disappear).
+	   - Compound plugs like colors or vectors are now passed a little
+	     bit faster into .mi file.
+	   - Custom text nodes can now run embedded MEL commands that
+	     are enclosed in `` [Horvath].
+	     Example:
+		 "objects"  [`ls -type nurbsSurface`]
+	   - Hair miHairType property is now an enum showing the actual
+	     type of hair being created.
+	   - Meshes can now also be spit as trilists (both binary and ascii).
+	   - Overriding image format thru the -imageFormat flag is
+	     now working.
+	   - miDefaultOption's makeMipMaps option now generates mip maps
+	     without popping up the windows console (Windows).  Errors
+	     are piped to the maya console window.
+	   - Shading groups are now spit out a tad faster.
+	   - exportFloatPrecision is now supported in mental ray globals.
+	     Default precision remains 6 decimal points.
+	   - During IPR, modification of shapes/transforms used in particle 
+	     instancer will refresh the instances properly.
+	   - Added MayatomrJob command for callbacks when emulating mayatomr.
+	     This command is still a no-op command, thou.
+ 	   - Updated all classes to raylib.
+	   - Added support for -addIncludes and -addLinks flags.  These
+	     flags allow you to register new shaders after mrLiquid is
+	     loaded.
+           - Custom text now properly checks for run-time errors in
+	     MEL, Ruby and Python commands and reports text node with
+	     problem.
+	   - Installer of MEL replacement maya scripts is now a tad simpler.
+	   - Split hair and paintfx strokes/geometry into their own
+	     separate classes for easier development.
+	   - Updated About window with beta-tester list to include those
+	     that reported bugs.
+	   - Removed 'by Gonzalo Garramuno' from .mi header.  
+	     Added date and cleaner formating.
+	   - Added support for miDiskSwapDir and miDiskSwapLimit in
+	     miDefaultOptions node.
+	   - Added support for -threads switch and mentalrayGlobals' 
+	     renderThreads attribute.
+	   - Automatically set MI_1TC_LIMIT when loading mrLiquid.
+	   - Sped up string parameters parsing/replacements a tiny bit.
+	   - All string parameters in mentalray now also support parsing 
+	     environment variables, using a $(VAR) syntax.
+	   - Copied GG icon to gg_threads, mrl_volume_isect, mrl_hairshader,
+	     mrl_particlesprite, gg_tracegroup, gg_select_tracegroup, 
+	     and mrl_state.
+	   - Shader Factory can now parse .mi files with texture and
+	     namespace lines in them, to support phenomena with 
+	     textures in them.
+	   - Phenomenon saver has been *HUGELY* improved:
+	     * It now saves out attributes' default values.
+	     * It now saves out attributes' min/max/softmin/softmax values.
+	     * It now saves out attributes' enum strings.
+	     * It now supports "lens", "volume", "environment", etc. root
+	       connections, besides main "root" connection.	
+	     * It can save out material phenomenons (note that these types
+	       of phenomenons are not yet properly supported in maya)
+	     * It saves out link/$include lines for the shaders being used.
+	     * It will save out $ifdef/set/$endif to avoid multiple inclusion
+	       of .mi files.
+	     * It will automatically assign a nodeid to the phenomenon.
+	     * It will automatically create an AE*Template for the phenomenon
+	       for nicer display in maya.
+	       Templates are saved in user's scripts dir 
+	       (ie: internalVar -userScriptDir)
+	   - Added new Materials->Create/Export Phenomena option in menus.
+	     This option allows you to collapse a shading network into
+	     a single phenomenon automatically by just selecting a shape,
+	     shading group or shader.
+	     The GUI that pops up then allows you to select which 
+	     attributes to expose in the phenomenon and how to name it.
+	     If you select the "Replace" option, the whole shading network
+	     is replaced with the single phenomenon when possible.
+	     Currently, this can be done for shaders, but not shading groups.
+	     A new phenomenon .mi file is saved in the users' presets
+	     directory (ie. internalVar -userPresetsDir) and it is later
+	     reloaded by mrLiquid to register the phenomenon.
+	     In the case of shading networks with textures, you can choose
+	     whether to export the textures into the phenomenon or make
+	     those textures part of the interface.
+	   - Added new Materials->Expand Phenomena option in menus to
+	     do the opposite of Create/Export Phenomena.
+	     This option allows you to expand a phenomenon into a shading
+	     network automatically by selecting the actual phenomenon node.
+	   - Cleaned up several linux warnings/errors.
+	   - mentalrayUserData nodes are now properly supported in shader
+	     connections.
+	   - Added support for miData attribute in object shapes.
+	   - Improved bug reporting when an instance is not found in 
+	     mrLiquid's internal database.
+	   - mrLiquid's subdivisions surfaces (or meshes with subd 
+	     approximations) now support "miTextureSpace" attribute for
+	     proper UV interpolation following the subdivision rules.
+	     The default interpolation is [subdivision], not [face].
+	     On meshes with subdivision approximations, the attribute
+	     miTextureSpace# is searched corresponding to the appropiate
+	     uv set, to allow you to mix subdivision, face and vertex
+	     interpolations.
+	   - Added support for mentalrayRenderPass node.  Similar to a 
+	     mentalrayOutputPass node, the main difference is that it
+	     operates on samples files instead of image files.
+	     To use them, in one of your camera, add a multi message 
+	     attribute called miSamplesPassList, like:
+
+	     addAttr -ln miSamplesPassList -multi -at message perspShape;
+
+	     Then, create a samples output pass and connect it to that 
+	     attribute:
+
+	     createNode mentalrayRenderPass;
+	     connectAttr mentalrayRenderPass1.message 
+			 perspShape.miSamplesPassList[0];
+
+	     By default, sample files are saved as $TMP/$RNDRPASS.@.pass. 
+	     Example:
+		/usr/tmp/defaultRenderPass.1.pass
+
+	     If you want to merge passes, you can connect one pass to 
+	     another by doing:
+		connectAttr FirstMergePass.message 
+			    MergingPass.sourceFiles[0];
+		connectAttr SecondMergePass.message 
+			    MergingPass.sourceFiles[1];
+		setAttr MergingPass.passMode 1; // merge
+
+	   - Added menu options to mrLiquid to add Samples Passes easily.
+	   - Added -pmn and -pst options to control how progressive 
+	     IPR works.
+	   - Added a two-step IPR to IPR menu.  This is like progressive,
+	     but only two re-renders are done (one low quality, one full).
+	   - Added support for -exportPathNames flag in main command.
+	     If not specified, default value is: "rraaaaaaaa".
+	   - makeMipMap() function now checks that the directory where a
+	     texture resides is open for writing before running imf_copy.
+	     If directory is protected, .map files are created in $TMP.
+	   - Moved lightMapOptions and options as pointers.
+	     This is part of a long upgrade to make mrLiquid support
+	     multiple render contexts and potentially allow for 
+	     multi-threaded conversion.
+	   - Updated .mi shader definitions to add enums.
+	   - Unified Maya render layers and mrLiquid's renderLayers.
+	     This change effects maya's layerEditor.mel script.
+	     Changed menu names from render passes to render
+	     layers to be consistent with maya's naming.
+	   - mentalRenderPassNode is now obsolete.  Maya's renderLayers
+	     now support override connections by adding special
+	     mrLiquid attributes.  You can then connect 
+	     mentalRenderPassOverrides to maya's renderLayers and
+	     maya will interpret them.
+	   - Camera switching among render layers is much simpler and follows
+	     maya's overrides.
+	   - Added an optional HairInset for Fur.  This allows you to
+	     push the root of the fur into the surface, to avoid the gaps
+	     that may appear between a subd surface and the hair being 
+	     calculated on the unsubdivided surface.
+	   - Render layers now support a "frequency" attribute.  This allows
+	     you to have a render layer that gets executed only at the
+	     first frame of the timeline, instead of on every frame.
+	     This option allows you, for example, to calculate a shadow map
+	     or raytraced shadow pass for static objects that only needs to
+	     be done once, not on every frame.
+	     Won't take credit for this one.  This mimics a similar 
+	     functionality in Renderman for Maya.
+	   - IPR can now optionally preview multiple cameras and multiple
+	     render layers (they are IPRed one after the other).
+	   - Added support for Loop approximation of meshes with
+	     subdivision approximation.
+	   - Simplified ruby render scripts to support just maya layer 
+	     rendering.
+	   - Made some possible failures in ruby render scripts report better
+	     errors.
+	   - There's now support for shadow map's dmapFrameExt, 
+	     dmapLightName, dmapSceneName, smapFrameExt, smapLightName and
+	     smapSceneName flags.
+	   - rubyMEL is now up to v0.9.
+	     It now ships with ruby bindings to ALL of the maya API.  
+	     This allows you to create maya plugins (of almost all kinds)
+	     directly in ruby.
+	     See examples of ruby plugins in the ruby directory of the 
+	     mrLiquid distribution.
+	     RUBY_PLUG_IN_PATH determines where the ruby plug-in editor
+	     searches for ruby plugins.
+	   - rubyMEL now has a nicer rubyEditor that tracks maya's
+	     history properly and supports multiple documents 
+	     (inspired on mw_scriptEditor).
+	     It should also guess between ruby and MEL code a tad smarter.
+	     It is also dockable now and appears in the View Panels menu.
+ 	   - rubyMEL ships with a new ruby plugin manager for .rbp plugins.
+	   - Shadow maps can now be shown and previewed by selecting the
+	     lights with shadow maps and then using:
+		    mrLiquid->Lights->Show Saved Shadow Map
+	     A new mental ray viewer will be open to show the
+	     shadow map.   For it to work, the shadow map needs to be
+	     saved to disk.  
+	     This works even in IPR (will update interactively -- super cool).
+	   - Added missing flagged approximations in raylib portion of
+	     mrLiquid.
+	   - Moved Ruby plugin manager to the "General Editors" 
+	     and Ruby Editor to View Panel menus from mrLiquid's menu.
+	   - Updated mentalFileObject grammar for some missing mray3.4/5 
+	     options.
+	   - Added a mentalParseString MEL command to parse a string
+	     replacing all of mrLiquid's special variables and
+	     characters ($SCN, etc).
+	   - Added support for miColorProfile.
+	   - Updated gg_exr shader for mray3.4 and later.  This shader is
+	     an alternative to mray's exr saver, which allows dumping all
+	     mray channels into a single exr file.  
+	     The name of the exr filename is now taken from the actual
+	     output line in mray.
+	   - Shader Factory now supports enums without an = value.
+	   - Upgraded file object grammar to support mray3.4 options.
+ 	   - Added Acrobat PDF documentation.
+	   - Cleaned up light linking code a bit.
+	   - Cleaned up some mrOption's flags a little bit.
+	   - Rewrote all old liquid functions.  We are now GPL free!!!
+	     Now scene traversal is also a little bit faster.
+	   - Updated rubyMEL to use the new ruby1.9 RARRAY and RSTRING macros,
+	     if present.
+	   - Point and streak particles now receive the particle id
+	     number as a user vector, which can be used for shading.
+	   - Keyword "hidden" is now supported in the .mi file shader
+	     description as a maya hint for an attribute. 
+	   - Removed some verbosity from the translation when verbosity is
+	     set to progress.
+	   - Installer now uses InstallJammer instead of NSIS.  This installer
+	     works under Linux (+ other Unices) and Windows.  Oddly, OSX is
+	     still not supported.
+	   - mrLiquid can now spit out maya's polygon derivatives.
+
+
+	 MRAY3.5 / MAYA8 changes (needs testing):
+	   - Upgraded file object grammar to support mray3.5 options.
+	   - mrClasses has been updated to support mray3.5's new C++ api.
+	   - Updated mrMeshSubd to use ccmesh instead of subdivsurf.
+	   - Subdivision surface edge weights for meshes are now supported.
+	   - Added support for defaultRenderGlobals.renderVersion (maya8).
+	   - Updated (Downgraded?) mrLiquid's maya8 version to use new
+	     maya8's (inferior?) lightLinker.
+	   - Added support for shadow linker.
+	   - Updated mrMatrix.inl, mrVector.inl and several shader
+	     in mrClasses to reflect const changes to miState*->camera
+	   - mentalRegisterRenderer.mel was updated to maya8.
+	   - Light linking in mray3.5 can now be done using mray3.5's
+	     new "light" and "light shadow" instance constructs.
+	   - Made code compatible with MSVC8 (VCExpress).
+	   - Added mrSpectrum.h to mrClasses, encapsulating all the
+	     spectrum stuff.
+	   - Added support for photonvol merge, caustic merge and
+	     globillum merge.
+	   - makeEXR() will properly create .exr images from the original
+	     image's float data, unlike maya7.
+	   - Added support for shader balls by spawning a separate
+ 	     render if Mayatomr is not loaded.  NOTE:  this requires
+	     two mray licenses, not one.
+	   - Added support for gzip compressed mi files (requires gzip
+	     to be installed).
+	   - Added support for volumetric fur.
+	   - Improved support for user data.  You can now have an unlimited
+	     number of user data per object.
+	   - Particle instancer now passes on user data of particle object
+	     onto each instance.
+	   - mrLiquid's YAML render framework has been superceded by a
+	     render framework written 100% with a Ruby DSL, albeit YAML
+	     can still be used.
+	     The beauty of this is that it keeps YAML's simplicity and
+	     readability with a slightly different syntax but it also 
+	     allows:
+		* use of ruby expressions, conditionals, and misc. code
+		  in render parameter descriptions.
+		* support for per-layer overrides, in addition to global
+		  overrides.
+		* ability to change parameters easily from a stand-alone
+		  ruby GUI, without bringing up maya.
+		* Mix mrLiquid renders with other renderer's renders
+		  (maya, hardware, etc)
+		* Nest renders programmatically, by using ruby's
+		  'require' construct.
+	    - Added support for maya8.5's architecture shaders.
+	    - Added support for mentalray assemblies (mray3.6).
+
+
+	 TODO:
+	   - Hardware particles (ie. point/streak/etc) are now rendered
+	     faster, due to using a geometry shader.
+	   - Add new mkmov and MKRNDRMOVIES command.  These allow you
+	     to create an .avi movie file from a list of frames.
+	   - Added mrLiquid hardware shaders to mimic all of maya/mray base
+	     shaders (scanline portions of them, that is).
+	   - Add cube/sphere environment shaders with proper filtering
+	     using ray differentials.
+
+
+0.7.6    Bug fixes:
+	   - Fixed one of the ugly bugs regarding texture filtering present 
+	     in mayatomr's mi/shader combo.  Sadly, many others remain.
+	   - Added libtiff3.dll, zlib1.dll and jpeg62.dll as part of the
+	     standard distribution.  These DLLs are needed by mrLibrary and
+	     are now placed inside the shaders directory. [Pavel]
+
+
+0.7.5    Bug fixes:
+	   - Doing "New Scene" was not cleaning the internal mrLiquid scene 
+	     properly.
+	   - Fluid instance transformation was not being taken into account 
+	     during IPR.
+	   - Moving vertices of a subdivision surface was not updating the
+	     surface properly.
+	   - Particle instancer had gotten broken.  Fixed.
+
+
+RC8    Bug fixes:
+	   - Spotlight's intensity curve and color curve were not being
+	     translated.  Fixed. [Markus]
+	   - Fixed a bug when several different networks were attached to
+	     each element of a compound plug, which could result in network
+	     being spit out in the wrong order into the .mi file.
+	   - When an UVChooser node was used on mesh objects,
+	     the file node was not setting vertexUV* connections
+	     correctly. [Pavel]
+	   - Fixed a shadow map refreshing problem when caching shadow maps 
+	     with @ frame number during IPR and then switching to a new frame
+	     (ie. "myshadow.@.shd" )
+	   - Fixed rubyEditor problems that would result in error messages
+	     or in ruby code being misinterpreted.
+	   - Fixed two visibility problems when switching maya render layers.
+	   - Fixed two bugs when adding and deleting paintfx/hair nodes, 
+	     which would lead to [BUG] reports from mrLiquid.
+	   - Fixed a memory trashing [BUG] due to photon/shadow shaders in
+	     shading group.
+	     This bug would often show up when a shader was deleted but its
+	     shading group was not.
+	   - Fixed encoding of ruby code in custom text nodes.
+	   - Fixed a bug that was not exporting out the cameras properly
+	     for multiple render passes.
+	   - Fixed a bug that would make the maya master layer always render,
+	     even when it was set to not renderable.
+	   - rubyMEL's $stdout/$stderr redirection had gotten broken.  
+	     Fixed.
+	   - Ruby YAML interface changed to use YAML::load_file instead of
+	     YAML::load.  Change in YAML API?
+	   - Ruby's mental RendererMental.rb was incorrectly hard-coded to 
+	     use mrLiquid's 0.7beta1 version's shaders when rendering thru an
+	     .mi file. Fixed to use latest (installed) version.
+	   - Ruby's mayalib's warn/error() functions were not printing
+	     properly when run in batch.
+	   - Fixed some bugs regarding the output filename when rendering
+	     a pass with multiple cameras.
+	   - Fixed some problems with running mrLiquid without Mayatomr.
+	   - Removed the need for attribute exportObjectLabels in options 
+	     node to export object labels and match maya2mr.  
+	     This was legacy stuff from maya5.
+	     Now only passLabelThrough is paid attention to.
+	   - Removed a bug with multiple uvsets and uv chooser.
+
+
+	   Improvements:
+	   - Added support for mentalrayVertexColor nodes.  This allows
+	     you to render meshes with vertex colors, including IPR them.
+	   - Added support for maya's fluids (2d and 3d), including IPR them.
+	     Fluids can be spit either into the .mi stream or into
+	     temp files into your $TEMP (faster).
+	     This is controlled by the optional boolean "exportFluidFiles" 
+	     option in the render globals.
+	   - Added support for spitting maya's animation curves directly into
+	     .mi2 stream (if motion blur is on only).  This allows proper
+	     motion bluring of texture shaders and the like (assuming the
+	     shader does take advantage of supersampling in time and you are
+	     not rendering with rapid moblur).
+	   - Minor sped up spitting of complex shading networks that have 
+	     single component connections in them.
+	   - Sped up IPR by making the check for stopping use a TCP socket 
+	     connection instead of a silly group of files as before.  
+	     This should make the IPR behave now 2 to 3 times as
+	     fast as before, specially when samples are set high
+	     (min/max 0,2 for example).
+	   - Added new AEtemplate for mentalray's custom text nodes.
+	   - Added new mentalCustomNodeClass and a modified 
+	     mentalrayCustomNodeClass mel scripts.  These allow mrLiquid's
+	     custom shaders to properly display their shaderballs under
+	     mayatomr (but not mrLiquid).
+	   - When pointLight is set to User (Area Object), the light is spit
+	     with an identity matrix.
+	   - Added support for mental ray pass files and samples compositing.
+	     Still need to work on the gui for this for more user control.
+	   - Consolidated rubyEditor's widget text extraction into a single
+	     function.
+	   - rubyMEL is now compiled against ruby1.8.4.
+	   - rubyMEL can now be safely loaded/unloaded multiple times.
+	   - rubyMEL will not crash maya if ruby throws a C/C++ exception.
+	   - Sped up most rubyMEL's string conversion functions a tiny bit.
+	   - Added support for "miCustomMotion" in shape nodes.  This allows
+	     you to have motion blurred animated displacement maps with 
+	     maya displacement shader.  (NOT fully working yet.  What 
+	     mayatomr does is wrong, unfortunately).
+	   - mrLiquid's render passes now support a "camera" attribute.  
+	     With it, you can lock a certain pass to render through a
+	     specific camera or cameras.   AEmentalRenderPassTemplate has 
+	     been updated to support this easily.
+	   - Added support for parsing enum "" declarations in shader .mi
+	     definitions. [Horvath]
+
+
+RC7	   Bug fixes:
+	   - Renaming of nodes up in the hierarchy that were not part of
+	     the .mi scene database could corrupt mrLiquid's database 
+	     during IPR, leading to all sort of problems later on.
+	     This problem would more commonly be seen during duplication of
+	     nested hierarchies.  *FINALLY* Fixed.  This was really *the*
+	     toughest bug to address efficiently in all of mrliquid.
+	     [horvath]
+           - Pausing the IPR, changing motion blur to on and/or changing
+	     motion steps and then unpausing the IPR could lead to a crash.
+	     Fixed.
+	   - The first time the IPR was started in RC6 it would report an
+	     error with mentalOptions.  Fixed.
+	   - .mi lexer was not recognizing the words true or false within
+	     the #: maya extensions, albeit the parser was. [barnaby]
+	   - The starting of the ipr thru the renderview would lead
+	     to a complaint about mentalIPRSetIdle in RC6.  Fixed.
+	   - If IPR was started while on an inactive mrLiquid render pass,
+	     IPR would stop incorrectly and say that there were no 
+	     valid render passes.
+	   - If a problem appeared during scene translation, IPR would be
+	     stopped, but the menus would not be updated to reflect this.  
+	     Fixed.
+	   - Lightmap shaders were not being properly detected in material 
+	     definitions with mrLiquid's .mi parser.  
+	     This would effect subsurface.mi versions that
+	     have additional phenomena in them.  It seems there's different
+	     versions of the subsurface.mi file out there some with and some
+	     without the phenomena. [barnaby]
+	   - Switching frames while motion blur was on during IPR had gotten 
+	     broken in RC6, leading to an infinite loop. Fixed.
+	   - Switch shaders were raising an exception, as their connections
+	     were attempted to be instantiated as shaders.  Fixed.  [Pavel]
+	   - Ruby rendering framework was allocating directories for
+	     render passes even when those were inactive.  Fixed.
+	   - -layer flag was only taking into consideration the first use 
+	     only.  Fixed.
+	   - Improved ruby batch renders to be a tad safer and to wait for
+	     render images.
+
+
+	   Improvements:
+	   - Reduced the name of instances with multiple shapes.  This change
+	     makes mi files smaller and makes it easier to rename instances.
+	   - Switching motion blur off does not force a refresh of the whole
+	     scene anymore.
+	   - Changing motion steps does not force a refresh of the whole
+	     scene if motion blur is off.
+	   - Shadow map caching to disk during progressive/normal IPR is now
+	     active again, as described in RC5.  
+	     It turns out it was not a bug in mray, but a
+	     feature that would deactivate shadow maps and force them to
+	     be re-generated if the specified resolution did not match.
+	     The only big disadvantage of this new caching is that, while 
+	     mentalray saves the shadow maps to disk, mrLiquid cannot 
+	     tell the IPR to stop, as no shader ever gets called during 
+	     that process (so no state, lens or anything unfortunately). 
+	     Shadow map caching works properly with instanced lights.  
+	     However, if one shadow map of one of the instanced lights 
+	     needs to be re-generated, ALL shadow maps for all instanced
+	     lights will be.
+	     This is a limitation of mrLiquid not knowing the hash function 
+	     that mental ray uses to identify light instances.
+
+
+
+RC6	   Bug fixes:
+	   - Shading network is now cycle safe.  Previously, doing shading
+	     connections that looped on themselves would crash mrLiquid.
+	   - Light, camera instances and options node were always being 
+	     spit incrementally when saving out several frames, even
+	     when nothing had changed.  Fixed.
+	   - Typo in incremental updates when several shaders along
+	     the same branch had to be updated is now fixed.
+
+
+	   Improvements:
+	   - Improved the connection of shaders with generic attributes.
+	     (no shader has that really, but light connections do...)
+	   - Object sets in light linker is now properly working, albeit 
+	     it is still considered an experimental feature.
+
+	     In the MEL script editor do:
+		 putenv("MRL_LIGHTLINK_SETS", "1"); 
+             to activate, before starting to render/export/IPR.
+             And:
+		 putenv("MRL_LIGHTLINK_SETS", "");
+             to turn off before starting to render/export/IPR.
+
+             This will spit out material and object sets as instgroups 
+	     into the mi file.  The ignored objects/sets/materials will
+	     also get spit out, albeit the Mayatomr shader does not support
+	     it, unfortunately.
+	     As such, light linker supports linking properly, but
+	     not ignoring of objects, so you should not use the menu
+	     option Lighting/Shading->Break Light Links.
+	     Instead, you should use
+	     Window->Relationship Editors->Light Linking->Light Centric
+							->Object Centric
+	     to add-remove light<->object/sets/materials relationships.
+	     Make sure to turn off the default light set connections and
+	     that you don't attempt to break a linker connection to an
+	     object whose material is added as a connection (this is
+	     what Break Light Links does).  That sort of thing will not
+	     work.  Anyway, experiment a tad with it outputing the file
+	     with "mental -mi -f test" and you'll see what's going on.
+	     Remember that the "ignore" connections will not be paid
+	     attention to.
+	     If the material or object set is linked to several lights,
+	     the savings in the mi file can be considerable.
+	     What's more, the light linker node will often render faster,
+	     too!  
+
+
+RC5	   Bug fixes:
+	   - mrLiquid was correctly passing shadow shader for hair.
+	     Unfortunately, the shader of maya2mr is buggy and
+	     will not cast raytraced shadows properly.  Mayatomr is,
+	     incorrectly, always casting solid shadows, regardless of
+	     hair opacity setting.  mrLiquid has been made to match
+	     mayatomr for now when miHairType == 3. When miHairType != 3
+	     (try miHairType==1), shadows work properly, using mrLiquid's 
+	     hair shader, albeit the specular might need adjusting.  
+	     [Jozvex]
+	   - Optimization of scene dag had inadvertently broken geometry 
+	     shaders in RC3.  Fixed. [me/francesca]
+	   - An exception was being raised when a deformer was created.
+	     A bug probably also added as a result of a failed attempt at
+  	     optimizing some stuff in RC3.
+	   - Instances with multiple shapes would receive a longer name than
+	     needed. This could also result in an exception later on.
+	     Fixed.
+	   - Smooth derivatives calculations could still result in some NAN 
+	     numbers if polygon was small, leading to strange syntax
+	     errors if mi was spit in ascii.  Fixed.
+	   - IPR would not stop render if render was finalgather only.  
+	     Fixed.
+	   - IPR would create an incorrect tag deletion on adding of a 
+	     geoshader.  Fixed.
+	   - Light's "shadowmap file" attribute was incorrectly being written
+	     as "shadowmap filename", leading to a syntax error.
+	   - IPR could sometimes throw an exception if it was stopped between
+	     an update and then re-started, as the IPR queue was not being 
+	     cleared on stopping the IPR.
+	   - mrLiquid was raising an exception with mentalrayTextures on
+	     incremental updates.  This would effect subsurface shaders,
+	     for example.  Fixed. [maurice]
+	   - Progressive IPR was not properly resetting itself in some
+	     cases (hiding lights or objects, for example).
+	   - Fixed typo in baking shader.
+	   - Changing light types would run into naming problems in database,
+	     leading to exceptions and/or additional fake lights being 
+	     created.  Fixed.
+	   - GG/Facility.rb was not correctly pointing to the FACILITY.yaml
+	     and SHOW.yaml files.  Fixed.     
+	   - Progressive IPR would often send several samples updates 
+	     together by mistake due to idle time being broken.  Fixed.
+	   - Light's animated settings would not get spit out 
+	     incrementally.  Fixed.
+	   - rubyMEL would crash and burn whenever a file was loaded due
+	     to idle callback in rubyMEL calling ruby to check log size.  
+	     Fixed by creating a mentalFileSize command.
+	   - maya's photon shaders were incorrectly being spit with all
+	     color settings at zero.  This would lead to no photons being
+	     stored. Fixed. [Pavel]
+	   - Unit Conversion node was being spit even when there was no
+	     input attached. Fixed.  [Pavel]
+
+
+	     Improvements:
+	   - Changed the name of !AllLights group to defaultLightSet.
+	     This is to match maya and to allow in the future proper light 
+	     linking without expanding nodes.
+	   - You can now use OBJECT SETS in light linking.  If you use 
+	     an object set, this will not be expanded and will instead get 
+	     passed as is onto the light linker shader, with the 
+	     "expandGroups" flag set to on.  
+	     Note that the object set can ONLY be used in the "link" 
+	     connection, not the ignore connection of the lightLink.
+	     The object set will also be created and spit if it has not been
+	     spit before.
+	     When used properly, this should give you a significant speed 
+	     boost in times taken to exporting complex scenes with light 
+	     linking.
+	     Note that LIGHT SETS and MATERIAL SETS will still get 
+	     expanded/flattened as before, so there's no benefit in 
+	     using them.  
+	     Also note that if you use object sets, you cannot do partial 
+	     substraction of elements from the object set using 
+	     "ignore" lights, as the mayatomr's lightlinker's ignore 
+	     setting are disregarded.
+	     [Feature REMOVED.  Not ready for prime-time yet]
+	   - Even without object sets, spitting of light linker 
+	     connections should now be a tiny bit faster.
+	   - Added support for finalGatherDensity in the mentalrayOptions 
+	     node.
+ 	     This allows you to improve the finalgather quality without 
+	     having to decrease the max radius.
+	   - Progressive IPR will now also change finalGatherDensity on each 
+	     iteration, to obtain even faster and better IPR previews of 
+	     finalgather.
+	   - Progressive IPR now will not rebuild the finalgather file on 
+	     each progressive iteration, but just add points to a single
+	     file.  This leads to better finalgather IPR previews.
+	   - Dag traversal code has been re-written once again.  The new
+	     algorithm should prune branches of hidden objects much faster.
+	     It will also properly propagate all the mi flags (like miTrace)
+	     down the hierarchy.
+	     As a downside, if all your objects are visible, dag exporting
+	     will be a tad slower than before (hopefully, not much).
+	   - Several auxiliary routines in the dag traversal code have been
+	     improved in terms of performance.
+	   - With RC5, there's now a new AEmentalrayInstanceFlags.mel 
+	     replacement for maya's equivalent file.  This file first fixes 
+	     the geoshader bug present in maya7 and it adds support for 
+	     miFinalGather, miReflection, and miRefraction, which will get
+	     added automatically to the instance when raytrace or finalgather
+	     is set in the render globals.
+	   - Upgraded all findPlug(attr, status) methods to 
+	        findPlug(attr, true, status)
+	     According maya 7.0 api docs, that may be faster if multiple ops
+	     are done on the plug.
+	   - Spitting of flagged approximations in meshes has been slightly 
+	     improved.
+	   - Progressive IPR now effects area lights' samples.  Area lights
+	     will begin sampling at a percentage of their samples (based on
+	     number of iterations) and keep increasing their values
+	     until they reach the final settings.
+	   - Progressive IPR now effects shadow map samples and resolution.
+	   - IPR will now automatically cache shadow maps onto disk in
+	     your temp directory.  
+	     In progressive mode, only the shadow map of the final pass is 
+	     cached to disk.  
+	     [Feature TEMPORARILY DEACTIVATED due to mray bug that makes it
+	     work slower after incremental updates]
+	   - Progressive IPR will now automatically update the number of
+	     samples for any short/integer attribute called "...samples", 
+	     "...Samples" or "...Rays".  This means that attributes 
+	     like miRefractionRays, miReflectionRays, numSamples, 
+	     raySamples, etc. will get updated progressively.
+	     This feature works with any shader (custom or not).
+	     This allows you to do IPR of ambient occlussion at pretty
+	     good interactive speed.
+	   - Solidified error messages in case of wrong shader connections.
+	   - Progressive IPR will now automatically change the resolution of
+	     writable textures (such as those used in subsurface 
+	     calculations).
+	     This allows you to do IPR of subsurface scattering at pretty
+	     good interactive speed.
+	   - Lightmap textures will now get spit next to the appropiate
+	     lightmap shader.
+	   - The number of IPR callbacks has been drastically reduced as
+	     we ignore now a bunch of nodes.  This helps keeping
+	     callbacks within the 32-bit size of maya and allows IPRing 
+	     larger scenes.
+	   - Added [BUG] messages to most functions that can raise 
+	     exceptions.
+	     This will hopefully help with debugging in case rare problems
+	     appear.
+	   - mrTimer now also returns milliseconds.
+	   - Crop tool on spotlights with shadow maps now does the right 
+	     thing and will make the resolution of the map match what you
+	     set in the light's shadowmap resolution, but only for the
+	     area of the crop region, not the full shadow map.
+
+
+
+RC4	   Bug fixes:
+	   - Area lights could not be turned off once activated during IPR.
+	     Fixed.
+	   - The paint.mi included in RC3 had incorrectly hard-coded my own
+	     path to base.mi.  Fixed.  [Pavel]
+	   - An optimization of lightLinker was causing light linker to not
+	     update properly during IPR.  Fixed.  [Pavel]
+	   - .mi Lexer was incorrectly leaving its file descriptors open
+	     in RC3 [RC2 was fine].  Fixed.
+	   - Meshes or Meshes with Subdiv approximations with empty uv
+	     sets would incorrectly spit out references to 
+	     inexistent vectors.  Fixed. [Pavel]
+	   - lightLinker would not spit out correctly links done through
+	     sets.  Now it works, albeit there's no benefit from using 
+	     sets yet. [Pavel]
+	   - Light Linker could miss spitting out some links if multiple
+	     light linkers were available in the scene.  Fixed.
+
+
+RC3	   Bug fixes:
+	   - On complex scenes, the pipe to the mentalray stand-alone was
+	     behaving EXTREMELY slowly on translating the scene for the
+	     first time, leading to IPR to take a long time to start.
+	     This was due to a bug on my part in the Windows pipe code.  
+	     Fixed. [Pavel, indirectly as he did not realize it was a bug]
+	   - Progressive IPR was often running into a race condition,
+	     leading to several refreshes being done and no input from the
+	     user.  Fixed.  [Francesca]
+	   - Light mapping baking was no longer working due to the change 
+ 	     to camera flag.  Fixed. [Pavel]
+	   - Upgraded light mapping functions to use maya7's shaders
+	     (bakelightmap, bakevertices).
+	   - Tearing-off the render pass submenu and then scrolling back
+	     onto the render pass menu would crash maya due to a Maya MEL 
+	     ELF bug. [Vania Alban-Zapata]
+	     I've made the menu not tearable for now. 
+	     Need better fix, thou.
+	   - Fixed a horrible bug where mi files were not being saved as
+	     binary in windows.  This could lead to syntax errors.
+	   - Fixed a minor rare bug that could sometimes lead to new material
+	     assignments not being updated during IPR.
+	   - Fixed two bugs in writing out hierarchical subd objects without 
+	     texture coordinates. [Francesca]
+	   - Instancing with mrLiquid would not allow assigning different
+	     materials to each instance.  Fixed.
+	   - The macro MRL_EXTEND_TO_SHAPE_DIRECTLY_BELOW would consider
+	     intermediate shapes when shape count was 1.  Fixed.
+ 	   - IPR was not properly updating instance flags such as miHide
+	     and similar.  Fixed.
+	   - Use of crop tool was turning off progressive mode in IPR.
+	     Fixed.  Now use of crop tool will reset samples. [Pavel]
+	   - Opposite flag was not being taken into account when rendering
+	     single sided.
+	   - Fixed a typo in the float values of nurbs surfaces' knot values 
+	     which could sometimes appear.
+	   - mentalrayGlobals' miText was not being read or spit.  Fixed.
+	   - Provided a new paint.mi file for mrliquid that has the
+	     link/$include lines for base.mi uncommented.  This fixes
+	     problems that would appear using mi_car_paint and other
+	     phenomena in that file.
+	   - Fixed a bug in .mi lexer regarding $include files.  Also made
+	     the lexer a tiny bit faster.
+
+
+	   Improvements:
+	   - Reordered the mrLiquid menu.
+	   - Added new BAKING options to mrLiquid.
+	     There's now a new Bake menu to mrLiquid's menu.
+	     This menu now contains options to bake geometry and textures.
+	   - Added a new APPROXIMATIONS EDITOR menu to mrLiquid.
+	     From this menu, you can add normal approximations as you do with
+	     Mayatomr.  But, you can also add flagged approximations.
+	     Flagged approximations are special approximations that only take
+	     effect for a certain ray type (like trace rays, for example).
+	   - During light baking, mrTexture outputs the name of the texture
+	     being baked to the console, if export verbosity > 2.
+	   - Added support for mray3.4 finalgather, reflection, refraction
+	     flags in instance.  Use optional miFinalGather, miReflection,
+	     miRefraction attributes in instance.
+	   - Added 1.0 / gamma compensation to viewer when format is
+	     not floating point and render gamma is != 1.0. 
+	     [Pavel suggestion]
+	   - Added rubyMEL documentation to the distribution of mrLiquid.
+	   - Progressive sampling starts at -3,-3 now to avoid warning spit
+	     by mentalray.
+	   - Added AEmentalFileObjectShapeTemplate.mel
+	   - Upgraded fileobjgrammar.y to new mray3 grammar.
+	   - Progressive mode has now been made to also work with scanline 
+	     rapid.  It begins with visibility samples set at 1 and shading
+	     samples set at 0.25 and goes up until it reaches your
+	     globals [Pavel]
+	   - Documented all special variables and attributes that mrLiquid
+	     supports in addition to Mayatomr in VARIABLES.txt in the doc
+	     directory.
+	   - Approximation nodes now support a "noSmoothing" bool attribute
+	     for "fine nosmoothing" approximations.
+	   - fileobjgrammar.y now does not read the object completely.  As
+	     soon as the basis/group section is reached, we stop reading
+	     the mi file.  This results in much faster feedback of
+	     mentalFileObjectShapes interactively, even with extremely 
+	     complex objects.
+	   - Added $ifdef/set/$endif statements to all mrLiquid's .mi files,
+	     to avoid re-inclusion by mistake.
+	   - Added spitting of $ifdef/set/$endif for $includes
+	     during .mi2 generation of mrLiquid.
+
+
+RC2	   Bug fixes:
+	   - Removed a warning introduced with RC1 when creating mesh objects
+	     with subd approximations.
+	   - Added a fix for a potential problem of a mesh being 
+	     turned into a subd object while it was set to be incremental.
+	     This could lead to a crash or undefined behavior.
+	   - mentalCropTool was printing out the pixel coordinates of the
+	     crop region (a debugging feature).  Turned it off.
+	   - The addition of miOpaque and contours was creating problems
+	     with paintfx/hair creation during IPR.  Fixed.
+	   - Removed an exception when doing New Scene and a potential
+	     race condition.
+	   - Added MStatus checks to removal of callbacks as a safety
+	     precaution.
+	   - New Scene was not deleting the AllLights group, leading to a
+	     warning on creation of a new empty scene.  Fixed.
+	   - Directional lights were raising an exception due to area 
+	     attribute.  Fixed.
+	   - PaintFX files were often incorrectly getting incandescence 
+	     values when all values were zero.  Optimized.
+	   - DAG scene traversal has been further optimized a little bit.
+	   - Instanced objects were being spit very slowly, courtesy of
+	     MDagPath::getAllPathsTo() being dog slow.  Fixed. [Pavel]
+	   - Image format was being changed back to iff
+	     when scene was reloaded. Fixed.  Need to hack another
+	     maya MEL file.  [Pavel]
+
+
+v0.7beta8  Updates:
+(RC1)	   - Damn... I had commented a line of code and this would lead to new
+	     materials not getting assigned their proper IPR callback.
+	   - When removing nodes, their IPR callbacks were not cleared,
+	     wasting some memory. Fixed.
+	   - Undoing of meshes with subdivision approximations would 
+	     incorrectly re-spit them as incremental, leading to an error.
+	   - Attaching a subd approximation node to a mesh would leak
+	     some memory (the original mesh node).
+
+
+v0.7beta7  Updates:
+	   - Fixed a potential bug with override approximations in the
+	     option block.
+	   - Quiting maya with the IPR active would leave mental ray running.
+	     Fixed. [Pavel]
+	   - You can now animate mentalray tesselations during an animation.
+	     Note, however, this is expensive as the whole object is respit.
+	     To be improved with tesselation overrides.
+	   - Removed warnings about "colorA" from custom light shaders.
+	     [Pavel]
+
+
+v0.7beta6  Updates:
+	   - A new pass system has been written to rely on using IPR
+	     callbacks.  
+	     This change now offers even more possibilities to the stuff you
+	     can change between render passes.  With this method, you are 
+	     allowed to change tesselation, create/delete objects at will, 
+	     load/unload file references, assign new per-face materials, etc.
+	     all between passes.
+	     To take advantage of these, you will need to rely on doing some
+	     MEL overrides for the mental render passes (ie. not maya render
+	     passes).
+	     Note, however, that this flexibility comes at a price.  This new
+	     flexible pass system is slower than the previous one.
+	     As such, it is not active by default.  Use the new -pfi flag
+	     to activative it.  Something like:
+		mental -mi -f test -pf 0 -pfi -sf 1 -ef 10
+	     This mode is still experimental, as I am still trying to improve
+	     it.  I might end up merging both systems into one, getting the
+	     best benefits of each.
+	   - Layered Texture was not being recognized properly as a maya 
+	     shader.  Fixed. [Pavel]
+	   - Duplicate Object/Instance had gotten broken.  Fixed. [Pavel]
+	   - Opening the mentalray tab of a light for the first time was
+	     creating a needless re-render.  Somewhat Fixed. [Pavel]
+	   - Some light setting were not being properly refreshed in IPR
+	     (area lights, for example). fixed.  [Pavel] 
+	   - Render Current Frame was misleading.  Now it previews the
+	     current frame and will correctly open the viewer [Francesca]
+	   - Stop Render would not stop the render preview.  Fixed. 
+	     [Francesca]
+	   - There's now a new mentalCropTool context.  This tool allows you
+	     to set a crop region in the opengl viewports, switch render 
+	     camera during ipr and also set crop regions for lights' 
+	     shadow maps.
+	     NOTE:: crop region is still not correct in Camera's Fill 
+		    Film fit Mode.
+	   - Spot lights now support cropped shadows set manually (with the
+	     crop region tool).
+	   - Maya's Render Settings window would list mrLiquid's mental 
+	     image formats as if it was maya's formats only.  Fixed, albeit
+	     this needs hacking of a maya file. Yuck.  Alias has a 
+	     complete mess with their mel scripts in render settings.
+
+
+v0.7beta5  Updates/Bug fixes:
+	   - Changing parameters of custom light shaders would create a 
+	     stack overflow and crash IPR, due to a bug in updateChildShaders
+	     related to mrLiquid's miInherit parameter.  Fixed.
+	   - Adding a custom light shader during IPR would lead to the shader
+	     not displaying its attributes.
+	     Ahh... alias in their infinite wisdom have added something in 
+	     their AEtemplates for nodes that actually hides
+	     my miInherit attribute (or any other attribute in custom light
+	     shaders the user might want to add)... Ay, alias, alias...
+	     this was working fine in maya5.
+	   - 'Export with Shading Engine' and 'Export with Volume Sampler' 
+	     were not being treated properly.  Fixed.
+	   - 'miOpaque' was not being exported.  Fixed.
+	   - Removed idiotic pointer in shape to instance I added in beta4.
+	     Found out I could do without and that having it would 
+	     potentially create issues with instancing.
+	     Created auxiliary functions that will locate the instance
+	     accurately instead.
+	   - Added support for maya contours in shading groups.
+	   - Typo in mentalOptions when working with photons removed.
+	   - Spitting colors with alpha in custom light shaders removed.
+	   - Recoded mrl_lens as mrl_state.  This allows stopping IPR during
+	     photon/light mapping, too.
+	   - During IPR, objects would get incorrectly spit without their
+	     caustic/globillum flags.  This would lead to photonmapping not
+	     working if user changed the render globals flag.  Fixed.
+	   - Made mrLiquid support attaching objects to shader parameters 
+	     correctly.
+	     This will make a shader like mib_geo_instance work properly, 
+	     unlike Mayatomr.
+	   - Changing/toggling on-off custom geometry shaders would not work 
+	     in IPR. Fixed.
+	   - %c, %l, %#n, etc. were not being translated properly in
+	     strings.  
+	     They were eating the one character afterwards.  Fixed.
+
+
+v0.7beta4  Updates/Bug fixes to IPR:
+	   - Solidified core.  I finally got a hang of how maya processes
+	     objects on creation and stuff.  I removed a bunch of hacks in
+	     the IPR due to that.  Actually, I rewrote a big chunk of the 
+	     IPR.
+	   - Fixed a crashing bug that would appear when adding deformers
+	     due to intermediate objects during IPR.
+	     This was due to the shape's intermediateObject attribute not
+	     being taken into account in ipr.
+	   - Updated mentalrayItemList.version to maya7's value.
+	   - Added a pointer to the instance in each shape.  This makes the
+	     converter use a tad more memory per shape but it makes locating
+	     instances easier.  
+	   - Fixed a bug in the renaming code that would show when renaming
+	     instances.
+	   - Fixed a bug in the adding of volume primitives.  Depending on
+	     action performed, several copies of the volume primitives
+	     would get added.  Same problem would appear with geometry
+	     shader instances.
+	   - Removed camera errors/warnings that would appear when switching 
+	     to a Look Thru Camera.
+	   - Lattice translations were not being updated in IPR.  Fixed.
+	   - Parenting was not refreshing nodes properly and would 
+	     sometimes lead to one object being created twice.  Fixed.
+	   - Particles (all supported types) now work properly in IPR.  You
+	     can now even switch from volumetric<->hair particles easily.
+	   - Fixed an index bug in multipoints/streak/line particles.
+	   - Blobby shader was calculating one of the particle coefficients 
+	     incorrectly.  Blobbies would be wrong for any radii != 1.0.
+	   - Sped octree intersection by doing all calculations in world 
+	     (internal) space.  Still too slow, compared to maya2mr's 
+	     shaders.
+	     Alias/mentalray did a good thing with that blob shader...
+	   - Blobby shader was suffering from surface acne due to precision
+	     problems.  Fixed.
+	   - Cloud particles were running into a recursive call to a 
+	     function.  Fixed.
+	   - Volumetric particles' bbox was being incorrectly spit in world 
+	     space. Fixed.
+	   - Swap in-place of pdc data in mrl_volume_isect was creating 
+	     problems with IPR.  Now swapping is done thru a copy.
+	   - Sped up IPR updates for almost all nodes and geometry types.
+	   - Motion vectors of particles were not being divided by 
+	     frame rate.  Fixed.
+	   - Name of PDC file was incorrect when motion blurred.  Fixed.
+	   - When playing an animation, and then hitting stop, the IPR will
+	     now correctly start rendering that frame you stopped in.
+	   - Change of several camera display settings (safeAction, etc) 
+	     will no longer trigger useless re-renders. 
+	   - Added a mentalClearConsole plug-in for windows, based on Samy 
+	     Ben Rabah's clearOutput plugin.  Added his name to About.
+	   - Fixed some typos in the MEL scripts.
+	   - Remove a crashing bug when creating particles during IPR.
+	     You can now safely create new particle buckets during IPR.
+	   - Changed the initialize function of mrLiquid to also allow it
+	     to be used as a full replacement to maya2mr.
+	   - Fixed object visibility/template (not instance) in 
+	     incremental updates.
+	   - Set Idle Time had broken.  Fixed.
+	   - Sped up IPR by doing updates on idle times only, like deletions.
+	     This makes the IPR several orders of magnitude faster, but 
+	     watch out if you are running complex MEL scripts during IPR.
+	     As a side benefit, it makes each update operation atomic, which 
+	     is good.
+	   - Changed lights so their updates work correctly in IPR, instead 
+	     of the hack that I had before.  
+	   - You can also change light types now during IPR.  Previously,
+	     this would lead to a crash.
+	   - mrLiquid was not respecting maya7's renderlayers visibility
+	     settings.
+	   - mrLiquid could sometimes get confused and not detect maya7's
+	     master Render Layer, leading to an incorrect "No render passes
+	     found" error.
+	   - Added debug() functions to mrNode, mrShape, mrInstance and 
+	     mrGroup, for easier debugging and printing of the addresses 
+	     and names of the scene dag.
+	   - Added forceIncremental() to file texture.  You can now use 
+	     paint3d with IPR :)
+	   - Eliminated a typo in particle hair motion blur (was missing #
+	     of motion vectors).
+	   - Improved rubyMEL/mayalib.  
+	     *  Maya::mel_error() and other functions have been
+		renamed to just Maya::error(), Maya::info(), etc.
+           - Created new ruby file GG/ConfigMayaWriter.rb.
+	     When run from within maya (with MEL command 
+	     mentalCreateYAML() ), this ruby script will handle the 
+	     creation of a yaml file for the current scene.
+	   - Batch render was reading attribute 'render' from cameras instead
+	     of 'renderable'.  Thus, it was determining all cameras 
+	     unrenderable.  Fixed.
+	   - Improved all batch render ruby scripts.  Now they are less
+ 	     verbose and more clear to read.
+	     They now also print out rendering stats at the end for each job.
+
+
+v0.7beta3  Updates:
+	   - Fixed crashing bug with IPR of volume primitives (was really
+	     a bug in the incremental of geoshaders).
+	   - Changing mentalrayGlobals attributes that affect the whole scene
+	     (exportSmoothDerivatives, etc), now force a re-spitting of the
+	     scene if changed during IPR.
+	   - Added removal of objects from MayaWorld list when invisible.
+	   - Sped up removal of objects and lights from groups.
+
+v0.7beta2
+
+	IPR updates:
+
+	+ Added some checks for mentalray's stand-alone environment,
+	  printing out what variables need to be set properly.
+	  This will help with people running and installing mrLiquid for
+	  the first time.
+	+ Fixed bug with some nodes not setting up their callbacks 
+	  appropiately.  This would happen with newly created projection or
+	  place2dtexture nodes.
+	+ Removed the use of MI_ROOT for finding the ray executable.
+	  Now the ray executable is only determined from the MRL_RAY
+	  environment variable.
+	+ Progressive IPR algorithm has been rewritten and now works a heck
+	  of a lot better.
+	+ Added a "mrl_lens" shader, a helper lens for ipr thru mi files.  
+	  This dummy shader checks for a mrl_stop file in your temp 
+	  directory.  
+	  If found, the render is aborted.
+	  During IPR, this mrl_lens is added automatically.  This helps
+	  with doing quick changes on big scenes and not having to wait
+	  for the whole frame to finish rendering.  SUPER COOL!  
+        + Added the ability to re-open image viewer if you closed it.
+	  Also, the image viewer is now opened with a simple mel command
+	  (mentalViewer).  This allows you to easily change the viewer from
+	  imf_disp to your own viewer (which must be able to connect to
+	  the mray stand-alone from a stub file, as well as open an iff
+	  file).  This can be useful for big facilities that have already
+	  better propietary viewers.
+        + IPR and Render Frame are now also (optionally) integrated with 
+	  maya's RenderView, albeit maya seems to have sort of redraw issues
+	  on windows due to the pipe to mray.  It leaves some traces of the
+	  squares and it will also not refresh the window if some other 
+	  window overlaps it.  Need to talk to Alias about it...
+	  That being said, I recommend also against using the RenderView as
+	  it is pretty slow refreshing.
+	+ Added a new command called mentalRenderView which will open an .iff
+	  128-bytes stub and display it in the render view window.  
+	  This has the benefit that you get access to the full float image 
+	  data instead of the 8-bit data that -imgpipe gives you.  
+	  Unfortunately, this feature seems to be broken on the current 
+	  mray releases, so you will get crap if you use it.  
+	  Still investigating...
+	+ Fixed a bug that would sometimes create a syntax error due to 
+	  adding a carriage return to the mi stream during IPR.
+        + Fixed a crash which would occur on adding an approximation node to
+          a mesh with 5+ sided polys.  As a side effect of this, polygons
+	  with 5-sided polys that have subd approximations are now valid
+	  (they get translated to triangles -- assuming polygon is convex).
+	+ Lowered the severity of all mrTHROW()'s within increment loops,
+	  so as to avoid some crashes during ipr.
+	+ Default amboccl pass was being created active.  Fixed it to be
+	  created turned off.
+	+ Added missing AETemplates for mrClasses shaders.
+	+ Added icons for shaders. (thanks goes to Jan Sandstrom -pixero)
+	+ It is now possible to switch from Normal IPR to Progressive IPR
+	  without having to restart the render.
+	+ The selection of image formats was incorrect for maya7.
+	  Fixed. [Puppet]
+	+ PaintFX brushes/strokes where not being IPRed properly when
+	  they were added after IPR had been started.  Fixed.
+	+ Hair can now be added while in IPR.
+	+ Changing Hair and Pfx values will now be IPRed properly. 
+	+ Fixed a bug that would cause mrLiquid to save out .mi2 binary 
+	  files after IPR even when no -bin flag had been set.
+        + Made mrLiquid use MEL's getenv() command instead of the standard
+	  C's getenv() command.  This has the benefit that you can
+	  change environment variables for mrLiquid from within maya's 
+	  script editor, using putenv().
+	+ Removed the need to call ray executable using the command console.
+	  This is a faster way to invoke mray and will report problems
+	  better when mray does not start for some reason.
+	+ IPR now deals properly with changes in displacement shaders.
+	  If a new displacement shader is attached/removed, all objects
+	  that have that shading group are respit with new approximation
+	  settings.
+	  Also, changes in displacement shader settings will also propagate
+	  properly onto the actual shape being re-spit.
+	  [MRAY BUG] when an object with displacement is incrementally 
+	  assigned a shading group without displacement, it becomes faceted.
+	+ Fixed a bug in IPR that would sometimes appear when motion blur 
+	  was on and timeline was moved, creating an infinite cycle.
+	+ You can now toggle motion blur on/off on a frame (without
+	  having to move to another frame)
+	+ Fixed a bug in rubyEditor where ruby code would not get passed
+	  appropiately to ruby when the code was selected.
+	+ Hair surface shader was being spit improperly for 
+	  miHairTypes 1 and 2.  Fixed.
+	+ Renaming objects/shaders/etc. was previously not supported.
+	  Now it is fully supported.
+	+ You can now assign new per-face materials while in IPR.
+
+
+
+v0.7    Okay... I was out for a while, but I am back in full force.
+	The converter was finally put thru its paces... so the bug list
+	became larger than my shopping list... here's what's new.
+
+	Core updates:
+
+	+ Merged mrLiquid and mrClasses.  This makes it relatively easier 
+	  for me to develop new mrLiquid shaders.
+	+ Updated all code to work properly with maya7.0 (maya 6.5 and 6.0 
+	  should work too, but is untested).
+	+ Updated all code to work under Linux and OSX. 
+	+ Meshes with subdivision surface approximations now support 
+	  3 and 4 sided polygons together, but they render as crappily as
+	  with maya2mr (ie. sans any sort of continuity). 
+	  (needs later versions of mental ray 3.4+).
+	+ Subdivision surfaces with 3 and 4 sided faces are supported, in
+	  the same way that maya7's maya2mr does (by programmatically 
+	  collapsing it one level)
+	+ Fixed a HUGE number of typos in the .mi2 file creation.
+	+ All shader connections have been bug fixed and updated for maya7.
+	+ Added support for new mental ray flags ( cast/receive shadows, 
+	  finalgather overrides, visibleInReflection, etc ).
+	+ Added support for shadow bias in render globals.
+	+ Added new finalgather settings (scale, diffuse depth).
+	+ Added diagnostic modes into mi file.
+	+ Added final support for min/max object samples.
+	+ Added support for passLabelThrough and passDepthThrough.
+	+ Added support for mirrorU, mirrorV in placeTexture nodes if 
+	  compiling under latest mayas.
+	+ Added all IPR callbacks and support for poor man's IPR.
+	+ Added missing contour output shader.
+	+ Fixed a minor memory leak that was ocurring on unloading the 
+	  plugin.
+	+ Added support for "default on/off" in .mi file #: maya sections to
+	  mrLiquid's .mi parser.
+	+ Added support (to ignore) preprocessor symbols in .mi file
+	  shader descriptions. (ie. $ifdef/$endif/$ifndef/etc).
+	+ Sped up a tad the spitting of lights, meshes, subds and nurbs.
+	  This will probably be somewhat noticeable on large scenes with tons
+	  of objects.  We are now on average about 1.5 faster than maya2mr 
+	  but on complex scenes mrLiquid is often twice as fast.
+	+ Fixed a motion blur bug which could occur in the matrix transform
+	  of instances when motion blur direction was not forward.
+	+ I moved a bunch of virtual functions that were left inlined in the 
+	  .h files due to lazyness to their proper .cpp files.  This 
+	  should result in faster (re)compilations.
+	+ Updated all storage of MObjects to MObjectHandles.  I'm not 100% 
+	  sure when MObjects go out of scope as I never quite run into the
+	  issue, but this is probably safer, anyway.
+	+ Fixed a pretty stupid bug of approximation nodes not being found
+	  on spitting out multiple frames onto different .mi files.
+	+ Fixed a bug that would keep adding finalgather files to the option
+	  block when doing incremental .mi files.
+	+ Fixed a bug that would not update child shaders properly when doing
+	  incremental .mi files.
+	+ mrLiquid now supports spitting the mi file to stdout, like 
+	  Mayatomr, when you use:
+	       mental -mi
+	  without specifying an actual fileroot.
+	  However, the switch is only effective in batch rendering, not 
+	  interactive.
+	+ Added support for rendering with multiple cameras.
+	  Also, each mentalRenderPass node now has an optional camera
+	  attribute in which you can type in or select the name of the 
+	  camera(s) to render for that pass.
+	+ Fixed some issues with light parameters not updating incrementally.
+	+ Fixed light shaders not recognizing mray's shadowMap attribute 
+	  properly.
+	+ Reversed the order of looking for shadow maps to match maya2mr's
+	  order.
+	+ Fixed an IPR issue that would show up if rendering from a camera 
+	  that was attached to a light.
+	+ Modified mrShadingGroup so it is possible to change shaders during
+	  IPR.
+	+ Fixed a minor bug that would spit out a displacement approximation
+	  incorrectly on incremental object updates.
+	+ Added -pass flag to mentalCmd.
+	+ Made  -camera flag in mentalCmd multi.
+	+ Changed detail shadow map attribute names to conform to maya7's
+	  conventions.
+	+ Added mentalrayOutputPassNode and translation support for it.
+	+ Added support for mentalrayUserBuffers like maya7 (this was already
+	  supported in mrLiquid, using mentalrayFramebuffers before).
+	+ Added support for non-infinite IBL shaders (this was mrLiquid's 
+	  original behavior) and fixed some issues with IBL shader not
+	  showing up.
+	+ Fixed problem with Exporter in File->Exporter not respecting
+	  ASCII or binary setting and always exporting binary.
+	+ Added support for maya 7's render layers, in addition to mrLiquid's
+	  render layers. 
+	  If both are used, mrLiquid's render layers are run first (based
+	  upon maya's master layer), and then maya render layers are run.
+	+ Fixed exporting of closed NURBs of degree 1.  As a result of this,
+	  exporting nurbs is a tiny bit faster.
+	+ Fixed exporting of NURBs' trims.
+	+ NURBS knots now are spit with maximum precision.
+	+ Fixed bug with transparency mapping not resulting in proper 
+	  shadows when using maya shaders.
+	+ Fixed a bug in the exporting of object data overrides
+	  for meshes and subds (it was not exported before properly on 
+	  incremental updates)
+	+ If using -perframe exporting, we now pay attention to the maya 
+	  globals setting to get the start/end frame.
+	  If -sf and -ef is provided, frame range is given
+	  by those flags.  
+	+ Fog primitives (cubeFog, sphereFog, coneFog) are now supported.
+	+ Updated light groups to support instances.  This simplifies the 
+	  world instance group as well as all material light 
+	  definitions (plus it works on older mray versions, too).
+	+ Added support for PSD shader.
+	+ Sped up a tad the spitting of bridge shaders and fixed some bugs
+	  with it.
+	+ Image planes have been fixed to support all options.
+	+ Added support for maya7 unitConversion node.
+	+ Added support for paintFX and hair.  Unlike maya2mr, mrLiquid works
+	  properly rendering hair with the mentalray stand-alone.  It also
+	  supports other methods for interpolating hairs that are much better
+	  than maya's "clumps", by adding a miHairType integer attribute
+	  to the pfxHair instance node.
+	+ Added support for (optional) caustic and global illumination 
+	  switches to all object's shape.
+	+ Fixed mrTranslator::updateLights() to deal properly with hiding
+	  of lights in different passes or during IPR.
+ 	+ Upgraded all particle shaders to mrClasses.
+	+ Fixed a bug in mrl_volume_isect when particle instance was
+	  transformed.
+	+ Fixed a bug in how particle shaders were spit that would lead to
+	  particles not being rendered when particle material was shared in
+	  several particle buckets.
+	+ Added support for miLabel in instances, too.
+	+ Added blobby particle support.
+
+
+	Documentation:
+
+	+ Added a bunch of Doxygen documentation.
+	+ Added licensing to all files and created a ruby script to automate
+	  adding license to files.
+
+
+	MEL script updates:
+
+	+ Added "Material" and "Visibility" buttons to template of render
+	  pass overrides for slightly easier render pass setup.
+	+ Added Camera to AEmentalRenderPassTemplate.
+	+ Added IPR functionality to menus.  
+	  Changed "mental" to "mrLiquid" in menu and in file exporter.
+
+
+	IPR updates:
+
+	With v0.7, I am open sourcing my IPR source code.  Yes, I am insane.
+
+	Compared to maya2mr, my framework has several benefits:
+
+	- It allows you to delete and add new objects or lights during 
+	  the IPR updating.
+	- It allows you to modify shapes (ie. drag vertices) while in IPR.
+	- It allows you to update/add/remove approximation settings.
+	- It allows you to change frames.
+	- It works with the .mi file exporting (you can do 
+	"mental -mi -f file.mi -imr on" and debug IPR problems that way)
+	- It supports all custom texts.
+	- It supports changing mental ray global options and adding shaders
+	  to materials.
+	- It works fine with all camera settings (image planes, output 
+	  shaders, lens shaders, etc).
+
+
+	Known bugs on IPR:
+	- Renaming of objects or shaders will confuse the IPR. **FIXED**
+	- DOF lens shader cannot be removed once added (mental ray bug).
+	- Hair cannot be modified in ipr (maya api bug that leads to a
+	  cycle), but you can go from frame to frame to see changes. **FIXED**
+
+	This portion of the code is mainly useful if you have mental 
+	images' raylib library (expen$ive), albeit you can also
+	obtain some form of IPR without it.  mrLiquid can be compiled to
+	allow a poor man's IPR by piping the output of an mi file onto a 
+	ray stand-alone executable (the default behavior when you compile
+	mrLiquid).
+	
+	If you use the poor man IPR (ie. using the stand-alone mray instead 
+	of linking mrLiquid against raylib), you get the following benefits:
+	- If the ray executable crashes, it will not bring maya down, as it
+	  is run as a separate process.
+	- You can use motion blur and get ipr functionality.
+	- You can ipr all changes as detailed above (time, geometry changes,
+	  etc).
+
+	But the poor man IPR also comes with one disadvantage:
+	- mental ray will not be taking full advantage of its caching of data
+	  for IPR (you really will be re-rendering the frame on 
+	  each iteration).
+	- Also, as the .mi format is used, conversion is a tad slower than it
+	  should be.
+
+	---
+
+	You can also use most of the raylib API calls thru a
+	geometry shader.  To do so, there is a new project called gg_mrliquid
+	which creates a geometry shader called gg_mrliquid.  
+	To use it, attach it to a poly cube.  Then, hide all other objects
+	in the scene.
+	The gg_mrliquid geometry shader, when run, will unhide all objects
+	and use mrLiquid to translate them.  The result should be your scene
+	rendered as usual, as if the objects had not been hidden.
+	The usefulness of this is really little, other than verifying
+	that the API code is working properly, even if you don't 
+	have raylib available to you.
+
+
+	Shader updates:
+	+ Renamed gg_volume_isect to mrl_volume_isect.
+	+ Added a new mrl_particlecloud shader for emulating maya
+	  particle cloud renders.
+	+ Added a new mrl_geo_hair shader for reading a hair file and 
+	  creating the hairs.  This geo shader works on stand-alone or with
+	  the integrated mray.  It also allows hair to grow from triangular 
+          interpolation, which leads to an easier way of controlling hair 
+          than maya's clump method.
+	  
+
+
+	Ruby scripts:
+
+	Began the creation of an efficient ruby script rendering framework.
+	With the new v0.7 of rubyMEL, it is also possible to run these 
+	scripts from within the embedded ruby.  This framework is now being 
+	distributed with both mrLiquid and rubyMEL.
+
+
+v0.6.5  Well, in two days I fly back to the US.  I'll probably be without a
+	machine for some weeks or a month, as I finish my moving, so this is
+	my latest update for a while... for real, now :)
+	I was hoping to have particles pretty much done, but it is quite
+	more tricky than I thought it would.  Seems like I'll be needing to 
+	re-write ALL of the maya particle shaders and not just the intersection
+	ones.  AAAARGH!  
+	
+	Minor fixes / improvements:
+	- Sped up instance shading group spitting a tad.
+	- miMultiShaders in instances were not being turned off properly
+	  when such an attribute was added and turned off in the instance.
+	- Particles, particles, particles... part 1
+	  Point and streak particles' size is now smaller.
+	  By default, point and streaks particles will have a radius of
+	  0.01 object units.  As maya calculates point/streak sizes in
+	  pixels, this value may need adjusting with a "miPixelSize" float
+	  attribute within the particleShape.  I could extend maya's
+	  matrix/view classes so I can obtain a proper pixel footprint for
+	  calculating the radii/length, but I never quite liked the idea
+	  of points/lines in space that remain consistent in size.
+	- Volumetric particles bbox was incorrect.  Fixed.
+	- IBL lights work properly on incremental updates.
+	  IBL lights now pass only rotational information like maya2mr,
+	  disregarding translation and scaling.
+	- point light's "lightprofile" is not spit out if it is not 
+	  connected.
+
+
+	New features:
+	- Particles, particles, particles... part 2
+	  Hardware particle types multi-streak and multi-point are now
+	  supported.  Albeit these will give similar results to maya, the
+	  exact positions of each multipoint/streak will not match exactly
+	  currently. 
+	- $LABEL is supported in strings, to pass into a string the object's
+	  label (an unsigned integer unique to the object).
+	- Brought up all new v0.6 options into raylib.
+	- File objects now can choose not to update the display of their
+	  bounding box (and thus not read the mi file on each frame).
+	  Remember to turn it back on previous to exporting, thou
+	  (hmm... should probably put this in a mel script previous to
+	  rendering?).
+	- Photonic Lights now also support the optional "causticPhotonsEmit" 
+	  and "globIllPhotonsEmit" integer attributes. 
+	- Particles, particles, particles... part 3
+	  Volumetric particles are partially functional.
+	  There's a first attempt at gg_volume_isect for particle volume 
+	  intersection, using a simple but efficient octree accelerator,
+	  located within the src/shaders directory.
+	  This shader needs to be installed in a directory where the ray
+	  executable (or maya2mr) would be able to read it.  This shader
+	  is not to be used manually, but it would be used automatically by
+	  an .mi file created by mrliquid (or a raylib translation of 
+	  mrliquid).
+	  The gg_volume_isect is intended for cloud particles, eventually.
+	  What it will do is that it will intersect each particle as a sphere
+	  and then it will call the attached volume shader.  The attached
+	  volume shader, unlike maya2mr, can be pretty much any shader that
+	  returns a color.
+	  Note: gg_volume_isect still has tons of stuff missing, mainly:
+		* motion blur is slower than it should be and has not been
+		  really tested yet
+		* some of the parameters of isect are still not functional
+		  nor are passed to the mi file
+		* some settings that should belong to isect are being spit 
+		  out for particle cloud.
+		* maya_particlecloud shader not supported (and has to be
+		  re-written)
+	- Particles, particles, particles... part 4
+	  Particle instancer is now supported as another particle rendering
+	  option.
+	  Note, however, that cycling objects, albeit it works, it currently
+	  still does not match maya's cycles unless objectId is used.
+	  It still needs to support file objects and instgroup file objects.
+	- Lowered the severity of raylib errors from exceptions to simple
+	  mi_error() messages.  This avoids problems with parameters not 
+	  being found in shaders from stopping the conversion of the scene.
+
+
+v0.6    We are slowly approaching the point in which I'll move on to improve
+	the GUI aspects of mrLiquid, as a basic feature set is now in place.
+	Of course, since I'm also heading into production....
+
+	Bug fixes (again, big thanks to Pavel Ledin):
+	- mental -binary flag had gotten broken in v0.4 and I had missed it,
+	  making mrLiquid look as if it were slower than maya2mr (OOPS!)
+	- Some maya lights were still spitting incorrect attributes from v0.4
+	  ( aka. as the *UGLY* version, the version that broke tons of 
+	  stuff :)
+	- Default light's position now matches maya's default light.
+	- Meshes with polygons with holes were being spit incorrectly. Fixed.
+	- When mrLiquid was used alone without maya2mr, mray's default
+	  shaders were not being registered.  Fixed.
+	- miMultiShaders were not working properly with instancing.  Fixed.
+	  Also made the miMultiShader option a tad faster and a tad smaller
+	  in the mi file.
+	- Hidden Lights were being incorrectly spit out into the mi file.
+	  Fixed.
+	- Instancing would not work properly if the main source object was 
+	  hidden or templated. Fixed.
+
+	New features:
+	- Bakeset overrides are now supported (for lightmap texture maps)
+	- Display layer visibility/templating is now supported.
+	- During incremental updates and render passes, shadingGroups now 
+	  will not update shadow, displacement, photon and photonVolume 
+	  shading networks if the appropiate option has been turned off in 
+	  the render globals for that pass.  This can result in more 
+	  efficient incremental .mi files in some cases.
+	- Light shaders now are spit faster. 
+	  This update also avoids problems with attributes of other 
+	  renderers being spit out by mistake.
+	- Shading networks are now spit faster, particularly in incremental 
+	  mode (mainly multiple passes or multiple incremental frames).
+	- Custom Light shaders can now optionally inherit parameters from 
+	  the main light shape's parameters.  Say you have a custom light
+	  like mib_point_light.  This light has a "color" attribute.
+	  By setting a boolean attribute called "miInherit" in the 
+	  mib_point_light shader, the shader will copy all the parameters
+	  and shading networks of similar named parameters in the main maya
+	  light shape.  In the case of mib_point_light, this would be just
+	  the color, as that's the only parameter with matching names.
+	  The use for this is to create shaders that extend or partially
+	  support most of the maya light shader options.  One of the issues
+	  that arises when doing that, is that all of maya manipulators
+	  modify just the main light's shader parameters.  So with custom
+	  shaders you usually loose the ability to say, change falloffs with
+	  manipulators, unless you create fancy MEL expressions.  Of course,
+	  once you add a shading network, your expression becomes useless,
+	  too.
+	  By setting the miInherit flag to on on the custom light shader,
+	  mrLiquid will automatically copy values and shading networks
+	  of matching named parameters for you, basically.
+	  This is true for both light shaders as well as photon emitter 
+	  shaders.
+	- miMultiShader is now turned on automatically as soon as a string 
+	  shader parameter in the shading network uses the 
+	  $OBJNAME/$OBJPATH/$INSTNAME/$INSTPATH special variables.
+	  No need for manually setting it anymore. Yipeee!
+	  Note, however, that a minor problem remains.  If the parameter is
+	  added and there are multiple render passes or frames being spit
+	  out, the first shading network where the parameter is found will
+	  not be updated incrementally but will be re-created uselessly for
+	  the following pass/frame.
+	- Particles, particles, particles.  
+	  There's now some temporary and not fully complete support for 
+	  particles, still under investigation & development.
+	  mrLiquid will eventually support 4 types of particle rendering:
+	  * volumetric particles (a la maya2mr, but using other shaders,
+				  supporting an intersection shader, a
+				  volumetric shader and a surface shader)
+	  * geometry particles (using a blobby geometry shader or custom)
+	  * hair particles (using the hair primitive for hardware particles,
+		            using any surface shader)
+	  * as geometry instancing
+
+	  Currently, we have support for hair particles (only points and
+	  streak) and the beginnings of volumetric particles (still not
+	  functional).
+
+	  The idea is that for volumetric and geometry particles we will be 
+	  relying on the PDC format of maya, which is the same format used 
+	  for particle caches.
+	  Instead of hard-coding the particle data as some blind data in the
+	  mi file, the name of a PDC file is passed, still as user data.
+	  If no particle cache exists when spitting out the mi file, mrLiquid
+	  will automatically create one as the mi file is spit out.  This
+	  particle cache is specific for rendering (as it lacks mass, etc)
+	  and is named as particleShape-mray.####.pdc
+	  Now, as the PDC format allows an arbitrary number of particle
+	  attributes, what this allows is for shaders to have access to 
+	  any sort of attribute.  By default, maya's particle caches save out
+	  ALL attributes in the particle node, so they are a tad inefficient.
+	  mrLiquid's pdc caching also allows selective saving of only
+	  some particle attributes.  This selective saving of attributes is
+	  done either by using the special string attribute "miAttributes", 
+	  containing a list of attributes separated by white space.
+	  If no miAttributes is provided, the attributes to be saved are
+	  selected from the particle render type.
+	  Now, one problem with this approach is that since the maya particle
+	  shaders expect the blind particle data, these shaders can no longer
+	  be used for rendering mrLiquid particles.  Proper replacement
+	  shaders will need to be provided (and have not been written yet).
+	- RenderPass and RenderPassOverride panels now have more complete
+	  menu options to copy, delete, etc. elements.
+
+
+v0.5    Oh...well... forget what I said... new update.
+
+	Minor bug fixes:
+	- Camera's custom text was not being read as reported.	I also 
+	  changed it to follow maya2mr's weird and buggy but somewhat 
+	  understandable form of custom text in the camera.  Mine is 
+	  not buggy, thou.
+	- The change in -fileroot using .mi2 was confusing for people.  I
+	  made it support both .mi2 and .mi extensions.  The exporter,
+	  however, still uses .mi2.
+	- Simplified mrTranslator maya5/6 code in some places and fixed a
+	  potential problem with multiple shapes under a dag node.
+
+	Bug fixes:
+	- Fixed a remaining problem with maya auxiliary shaders that had a 
+	  single struct output value, like gammaCorrect, from the v0.4 
+	  optimization, as they were still spit out incorrectly in shading
+	  networks.
+	- Optimizing of "link" and "$include" lines was not taking into
+	  account shaders appearing in shading networks.  Fixed.
+	- xResolution/yResolution had vanished from the "mental" flag
+	  switches.  Fixed.
+	- Removed a trashing memory bug related to mentalrayTextures when
+	  mental was run several times and when multiple frames were spit.
+	- Fixed a typo bug in mrInstanceObject that was having some instances
+	  stored in the wrong hash (probably non-critical bug).
+	- mentalMaterial now works properly for saving/restoring materials of
+	  components.  It is also a tad faster than before.
+
+	Minor code improvements/features:
+	- Unified several mrLiquid macros from MENTAL_* to MRL_*
+        - Made the need for mrGroupSG obsolete.  This should result in
+	  a slightly faster response to shading group (material) creation.
+	- Added a new rule to grammar.lex to match a rare but still valid 
+	  form of floating point numbers.
+	- Objects are spit out incrementally if mental is called with
+	  -fragmentExport option (this replaces the other ugly exportFilter
+	  number of v4.0).
+	- mentalOptions is now more compact in some situations, avoiding
+	  to spit some useless settings.
+
+	New features:
+	- mental's shmapDir, fgmapDir, phmapDir are now functional options.
+	- Lightmapping is now supported, both vertex and texture light
+	  mapping.
+	- More maya2mr compatability.  New commands supported:
+	       * convertLightmap
+	       * convertLightmapSetup
+	  These allow light mapping from the maya gui or from command line.
+	  Unlike their maya2mr counterparts, the mrLiquid versions allow 
+	  baking frame sequences and multiple passes, too, even using mray's 
+	  incremental updates.  Kick ass!
+	  As usual, these are active only on debug builds or on 
+	  -DMR_NO_MAYA2MR, to avoid conflicts with maya2mr.
+	  Only particles and fluids left to go...
+	- maya's camera dof is now passed as either a lens shader or
+	  as camera's rapid options if rapid motion blur is on.
+	- Added support for multi-shader spawning shading groups, when 
+	  shading groups have the miMultiShader attribute set.
+	  This is a cool option for shading networks that can cut out the 
+	  footprint of shading networks in maya scenes by the hundreds, yet 
+	  result in large shading networks in the .mi file.
+	  Multi-shaders (ie. multi-shading networks) can also be controlled
+	  on a per-object and on a per-shading branch, too, to trim the 
+	  amount of shaders passed onto the mi file.
+	  Hopefully I'll convince thomas to add some form of parameter 
+	  overriding in the .mi scene description to bring the .mi scene to 
+	  even smaller sizes.
+	- Related to the above, $OBJNAME and $OBJPATH now work within strings
+	  in shaders.  Note, however, that if a shader is used in several 
+	  objects, the shading group has to be marked as miMultiShader for 
+	  these variables to work properly.
+	- Also added $INSTNAME and $INSTPATH.  Same restriction as 
+	  $OBJNAME/$OBJPATH.
+	- Added support for $RNDRPASS and $PREVPASS in strings to refer to
+	  the current and previous render pass name.
+	- Custom Text now properly parses all special variables.
+	- The algorithm for creating the shading groups has changed.
+	  Previously, shading groups were not created on demand.
+	  All active shading groups were scanned and created first and
+	  then the relationship with the instance was more or less hacked in.
+	  The new design mantains the on-demand creation, keeps order in .mi
+	  file like maya2mr, uses less memory and should be faster in 
+	  spitting the mi file.
+	  Shading groups are now also kept in their own hash for quick 
+	  matching.
+
+
+v0.4.1  Oh well... I lied... some embarassing bugs left, so...
+
+	Bug fixes:
+	- lexer was freeing string memory twice in some cases	
+	  (man, I am way too rusty with lex and yacc).
+	- New mrShader::getConnectionNames was incorrectly failing on maya's 
+	  textures & other nodes ( a bug introduced in 0.4, I believe ),
+	  returning "Unknown or invalid shader connection". 
+	- The new optimizations done in mrShader were leading to all sort of
+	  problems with maya shaders.  Fixed.
+
+	New features:
+	- True object area lights are supported.  Create a point light,
+	  turn on the area light settings for it.
+	  Set the area light type to user. 
+	  Then, create a new attribute called "miAreaObject".  Attach
+	  the message parameter of your favorite object to this new 
+	  attribute.
+	  You probably also want to assign an approximation node to the
+	  object (if it is subd or nurbs) to set the tesselation count 
+	  relatively low.  And hide or template the object so it does not
+	  render.
+
+	- Beautification of .mi file in debug builds is pretty much done.
+
+	- More maya2mr compatability.
+	  * The following nodes are now supported:
+	      discLightLocator
+	      cylindricalLightLocator
+	      rectangularLightLocator
+	      sphericalLightLocator
+	      mentalrayIblShape
+	      mapVizShape (somewhat, as display is not 100% correct, as
+			   data is in a propietary format)
+	  * mrFactory now supports most options, including help.
+	    Help is supported next to each parameter, as well as a global
+	    help where nodeid is set, to offer help for the actual shader.
+	    That is:
+
+		 declare shader 
+			 color     #: shortname "oc" help "output color"
+			 "myshader" (
+			 color "diffuse", 
+			 #: shortname "d" 
+			 #: help "Controls the diffuse channel value.
+			 #:       This is a multi-line help"
+			 scalar "opacity", 
+			 #: shortname "o"
+			 #: help "Controls the opacity of the object"
+			 )
+			 #: nodeid 12354
+			 #: help "This shader is a dummy example of help.
+			 #:       Use it at your own risk."
+			 apply material
+			 version 1
+		end shader
+
+	  * There's now a "mental" file translator.  You can now use it to
+	    export files directly from the "Export All / Export Selected" 
+	    of the maya gui.
+	    As a result of this, mrLiquid's .mi extension is changed to be 
+	    .mi2 (or conflicts would appear).
+
+	- There's now MEL support for mrLiquid rendering from:
+	  http://www.puppet.cgtalk.ru/download/m2mr_e.shtml
+	  This will use imf_disp and ray stand-alone with mrLiquid 
+	  and maya2mr.
+
+	- Added support for faster displacements.
+	  By changing the way tesselation is spit with subds or nurb objects
+	  with displacement on, fine displacement performance is usually 
+	  improved.
+
+
+v0.4    Ok.... this is likely going to be the last mrLiquid update for a 
+	little while as I am probably going to be heading back into
+	production....
+	Plus some of the stuff I'll be adding from now is probably better 
+	kept closed source for now.
+
+        Bug fixes:
+	- The lexer does not leak memory anymore.
+	- parseString() of single @/# tokens (like file.@.iff) was buggy in 
+	  that only a single digit would be considered, making it work fine 
+	  only between frames 0-9.  Fixed.
+	- mrSubd was not distinguishing properly meshes with mixed 3 and 4 
+	  sided faces in some cases.  
+	  Also, it was not checking for hierarchical triangle subds not being
+	  valid either.
+
+	Minor improvements:
+	- Made the mi file lexer and shader parser a tad more solid and 
+	  report better info on errors.
+	- Made the lexer be generic so as to use it to parse any type of mi 
+	  grammar.
+	- The lexer is now created with flex's -8 -CFe optimization.  This 
+	  improves performance dramatically.
+	- Minor speeeding up of retrieving some shader connections by 
+	  doing early exits in mrShader::getConnectionNames() loop.
+	- Sped up light creation routines and lowered its memory footprint a
+	  tad.  
+	  There were a bunch of silly attributes being retrieved and stored
+	  that were unneeded (a legacy from when lights had 
+	  hard-coded shaders)
+	- Now all the pass nodes are called mental*, instead of mentalray*.  
+	  This is to distinguish them from potential similar nodes showing up
+	  in maya2mr.  Yes, this breaks compatability with previous scenes, 
+	  which will need some ASCII editing, but I doubt many people will 
+	  suffer from this, as mrliquid is rather new.
+	- Allowed instances to be spit out without any shaders.  If a normal
+	  object, this will result in a warning, instead of an exception as 
+	  before.  The issue of not being to deal with shading groups with
+	  no shaders attached still remains.  Still pondering how to allow
+	  that too.
+	- mrLiquid tries to unregister all of its nodes and commands even if 
+	  any of them fail.
+
+	New features:
+	- Lexer/Grammar now supports:
+			 #: help "message"
+		and
+			 #: help "multi-line
+			 #:       message"
+	  This is to allow providing help instructions for shader parameters
+	  in maya gui.  mrFactory will eventually be able to extract that 
+	  info upon request (not yet).  The idea is that you will be able 
+	  to do something akin to:
+
+	       > mrFactory -helpAttribute "mib_blinn_illum" "diffuse"
+	       // Result: This setting controls the coefficient of
+	       //         of the diffuse channel.
+
+	- Light profiles are now supported.
+	- Light sets and object sets are supported.  If any of these are 
+	  connected to a shader attribute that supports "array light" or 
+	  "array geometry", the set will be spit as an instance group in 
+	  mray.
+	  Note that the contents of a set CANNOT be modified on a per render
+	  pass basis (don't do any MEL/Ruby crazyness, basically).
+	  Light sets are basically a more efficient form of light linking
+	  which can be used with custom mental ray shaders.
+	  Unlike maya's light linking, which is object basis, light sets
+	  allow linking of lights on a shader basis.  That is, instead of
+	  linking a light to a certain object, you link a light to a certain
+	  shader.  Note that light sets can be several order of magnitude
+	  faster than any light-object light linking.
+	- Camera now supports custom text like maya2mr (thanks to Pavel again
+          for allowing me to figure out what was wrong)
+	- Lights now also support custom text if an miText attribute is 
+	  added, like cameras.
+	- Created some MEL scripts to automatically extract/read all the 
+	  parameter information from any mental ray node so that 
+	  mrLiquid can easily be kept up to date with any maya2mr release.
+	- Added proper support for per light and per camera miText.
+	  Deactivated mrOptions' miCameraText for now, as it was incorrectly
+	  being handled.
+	- Added all the main maya2mr nodes.  These are created by mrLiquid
+	  if MR_NO_MAYA2MR flag is set in the compile options.  By default,
+	  optimize builds have it off, while debug builds have it on.
+
+	  The nodes suported right now are:
+	    mentalrayGlobals, mentalrayFramebuffer, mentalrayOptions,
+	    mentalrayItemList, mentalrayText, mentalray*Approx,
+	    mentalrayPhenomenon, mentalrayLightProfile
+
+	  Note that these nodes are created with the same ids given
+	  by maya2mr, so that mrliquid becomes as close as a drop-in
+	  replacement for maya2mr.
+	    
+	  That is, saving a .ma file and changing the:
+		 loadPlugin "Maya2mr";
+          line for:
+		 loadPlugin "mrLiquid";
+	    
+	  (and viceversa) should result in valid scenes.
+          Note, however, that the maya gui will not respond properly to
+	  mrLiquid, as a lot of mel scripts check if Mayatomr is loaded.
+	  Also, mrLiquid at this point does not provide maya2mr's locators
+	  or shapes (nor integrated rendering, for that matter).
+
+	  Also, watch out for this!  If maya2mr is loaded AFTER mrLiquid,
+	  the end result will more than likely be a beautiful and wonderful 
+	  crash as all node ids will end up being in conflict.
+	  mrLiquid, however, does check for the existance of maya2mr and 
+	  based on it will register some nodes or not.
+
+	  Thus, in order to take advantage of this, it is recommended that
+	  maya2mr is left as an autoloaded plugin, but that mrLiquid is 
+	  "manually autoloaded" from the user userSetup.mel script.
+
+	- Started supporting the mrFactory command.  Supporting this command
+	  really, really blows, as it makes you keep a bunch of shader 
+	  definitions in memory.  I've created special classes to keep the
+	  memory footprint down, but still... pain in the butt.
+	  It may be less expensive to just parse out the info and extract it 
+	  on the fly from the mi file.
+	- Added support for file objects, using the special locator
+	  called mentalFileObject.  This locator reads an .mi file object
+	  description in and draws itself as a bounding box corresponding
+	  to the size of the bounding box of the object matched in the .mi 
+	  file.
+	  It also supports .mi file with namespaces (ie. making mray 
+	  namespaces and maya's reference scenes work relatively seamlessly).
+	- Related to the above, the translator now recognizes those special 
+          locators and spits out the appropiate file object information.
+	- If mi file being saved is not a fully renderable mi file, objects
+	  are spit incrementally and with bounding boxes, so as to allow
+	  their later inclusion as file objects easily.  
+	  Basically, we determine if the mi file being spit is for inclusion 
+	  if these are not being spit out: 
+		Link, Include, Shader Definitions, Options, 
+		and RenderStatements.
+          Currently, this corresponds with the -exportFilter value of 526851
+	  ( I know, I know... I have to add a flag to make that easy to use
+	   and remember )
+		     
+	  Also, the whole scene is spit out under a namespace (which can 
+	  now be set with a new command-line option called -namespace).  
+	  If no namespace is provided, the name of the scene is used as 
+	  a namespace (sans .ma/mb of course).
+
+
+v0.3.1  I finally got some bug reports with some people with the stand-alone
+	mray, so I started fixing some obvious stuff that was broken.
+	Pain in the neck this thing of developing a converter without the 
+	stand-alone mray.
+	Big thanks go to Pavel Ledin for his bug reports.
+
+	Bug fixes:
+	- Added missing comma in maya_state definition in mentalOptions.
+	- Autoexpansion of all instgroups included in others instgroups
+	  (this should really be something for mray to do automatically)
+	- Light linking got broken.  maya api could also fail in fresh
+	  scenes, returning light link nodes as not connected.
+	- "-fileroot" flag is now improved and consolidated.  If -f receives
+	  full paths, the full paths are used.  If -f receives just a name,
+	  this is appended to the default mi file directory (which can be set
+	  with -dir ).
+	- renderPasses array was not being cleared.  This could lead to
+	  unpredictable behavior and possible crashes.
+	- Each filter type in mray has to multiply the values gotten from
+	  maya differently.  Fixed.
+
+	Minor improvements:
+	- Frame buffers that get saved to disk (ie. mrFramebuffer nodes)
+	  can now be deactivated by setting the nodeState to a value other 
+	  than 0.
+	  Thus, this allows for example the contact shadow pass to not
+	  use any additional buffers (saving memory and time) while the 
+	  beauty pass can turn on all the buffers as needed. 
+	- Consolidated some redundant code from write_photon_parameters.
+	- Made maya light shaders also use MFnAttribute.
+	- Sped up spitting of light and maya shaders a tad.
+	- Beautified mi printing more (debug builds only).
+	
+	New Features:
+	- Added support for -exportFilter flag (most options)
+	  You can now spit out only specific stuff into the mi based on
+	  categories, like maya2mr.
+	- Also added support for -exportFilterString flag.
+	- Added support for -regionRect flag.
+	- Refactored file node into its own class.  This makes mrShaderMaya
+	  a tad simpler and faster.  It also makes the file node a tad
+	  faster.
+	- mrLiquid now contains a full node factory shader creator that can 
+	  parse all sorts of mi files (only shader descriptions, not full
+	  mi syntax).  
+	  Note that by now this is active only on debug builds, as the 
+	  creation of those nodes may cause conflicts if maya2mr is also
+	  loaded (due to using the same ids).
+	- Started consolidating (and documenting) compile switches under 
+	  mrCompileOpts.h
+	- Added option to spit out only the link/$include lines for those
+	  shaders being used in the scene, instead of dummily relying on
+	  maya.rayrc.  
+	  This feature is not fully functional yet (dso list is still not 
+	  parsed yet and maya shaders will still create issues), but with 
+	  some changes to environment variables and your maya.rayrc you can 
+	  already make it work for most cases.
+	- Cameras now support background color properly.
+
+
+v0.3    Okay, this update is worth something this time around... :)
+	Bug fixes galore, as I finally got raylib up and going and can now
+	visually check my screw-ups :)
+	- Updated mrOptions so each parameter used is checked for incremental
+	  updates. 
+	- Added proper support for per-object sampling. 
+	- Added support for contour rendering. 
+	- Added support for detail shadow maps.
+	- Added support for shadow crops.
+	- Added safe unloading of maya2mr and consolidated code for
+	  unloading mrLiquid, too.
+	- Refactoring and consolidation of shadow querying code into 
+	  mrLightShMap. 
+	- Refactoring of mentalCmd translator into mrTranslator.h/cpp.
+	- Ported all code to geoshader/raylib calls (not opensource)
+	- Minor bug fixes here and there
+	- Bug fix in mrGroup: destructor was not declared virtual.
+	- Bug fix: exporting of geometry shaders was broken?
+	- Some 64-bit warnings removed.
+	- Bug fix: removed creation of default render passes on loading of
+	  plugin.  This was creating issues when loading scenes previously.
+	  mental->Render Passes now has a menu to create the default render
+	  passes.  These passes will also be created on running "mental" if
+	  no passes are available.
+        - Bug fixes: 
+	  mrSubd.cpp was spitting out normal information which is
+	  not used in subdivision surfaces.
+	  mrSubd.cpp was incorrectly sending the vertex indices due to a bug
+	  in the maya api's MFnSubd.polygonVertices() which always expects
+	  the vertex list to be of 0 elements (cannot pre-allocate it to
+	  speed up conversion ---argh Alias, I hate you).
+	- mrSubd.cpp now supports hierarchical subdivision.
+	  What a mess... the maya api is a pain in the neck to deal with
+	  hierarchical subds.  Much slower than it could potentially be.
+	  NOTE:  we still spit out way too many texture vectors.  Can this
+		 be improved?  This is same issue with maya2mr, and kind of
+		 a logic problem dealing with maya's api.
+	- Refactored derivatives code in mrMesh so raylib and non-raylib code
+	  uses same derivatives calculations.
+	- Added support for unlimited finalgather files by creating a dynamic
+	  string array attribute called "finalGatherFilenameList" in the
+	  mentalrayOptions node.
+	- Added support for unlimited frame buffers, by adding a 
+	  "userFramebufferList" message array attribute.
+	  To this attribute, you connect nodes of type mentalrayFramebuffer.
+	  These frame buffers ALSO get saved out using the file format of
+	  your choosing.  The 7 standard framebuffers are not saved to disk
+	  and are reserved for special effects and storage.
+	- Added support for IBL lights.
+	- Added support for custom shaders with output structs (yipee!)
+	- Polygonal meshes now (optionally) cache derivatives during
+	  incremental mi spitting (ie. multiple frames per mi file).  
+	  This speeds up spitting out polygonal meshes, at the 
+	  cost of some memory per object.
+	- Added support for phenomenon (more shit comming for this to make
+	  it more user friendly)
+	- Camera's shutterAngle was being retrieved as a float.  This would
+	  lead to incorrect values when maya did automatic conversion.
+	- Changed code for detection of "out"put attributes, to using
+	  MFnAttribute and query for isReadable/Writable.
+	  This makes spitting shading networks a tad faster, I hope, by
+	  removing the need for some string comparisons.
+	- Added support for object labels.  You need to create and set to
+	  on a boolean attribute called "exportObjectLabels" in the 
+	  mentalrayOptions node.  
+	  Afterwards, if your shape object has an integer attribute 
+	  named "miLabel", the value will get passed as a label.  If miLabel
+	  is not present, the object will receive a label based on the order
+	  in the list of elements. 
+
+
+v0.2.3  Been kind of lazy these days...
+	- Added support for mentalTextures, such as those in subsurface
+	  scattering (only used in maya6 or later)
+	- Added support for reference objects (ie. Pref in MTOR parlance )
+	- Added support for render selected objects only
+	- Textures in maya's file nodes can now optionally be automatically 
+	  tile-mipmapped by default, by calling imf_copy.
+	  To do so, add and turn on a boolean attribute in the 
+	  mentalrayOptions node called "makeMipMaps".
+	- Fixed exporting of multiple shapes under a single transform.
+	- Fixed silly errors due to attempts to re-create default nodes
+	  when a scene was re-loaded.
+	- Fixed bug in light photon energy emission (wrong name of 
+	  attribute).
+	- Added string replacement in couple of places.
+	- Added code for easy unloading of plugin.
+	- Added missing #if/#endif api checks to make it compile more easily 
+	  across older maya versions (note that not all features may be 
+	  supported)
+	- Updated README.txt
+
+
+v0.2.2  - Added proper support for shutter angle (thanks to Jonathan Litt
+	  who pointed the strange place where the control is)
+	- Fixed light camera lookup
+	- Bug fixed render pass MEL template as buttons' commands were not 
+	  being updated properly.
+	- Added the MEL code to save a scene per render pass.
+	- Added more code to support both detail and normal shadow maps 
+	  within a single light (this may change based on .mi scene 
+	  description).
+	- Hooked up photon map file, as it was read but not used
+
+
+v0.2.1  - Fixed code for Intel and VC6 compilers (thanks go to Martin
+	  Leguizamon for helping out with this).
+	- Provided a very simple gg_hashmap file for those without a 
+	  hash_multimap STL implementation (or an incompatible one, like
+	  SGI's).
+	- Fixed a bug in mrHash that could potentially show up in very
+	  complex scenes if hash collisions happened.
+	- Render passes are up and running, with MEL GUI and AETemplates.
+	- Render passes now support changing global render options, too.
+	- Fixed a typo in attaching light list to custom shaders
+	- Started adding .mi beautifying code (still long to go, but mi files
+	  are spit much nicely in debug compiles).  I will probably not make
+	  beautification a user switch as I don't want to pay for the cost of
+	  it.
+	- Solidified render pass code
+	- Added mentalMaterial command to save/restore material assignments
+	  (useful in pass overrides)
+	- Added mentalVisibility command to save/restore objects' visibility
+	  (useful in pass overrides)
+	- bug fixed emitterShader of lights
+
+
+v0.2    - First public release on sourceforge
+          Not yet battle tested under any production.
+

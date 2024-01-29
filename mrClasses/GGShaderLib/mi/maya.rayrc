@@ -1,0 +1,103 @@
+#*****************************************************************************
+# Copyright 1986-2003 by mental images GmbH & Co.KG, Fasanenstr. 81, D-10623
+# Berlin, Germany. All rights reserved.
+#*****************************************************************************
+# Evaluated at startup time of the plug-in to fill the mental ray registry.
+#*****************************************************************************/
+
+#############################################################
+# Obtain MAYAROOT from environment variable MAYA_LOCATION
+#############################################################
+registry "{MAYAROOT}"	value	"{$MAYA_LOCATION}" end registry
+
+registry "{MAYABASE}"	value	"{MAYAROOT}/mentalray" end registry
+
+registry "{SYSTEM}"	value	"windows"       end registry
+registry "{DSO}"	value	"dll"		end registry
+
+
+
+$lookup "{MAYAROOT}"
+$lookup "{MAYABASE}"
+$lookup "{SYSTEM}"
+$lookup "{DSO}"
+
+
+
+#############################################################
+# Define location of auxiliary C/C++ libraries 
+# (these are loaded first)
+#############################################################
+registry "{AUX_LIBS}"     value "{MAYAROOT}/Aura/shaders/"  end registry
+
+
+
+#############################################################
+# Define location of public domain shaders
+#############################################################
+registry "{PD_SHADERS}"   value "{MAYAROOT}/PD/shaders/"  end registry
+
+
+
+#############################################################
+# Define location of my own shaders
+#############################################################
+registry "{AURA_SHADERS}" value "{MAYAROOT}/Aura/shaders/"  end registry
+
+
+
+#############################################################
+# List all auxiliary libraries here...
+#############################################################
+registry "{MRLIB_START}"
+	link "{AUX_LIBS}/mrLibrary.{DSO}"
+	echo "mrLibrary startup"
+end registry
+
+
+
+
+#############################################################
+# List all my shaders (I list them thru includes) here...
+#############################################################
+registry "{AURA_START}"
+	mi "{AURA_SHADERS}/mray_shaders.mi"
+	link "{AURA_SHADERS}/mray_shaders.{DSO}"
+	echo	"mental ray for Maya - Aura startup done"
+end registry
+
+
+
+#############################################################
+# List all Public Domain shaders here...
+#############################################################
+registry "{PD_START}"
+	echo	"mental ray for Maya - PD startup done"
+end registry
+
+
+
+#############################################################
+# List all Maya shaders here...
+#############################################################
+registry "{MRMAYA_START}"
+	link 	"{MAYABASE}/lib/base.{DSO}"
+	link	"{MAYABASE}/lib/physics.{DSO}"
+	link	"{MAYABASE}/lib/mayabase.{DSO}"
+	link	"{MAYABASE}/lib/contour.{DSO}"
+	mi 	"{MAYABASE}/include/mayabase.mi"
+	mi 	"{MAYABASE}/include/base.mi"
+	mi 	"{MAYABASE}/include/physics.mi"
+	mi 	"{MAYABASE}/include/contour.mi"
+	echo	"mental ray for Maya - startup done"
+end registry
+
+
+
+##############################################
+# LOAD ALL THE STUFF IN THE RIGHT ORDER HERE
+##############################################
+$lookup	"{MRLIB_START}"  
+$lookup	"{MRMAYA_START}"
+$lookup "{AURA_START}"
+$lookup "{PD_START}"

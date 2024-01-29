@@ -1,0 +1,86 @@
+
+mrClasses is
+Copyright 2004, Gonzalo Garramuño
+All Rights Reserved
+
+However, it would not have been possible without the contribution 
+(whether known or unknown) of other researchers, TDs and 
+other open source and non-open source developers.
+
+
+Thanks go to (in no particular order):
+
+mental images
+Rolf Herken, Thomas Driemeyer and others
+For pushing raytracing even at times when it was considered 
+too slow to be used in production.
+For developing what is likely to become the standard ideas and
+concepts of today and future raytracers and their APIs.
+
+TDI
+For having more or less developed the ideas of shading trees and 
+IPR as artists know them today.
+
+Pixar - http://www.pixar.com
+For having created the RISpec and for on occasion teaching CG to others.
+The RenderMan (R) Interface Procedures and Protocol are:
+Copyright 1988, 1989, Pixar
+All Rights Reserved
+RenderMan (R) is a registered trademark of Pixar
+Also for supporting libtiff and adding their texture code to it.
+
+The Affine Toolkit - http://www.affine.org/
+copyright (c) 1995-1998 Thomas Burge
+For providing some implementations of common renderman routines
+and other useful functions.
+
+Magic Software -  http://www.magic-software.org/
+David Eberly's website is one of legend already within the 3D
+community.  Providing math tutorials, and working source code
+for a huge variety of problems, together with two 3d books.
+
+Industrial Light and Magic - http://www.ilm.com
+Florian Kainz and others, who contributed to OpenEXR and more
+importantly, to releasing the Imath library for free, which
+shares some concepts with mrClasses.
+
+Sam Leffler, Frank Warmerdam, Andrey Kiselev, Mike Welles and Dwight Kelly.
+For libtiff, making TIFF reading as painless as possible.
+
+Softimage
+Dave Lajoie and others
+For being the first 3d company to open source their
+shader library.  A whole generation of shader writers likely
+learnt from it.
+
+Matt Pharr
+For being a great teacher both at Stanford and online.  For also
+sharing his knowledge (and often, his own code) freely and without 
+any obscure academic explanations.
+
+Miguel Garcao for being the first brave soul to provide his own shaders
+as examples of mrClasses' usage.
+
+Nvidia for the idea of the swizzle operators.
+
+Ken Perlin for his noise functions (both old and new).
+Improved Perlin is based on Perlin's own Java code, adapted thru ideas
+described by Hugo Elias and others.
+
+Steve Worley for the noise that bears his name.
+And for being an inspiration to all shader writers, too.
+
+Jim Blinn.  What would we do without you?  30+ years doing CG and
+still as fresh as a young student.
+
+Okan Arikan for Pixie and for making it open source.
+
+Graphic Gems and Game Gems editors and contributors.
+
+Foley and Van Damm for obvious reasons.
+
+Paul Heckbert, for his thesis.
+
+Michael McCool and his team for the ideas pioneered in Sh.  mrClasses
+will probably end up borrowing stuff from it.
+

@@ -1,0 +1,44 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+displayString -replace -value "Contour Contrast" m_mentalrayCustomNodeUI.kContourContrast;
+displayString -replace -value "Contour Output" m_mentalrayCustomNodeUI.kContourOutput;
+displayString -replace -value "Contour Shader" m_mentalrayCustomNodeUI.kContourShader;
+displayString -replace -value "Contour Store" m_mentalrayCustomNodeUI.kContourStore;
+displayString -replace -value "Data Conversion" m_mentalrayCustomNodeUI.kDataConversion;
+displayString -replace -value "Displacement Shaders" m_mentalrayCustomNodeUI.kDisplacementShaders;
+displayString -replace -value "Environments" m_mentalrayCustomNodeUI.kEnvironments;
+displayString -replace -value "Geometry" m_mentalrayCustomNodeUI.kGeometry;
+displayString -replace -value "Lenses" m_mentalrayCustomNodeUI.kLenses;
+displayString -replace -value "Light Maps" m_mentalrayCustomNodeUI.kLightMaps;
+displayString -replace -value "Materials" m_mentalrayCustomNodeUI.kMaterials;
+displayString -replace -value "MentalRay Lights" m_mentalrayCustomNodeUI.kMentalRayLights;
+displayString -replace -value "mental ray ^1s" m_mentalrayCustomNodeUI.kMentalrayMenu;
+displayString -replace -value "Miscellaneous" m_mentalrayCustomNodeUI.kMiscellaneous;
+displayString -replace -value "Output Shaders" m_mentalrayCustomNodeUI.kOutputShaders;
+displayString -replace -value "Photon Emitters" m_mentalrayCustomNodeUI.kPhotonEmitters;
+displayString -replace -value "Photon Volumetric Materials" m_mentalrayCustomNodeUI.kPhotonVolumetricMaterials;
+displayString -replace -value "Photonic Materials" m_mentalrayCustomNodeUI.kPhotonicMaterials;
+displayString -replace -value "Sample Compositing" m_mentalrayCustomNodeUI.kSampleCompositing;
+displayString -replace -value "Shadow Shaders" m_mentalrayCustomNodeUI.kShadowShaders;
+displayString -replace -value "State Shaders" m_mentalrayCustomNodeUI.kStateShaders;
+displayString -replace -value "Textures" m_mentalrayCustomNodeUI.kTextures;
+displayString -replace -value "Volumetric Materials" m_mentalrayCustomNodeUI.kVolumetricMaterials;

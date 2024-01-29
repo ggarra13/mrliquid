@@ -1,0 +1,113 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.// All rights reserved.//// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.//// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+displayString -replace -value "Add New Objects to Current Layer" m_layerEditor.kAddNewObjectsToCurrentLayer;
+displayString -replace -value "Add Selected Objects" m_layerEditor.kAddSelectedObjects;
+displayString -replace -value "Argument must be a ^1s" m_layerEditor.kArgumentError;
+displayString -replace -value "Assign Existing Material Override" m_layerEditor.kAssignExistingMaterialOverride;
+displayString -replace -value "Attributes" m_layerEditor.kAttributes;
+displayString -replace -value "Auto Overrides" m_layerEditor.kAutoOverrides;
+displayString -replace -value "Bounding Box" m_layerEditor.kBoundingBox;
+displayString -replace -value "Set all layers to bounding box" m_layerEditor.kBoundingBoxAnnot;
+displayString -replace -value "Cancel" m_layerEditor.kCancel;
+displayString -replace -value "Visible" m_layerEditor.kCheckVisible;
+displayString -replace -value "Color:" m_layerEditor.kColor;
+displayString -replace -value "Copy Layer" m_layerEditor.kCopyLayer;
+displayString -replace -value "Copy layer mode:" m_layerEditor.kCopyLayerMode;
+displayString -replace -value "Copy Layer Options" m_layerEditor.kCopyLayerOptions;
+displayString -replace -value "Create Empty Layer" m_layerEditor.kCreateEmptyLayer;
+displayString -replace -value "Create new empty layer" m_layerEditor.kCreateEmptyLayerAnnot;
+displayString -replace -value "Create new layer and assign selected objects" m_layerEditor.kCreateLayerAssignObjects;
+displayString -replace -value "Create Layer from Selected" m_layerEditor.kCreateLayerFromSelected;
+displayString -replace -value "Create a new layer" m_layerEditor.kCreateNewLayer;
+displayString -replace -value "Create New Material Override" m_layerEditor.kCreateNewMaterialOverride;
+displayString -replace -value "Darken" m_layerEditor.kDarkenMode;
+displayString -replace -value "Delete Layer" m_layerEditor.kDeleteLayer;
+displayString -replace -value "Delete Selected Layers" m_layerEditor.kDeleteSelectedLayers;
+displayString -replace -value "Delete Unused Layers" m_layerEditor.kDeleteUnusedLayers;
+displayString -replace -value "Display" m_layerEditor.kDisplay;
+displayString -replace -value "Display type:" m_layerEditor.kDisplayType;
+displayString -replace -value "Edit Layer" m_layerEditor.kEditLayer;
+displayString -replace -value "Edit Layers" m_layerEditor.kEditLayers;
+displayString -replace -value "Empty the Layer" m_layerEditor.kEmptyLayer;
+displayString -replace -value "Full Detail" m_layerEditor.kFullDetail;
+displayString -replace -value "Set all layers to full detail" m_layerEditor.kFullDetailAnnot;
+displayString -replace -value "Help" m_layerEditor.kHelp;
+displayString -replace -value "Help on Display Layers" m_layerEditor.kHelpDisplayLayers;
+displayString -replace -value "Help on Render Layers" m_layerEditor.kHelpRenderLayers;
+displayString -replace -value "Invalid layer type: ^1s" m_layerEditor.kInvalidLayerType;
+displayString -replace -value "Invisible" m_layerEditor.kInvisible;
+displayString -replace -value "Set all layers invisible" m_layerEditor.kInvisibleAnnot;
+displayString -replace -value "Layers" m_layerEditor.kLayers;
+displayString -replace -value "Lighten" m_layerEditor.kLightenMode;
+displayString -replace -value "Make New Layers Current" m_layerEditor.kMakeNewLayersCurrent;
+displayString -replace -value "Membership" m_layerEditor.kMembership;
+displayString -replace -value "With membership and overrides" m_layerEditor.kMembershipAndOverrides;
+displayString -replace -value "Multiply" m_layerEditor.kMultiplyMode;
+displayString -replace -value "Name:" m_layerEditor.kName;
+displayString -replace -value "An object by the name \"^1s\" already exists.\nEnter a different name." m_layerEditor.kNameAlreadyExist;
+displayString -replace -value "The name \"^1s\" is invalid. Valid names contain alphanumeric\ncharacters only. Whitespace characters are not allowed." m_layerEditor.kNameInvalid;
+displayString -replace -value "There is no current Layer Editor" m_layerEditor.kNoLayerEditor;
+displayString -replace -value "Normal" m_layerEditor.kNormal;
+displayString -replace -value "Set all layers to normal display" m_layerEditor.kNormalAnnot;
+displayString -replace -value "Normal" m_layerEditor.kNormalMode;
+displayString -replace -value "The node lambert1 can not be used to create shading group override." m_layerEditor.kNotAllowedForShadingGroupOverride;
+displayString -replace -value "The specified case '^1s' is not supported." m_layerEditor.kNotFound;
+displayString -replace -value "OK" m_layerEditor.kOK;
+displayString -replace -value "Normal" m_layerEditor.kOptionNormal;
+displayString -replace -value "Reference" m_layerEditor.kOptionReference;
+displayString -replace -value "Template" m_layerEditor.kOptionTemplate;
+displayString -replace -value "Options" m_layerEditor.kOptions;
+displayString -replace -value "Overlay" m_layerEditor.kOverlayMode;
+displayString -replace -value "Playback Off" m_layerEditor.kPlaybackOff;
+displayString -replace -value "Set all layers playback off" m_layerEditor.kPlaybackOffAnnot;
+displayString -replace -value "Playback On" m_layerEditor.kPlaybackOn;
+displayString -replace -value "Set all layers playback on" m_layerEditor.kPlaybackOnAnnot;
+displayString -replace -value "Presets" m_layerEditor.kPresets;
+displayString -replace -value "Reference" m_layerEditor.kReference;
+displayString -replace -value "Set all layers to reference display" m_layerEditor.kReferenceAnnot;
+displayString -replace -value "Remove Material Override" m_layerEditor.kRemoveMaterialOverride;
+displayString -replace -value "Remove Render Flag Overrides" m_layerEditor.kRemoveRenderFlagOverrides;
+displayString -replace -value "Remove Render Setting Overrides" m_layerEditor.kRemoveRenderSettingOverrides;
+displayString -replace -value "Remove Selected Objects" m_layerEditor.kRemoveSelectedObjects;
+displayString -replace -value "Remove Selected Objects from Selected Layers" m_layerEditor.kRemoveSelectedObjectsFromSelectedLayers;
+displayString -replace -value "Render" m_layerEditor.kRender;
+displayString -replace -value "Render All Layers" m_layerEditor.kRenderAllLayers;
+displayString -replace -value "Renderable" m_layerEditor.kRenderable;
+displayString -replace -value "Save" m_layerEditor.kSave;
+displayString -replace -value "Screen" m_layerEditor.kScreenMode;
+displayString -replace -value "Select Objects" m_layerEditor.kSelectObjects;
+displayString -replace -value "Select Objects in Selected Layers" m_layerEditor.kSelectObjectsInSelectedLayers;
+displayString -replace -value "Set All Layers" m_layerEditor.kSetAllLayers;
+displayString -replace -value "Set Only Selected Layers" m_layerEditor.kSetOnlySelectedLayers;
+displayString -replace -value "Set Selected Layers" m_layerEditor.kSetSelectedLayers;
+displayString -replace -value "Shaded" m_layerEditor.kShaded;
+displayString -replace -value "Set all layers to shaded" m_layerEditor.kShadedAnnot;
+displayString -replace -value "Show Namespace" m_layerEditor.kShowNamespace;
+displayString -replace -value "Sort Layers Alphabetically" m_layerEditor.kSortLayersAlphabetically;
+displayString -replace -value "Sort Layers Chronologically" m_layerEditor.kSortLayersChronologically;
+displayString -replace -value "Must supply a layer argument" m_layerEditor.kSupplyLayerArgument;
+displayString -replace -value "Template" m_layerEditor.kTemplate;
+displayString -replace -value "Set all layers to template display" m_layerEditor.kTemplateAnnot;
+displayString -replace -value "Textured" m_layerEditor.kTextured;
+displayString -replace -value "Set all layers to textured" m_layerEditor.kTexturedAnnot;
+displayString -replace -value "Unshaded" m_layerEditor.kUnshaded;
+displayString -replace -value "Set all layers to unshaded" m_layerEditor.kUnshadedAnnot;
+displayString -replace -value "Untextured" m_layerEditor.kUntextured;
+displayString -replace -value "Set all layers to untextured" m_layerEditor.kUntexturedAnnot;
+displayString -replace -value "Visible" m_layerEditor.kVisible;
+displayString -replace -value "Set all layers visible" m_layerEditor.kVisibleAnnot;
+displayString -replace -value "Warning" m_layerEditor.kWarning;
+displayString -replace -value "With membership" m_layerEditor.kWithMembership;

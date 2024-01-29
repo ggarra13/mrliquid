@@ -1,0 +1,38 @@
+/**
+ * @file   mentalSaveRenderLayerScene.mel
+ * @author gga
+ * @date   Mon Nov  5 18:25:34 2007
+ * 
+ * @brief  
+ * 
+ * 
+ */
+
+global proc string mentalSaveRenderLayerScene(string $layerName,
+					      string $baseName,
+					      string $outputDir, int $asciiMode)
+{
+  string $originalPass = mentalGetCurrentPass();
+  string $originalSceneDir = `workspace -q -objectTypeEntry scene`;
+  string $originalSceneName = `file -q -sceneName`;
+  if ($originalSceneName == "") {
+    $originalSceneName = "untitled";
+  }
+
+  workspace -ot "scene" $outputDir;
+
+  print("Saving out render layer: " + $layerName + "\n");
+  mentalApplyRenderLayer($layerName);
+  file -rename ($baseName + "_" + $layerName);
+  string $format = "mayaBinary";
+  if ($asciiMode) {
+    $format = "mayaAscii";
+  }
+  string $savedFile = `file -save -type $format`;
+
+  mentalApplyRenderLayer($originalPass);
+  workspace -ot "scene" $originalSceneDir;
+  file -rename $originalSceneName;
+
+  return $savedFile;
+}

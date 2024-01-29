@@ -1,0 +1,41 @@
+#/bin/bash --norc 
+#
+# Environment settings for <%ShortAppName%> <%Version%>.  
+# Source these from bash before starting maya <%MayaVersion%>.
+# This unfortunately must be done on Unix systems as LD_LIBRARY_PATH
+# cannot be overridden by Maya.env
+#
+
+MRL_ROOT="<%InstallDir%>/<%ShortAppName%>/<%Version%>/<%Platform%>/<%Arch%>"
+
+#
+# Add license (change 127.0.0.1 to your license server if needed)
+#
+export RLM_LICENSE=2764@127.0.0.1
+
+#
+# Add module path
+#
+MRL_MODULE="$MRL_ROOT/maya<%MayaVersion%>"
+export MAYA_MODULE_PATH="$MRL_MODULE:$MAYA_MODULE_PATH"
+
+#
+# Modify user's PATH variable
+#
+MRL_PLUGIN="$MRL_MODULE/plug-ins"
+MRL_SHADERS="$MRL_ROOT/shaders/mentalray<%MrayVersion%>"
+export PATH="$MRL_PLUGIN:$MRL_ROOT/bin:$PATH"
+export LD_LIBRARY_PATH="$MRL_ROOT/lib:$MRL_SHADERS:$LD_LIBRARY_PATH"
+
+#
+# For mental ray (must use ; not : )
+#
+export MI_CUSTOM_SHADER_PATH="$MRL_SHADERS;$MI_CUSTOM_SHADER_PATH"
+export MI_RAY_INCPATH="$MRL_SHADERS:$MI_RAY_INCPATH"
+export MI_LIBRARY_PATH="$MRL_SHADERS:$MI_LIBRARY_PATH"
+
+#
+# For Ruby
+#
+export RUBYLIB="$MRL_ROOT/lib/ruby/<%RubyVersion%>:$RUBYLIB"
+

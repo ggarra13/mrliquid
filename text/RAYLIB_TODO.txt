@@ -1,0 +1,46 @@
+
+
+- mrInstance          **DONE**  **TESTED**
+- mrInstanceObject    **DONE**  **TESTED** 
+- mrInstanceGeoShader **DONE**  
+- mrGroup             **DONE**  **TESTED**
+- mrGroupInstance     **DONE**  **TESTED** -- check in incremental mode
+- mrGroupSG           **DONE**  **TESTED**
+
+- mrOptions           **DONE** 
+
+- mrCamera            **DONE** 
+
+- mrObject            **DONE**   **TESTED**
+  - mrMesh              **DONE** **TESTED**
+  - mrMeshSubd          **DONE**
+  - mrSubd              **DONE**
+  - mrNurbsSurface      **DONE** **TESTED** -- missing testing trims
+  - mrImagePlane        **DONE**
+
+
+- mrFramebuffer       **DONE?**
+- mrOutput            **DONE?**
+
+- mrLight              **DONE**
+  - mrLightShMap       **DONE**
+    - mrLightPhotons   **DONE**
+      - mrLightSpot    **DONE**
+      - mrLightPoint   **DONE**
+      - mrLightDirectional  **DONE**
+  - mrLightVolume      **DONE**
+  - mrLightArea        **DONE**
+  - mrLightAmbient     **DONE**
+  - mrLightDefault     **DONE**
+
+- mrShadingGroup       **DONE**
+  - mrImagePlaneSG     **DONE**
+
+- mrShader             **DONE** **TESTED**
+  - mrShaderMaya       **DONE** **TESTED**
+  - mrShaderLight      **DONE**
+
+- mrTexture            **DONE**
+
+- mrTranslator         **DONE** **TESTED**
+

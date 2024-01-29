@@ -1,0 +1,726 @@
+
+proc int openMiFile( string $miFile )
+{
+   int $fileId = -1;
+   if ( `filetest -r $miFile` )
+   {
+      $fileId = `fopen $miFile  "r"`;
+   }
+   else
+   {
+      string $path = getenv("MI_CUSTOM_SHADER_PATH");
+      string $paths[];
+      string $sep = ":";
+      if ( `about -nt` )
+      {
+	 $sep = ";";
+      }
+      tokenize($path, $sep, $paths);
+      for ($path in $paths )
+      {
+	 string $file = $path + "/" + $miFile;
+	 if ( `filetest -r $file` )
+	 {
+	    $fileId = `fopen $file  "r"`;
+	    break;
+	 }
+      }
+      if ( $fileId == -1 )
+      {
+	 error("Could not find .mi file \"" + $miFile + "\""); 
+      }
+   }
+   return $fileId;
+}
+
+/** 
+ * Return 1 if it is a maya_* shader, 0 if it is not.
+ * 
+ * @param shaderType maya shader (as it appears in .mi file)
+ * 
+ * @return 1 or 0.
+ */
+proc int isMayaShader( string $shaderType )
+{
+   if ( substring( $shaderType, 1, 5 ) != "maya_" )
+      return 1;
+   return 0;
+}
+
+/** 
+ * Given a list of shader mappings and a parameter of one of those
+ * shaders, return a new parameter matching the corresponding shader in maya.
+ * 
+ * @param mappings list of shader mapping names (as they appear in .mi vs.
+ *                 the name when they were created in current scene)
+ * @param param    parameter pointing to an attribute as it appears in .mi
+ *                 file
+ * 
+ * @return new parameter, corresponding to the node and attribute in maya.
+ */
+proc string mayaInterface( string $interfaces[], string $param )
+{
+   // Modify node name based on mappings (shaders created)
+   string $node = match("^[^\.]+\.", $param);
+   string $attr = substitute($node, $param, "");
+   int $i;
+   int $len = size($interfaces);
+   for ($i = 0; $i < $len; $i += 2 )
+   {
+      if ( $interfaces[$i] == $attr )
+      {
+	 $param = $interfaces[$i+1];
+      }
+   }
+   return $param;
+}
+
+
+/** 
+ * Given a list of shader mappings and a parameter of one of those
+ * shaders, return a new parameter matching the corresponding shader in maya.
+ * 
+ * @param mappings list of shader mapping names (as they appear in .mi vs.
+ *                 the name when they were created in current scene)
+ * @param param    parameter pointing to an attribute as it appears in .mi
+ *                 file
+ * 
+ * @return new parameter, corresponding to the node and attribute in maya.
+ */
+proc string mayaParameter( string $mappings[], string $param )
+{
+   // Modify node name based on mappings (shaders created)
+   string $node = match("^[^\.]+\.", $param);
+   string $attr = substitute($node, $param, "");
+   int $i;
+   int $len = size($mappings);
+   for ($i = 0; $i < $len; $i += 2 )
+   {
+      string $cmp = $mappings[$i] + ".";
+      if ( $cmp == $node )
+      {
+	 $node = $mappings[$i+1] + ".";
+      }
+   }
+   return ( $node + $attr );
+}
+
+/** 
+ * Take a mental ray parameter name to a maya parameter name.
+ * Some maya shaders parameters change their names to be prefixed with mi*
+ * in the maya parameter name.  This function gives you the reverse
+ * mapping for them.
+ * 
+ * @param param Shader Type as it appears in an .mi file (ie: reflectionBlur) 
+ * 
+ * @return parameter as it appears to maya (ie: miReflectionBlur)
+ */
+proc string paramMapping( string $param )
+{
+   string $mappings[] = {
+   "reflectionBlur", "miReflectionBlur",
+   "reflectionRays", "miReflectionRays",
+   "refractionBlur", "miRefractionBlur",
+   "refractionRays", "miRefractionRays",
+   "irradiance", "miIrradiance",
+   "irradianceColor", "miIrradianceColor",
+   "occlusionScale", "",
+   "opacityGain", "",
+   "lightMode", ""
+   };
+
+   int $i = 0;
+   int $len = size($mappings);
+   for ( $i = 0; $i < $len; $i += 2 )
+   {
+      if ( $mappings[$i] == $param )
+      {
+	 $param = $mappings[$i+1]; break;
+      }
+   }
+
+   return $param;
+}
+
+/** 
+ * Take a mental ray shader name to a maya shader name.
+ * The maya shaders change their names to be prefixed as maya_*
+ * in the .mi file shader name.  This function gives you the reverse
+ * mapping for them.
+ * 
+ * @param shaderType Shader Type as it appears in an .mi file (ie: maya_blend) 
+ * 
+ * @return shader type as it appears to maya (ie: blendColors)
+ */
+proc string shaderTypeMapping( string $shaderType )
+{
+   if ( substring( $shaderType, 1, 5 ) != "maya_" )
+      return $shaderType;
+
+   string $type = substring( $shaderType, 6, size($shaderType) );
+
+   string $mappings[] = {
+   "place2dtex",  "place2dTexture",
+   "plusminusavg", "plusMinusAverage",
+   "blend", "blendColors",
+   "gamma", "gammaCorrect",
+   "multdiv", "multiplyDivide",
+   "singleswitch", "singleShadingSwitch",
+   "doubleswitch", "doubleShadingSwitch",
+   "tripleswitch", "tripleShadingSwitch",
+   "quadswitch", "quadShadingSwitch",
+   "displace", "displacement"
+   };
+
+
+   int $i = 0;
+   int $len = size($mappings);
+   for ( $i = 0; $i < $len; $i += 2 )
+   {
+      if ( $mappings[$i] == $type )
+      {
+	 $type = $mappings[$i+1]; break;
+      }
+   }
+
+   return $type;
+}
+
+/** 
+ * Parse a phenomenon .mi file and extract all roots used in some
+ * phenomenon.
+ * 
+ * @param miFile      .mi file to parse 
+ * @param phenomenon  phenomenon to search for.
+ * 
+ * @return mapping list of phenomenon interfaces to shaders' attributes.
+ */
+proc string[] mentalParseRoots( string $miFile, string $phenomenon )
+{
+   int $fileId = openMiFile( $miFile );
+
+   string $shader, $shaderName, $shaderType, $root;
+   int $in_phenomenon = 0;
+   int $in_interface = 0;
+   int $in_shader = 0;
+   int $in_shaderType = 0;
+   int $in_root = 0;
+
+   string $roots[];
+   string $tokens[];
+   while ( ! `feof $fileId` )
+   {
+      string $line = `fgetline $fileId`;
+      if ( $line == "" ) break;
+
+      if ( ! $in_phenomenon )
+      {
+	 if ( match( "declare phenomenon", $line ) != "" )
+	 {
+	    $in_phenomenon = 1;
+	    while ( ! `feof $fileId` )
+	    {
+	       $line = `fgetline $fileId`;
+	       if ( match( "^[\t ]*\"" + $phenomenon + "\"", $line ) != "" )
+	       {
+		  $in_interface = 1;
+		  break;
+	       }
+	       else if ( match( "\\)", $line ) != "" )
+	       {
+		  $in_interface = 0;
+		  break;
+	       }
+	    }
+	 }
+      }
+      else
+      {
+	 if ( match( "end declare", $line ) != "" )
+	 {
+	    $in_shader = $in_phenomenon = $in_interface = 0; 
+	    $in_shaderType = 0;
+	    continue;
+	 }
+      }
+
+      if ( $in_interface )
+      {
+	 if ( match( "\\)", $line ) != "" )
+	 {
+	    $in_interface = 0;
+	    $in_shader = 1;
+	 }
+	 continue;
+      }
+
+      if ( $in_shader )
+      {
+	 tokenizeList($line, $tokens);
+	 if ( $in_root )
+	 {
+	    if ( $tokens[0] == "=" )
+	    {
+	       $root = substituteAllString( $tokens[1], "\"", "");
+	    }
+	 }
+	 else
+	 {
+	    if ( $tokens[0] == "root" )
+	    {
+	       $in_root = 1;
+	       if ( $tokens[2] != "" )
+	       {
+		  $root = substituteAllString( $tokens[2], "\"", "");
+	       }
+	    }
+	 }
+
+
+	 if ( $root != "" )
+	 {
+	    $roots[size($roots)] = $root;
+	    $root = "";
+	 }
+      }
+   }
+
+   fclose $fileId;
+   return $roots;
+}
+
+
+/** 
+ * Parse a phenomenon .mi file and extract all interfaces used in some
+ * phenomenon.
+ * 
+ * @param miFile      .mi file to parse 
+ * @param phenomenon  phenomenon to search for.
+ * 
+ * @return mapping list of phenomenon interfaces to shaders' attributes.
+ */
+proc string[] mentalParseInterfaces( string $miFile, string $phenomenon )
+{
+   int $fileId = openMiFile( $miFile );
+
+   string $shader, $shaderName, $shaderType;
+   int $in_phenomenon = 0;
+   int $in_interface = 0;
+   int $in_shader = 0;
+   int $in_shaderType = 0;
+
+   string $interfaces[];
+   string $tokens[];
+   while ( ! `feof $fileId` )
+   {
+      string $line = `fgetline $fileId`;
+      if ( $line == "" ) break;
+
+      if ( ! $in_phenomenon )
+      {
+	 if ( match( "declare phenomenon", $line ) != "" )
+	 {
+	    $in_phenomenon = 1;
+	    while ( ! `feof $fileId` )
+	    {
+	       $line = `fgetline $fileId`;
+	       if ( match( "^[\t ]*\"" + $phenomenon + "\"", $line ) != "" )
+	       {
+		  $in_interface = 1;
+		  break;
+	       }
+	       else if ( match( "\\)", $line ) != "" )
+	       {
+		  $in_interface = 0;
+		  break;
+	       }
+	    }
+	 }
+      }
+      else
+      {
+	 if ( match( "end declare", $line ) != "" )
+	 {
+	    $in_shader = $in_phenomenon = $in_interface = 0; 
+	    $in_shaderType = 0;
+	    continue;
+	 }
+      }
+
+      if ( $in_interface )
+      {
+	 if ( match( "\\)", $line ) != "" )
+	 {
+	    $in_interface = 0;
+	    $in_shader = 1;
+	 }
+	 continue;
+      }
+
+
+      if ( $in_shader )
+      {
+	 if ( $shader != "" )
+	 {
+	    tokenizeList($line, $tokens);
+	    if ( $tokens[0] == ")" ) 
+	    {
+	       $shaderType = $shaderName = $shader = "";
+	       continue;
+	    }
+
+	    if ( $tokens[2] != "interface" )
+	       continue;
+
+	    $param = substituteAllString( $tokens[0], "\"", "");
+	    if ( isMayaShader( $shaderType ) )
+	    {
+	       $param = paramMapping($param);
+	       if ( $param == "" ) continue;
+	    }
+
+	    string $src = substituteAllString( $tokens[3], "\"", "");
+	    string $dst = $shader + "." + $param;
+
+	    $interfaces[size($interfaces)] = $src;
+	    $interfaces[size($interfaces)] = $dst;
+	 }
+	 else
+	 {
+	    if ( $in_shaderType )
+	    {
+	       $shaderType = match( "\"([^\"]+)\"", $line );
+	    }
+	    else
+	    {
+	       tokenizeList($line, $tokens);
+	       if ( $tokens[0] == "shader" )
+	       {
+		  $shaderName = substituteAllString( $tokens[1], "\"", "");
+		  $shaderType = $tokens[2];
+	       }
+	    }
+
+	    if ( $shaderType != "" )
+	    {
+	       $shaderType = substituteAllString( $shaderType, "\"", "");
+	       $shaderType = shaderTypeMapping( $shaderType );
+	       $shader = $shaderName;
+	       $in_shaderType = 0;
+	    }
+	    else
+	    {
+	       if ( $shaderName != "" )
+	       {
+		  $shader = "";
+		  $in_shaderType = 1;
+	       }
+	    }
+	 }
+      }
+   }
+
+   fclose $fileId;
+   return $interfaces;
+}
+
+
+/** 
+ * Parse a phenomenon .mi file and extract all shaders used in some
+ * phenomenon, creating them along the way.
+ * 
+ * @param miFile      .mi file to parse 
+ * @param phenomenon  phenomenon to search for.
+ * 
+ * @return mapping list of phenomenon shader to hypergraph shader
+ */
+proc string[] mentalParsePhenomena( string $miFile, string $phenomenon )
+{
+   int $fileId = openMiFile( $miFile );
+
+   string $shader, $shaderName, $shaderType;
+   int $in_phenomenon = 0;
+   int $in_interface = 0;
+   int $in_shader = 0;
+   int $in_shaderType = 0;
+
+   string $mappings[];
+   string $tokens[];
+   while ( ! `feof $fileId` )
+   {
+      string $line = `fgetline $fileId`;
+      if ( $line == "" ) break;
+
+      if ( ! $in_phenomenon )
+      {
+	 if ( match( "declare phenomenon", $line ) != "" )
+	 {
+	    $in_phenomenon = 1;
+	    while ( ! `feof $fileId` )
+	    {
+	       $line = `fgetline $fileId`;
+	       if ( match( "^[\t ]*\"" + $phenomenon + "\"", $line ) != "" )
+	       {
+		  $in_interface = 1;
+		  break;
+	       }
+	       else if ( match( "\\)", $line ) != "" )
+	       {
+		  $in_interface = 0;
+		  break;
+	       }
+	    }
+	 }
+      }
+      else
+      {
+	 if ( match( "end declare", $line ) != "" )
+	 {
+	    $in_shader = $in_phenomenon = $in_interface = 0; 
+	    $in_shaderType = 0;
+	    continue;
+	 }
+      }
+
+      if ( $in_interface )
+      {
+	 if ( match( "\\)", $line ) != "" )
+	 {
+	    $in_interface = 0;
+	    $in_shader = 1;
+	 }
+	 continue;
+      }
+
+
+      if ( $in_shader )
+      {
+	 if ( $shader != "" )
+	 {
+	    tokenizeList($line, $tokens);
+	    if ( $tokens[0] == ")" ) 
+	    {
+	       $shaderType = $shaderName = $shader = "";
+	       continue;
+	    }
+
+	    if ( $tokens[0] != "" )
+	    {
+	       $param = substituteAllString( $tokens[0], "\"", "");
+	       if ( isMayaShader( $shaderType ) )
+	       {
+		  $param = paramMapping($param);
+		  if ( $param == "" ) continue;
+	       }
+
+	       string $src = "";
+	       string $dst = $shader + "." + $param;
+	       string $type = `getAttr -type $dst`;
+	       if ( $tokens[1] == "=" ) 
+	       {
+		  $src = substituteAllString( $tokens[2], "\"", "");
+	       }
+	       else
+	       {
+		  if ( $type == "" ) 
+		  {
+		     $src = substituteAllString( $tokens[1], "\"", "");
+		  }
+	       }
+
+	       if ( $src != "" )
+	       {
+		  if ( $src == "interface" || $src == "" ) continue;
+
+		  if ( match("\\.", $src) == "" )
+		  {
+		     $src += ".message";
+		  }
+		  else
+		  {
+		     string $node = match("^[^\.]+\.", $src);
+		     string $attr = substitute($node, $src, "");
+		     if ( substring($attr, 1, 3) != "out" )
+		     {
+			$attr = "out" + capitalizeString($attr);
+		     }
+		     $src = $node + $attr;
+		  }
+
+		  // Modify node name based on mappings (shaders created)
+		  $src = mayaParameter( $mappings, $src );
+		  string $cmd = "connectAttr " + $src + " " + $dst;
+		  eval($cmd);
+	       }
+	       else
+	       {
+		  $val = "";
+		  int $i = 1;
+		  int $len = size($tokens);
+		  if ( $len == 2 ) 
+		  {
+		     $type = "";
+		  }
+		  else
+		  {
+		     if ( $type == "double2" ) $len -= 1;
+		     $type = " -type \"" + $type + "\"";
+		  }
+		  for ($i = 1; $i < $len; $i++ )
+		  {
+		     $val += " " + $tokens[$i];
+		  }
+		  string $cmd = "setAttr " + $type + $dst + $val;
+		  catchQuiet( eval($cmd) );
+	       }
+	    }
+	 }
+	 else
+	 {
+	    if ( $in_shaderType )
+	    {
+	       $shaderType = match( "\"([^\"]+)\"", $line );
+	    }
+	    else
+	    {
+	       tokenizeList($line, $tokens);
+	       if ( $tokens[0] == "shader" )
+	       {
+		  $shaderName = substituteAllString( $tokens[1], "\"", "");
+		  $shaderType = $tokens[2];
+	       }
+	    }
+
+	    if ( $shaderType != "" )
+	    {
+	       $shaderType = substituteAllString( $shaderType, "\"", "");
+	       $shaderType = shaderTypeMapping( $shaderType );
+	       string $cmd = ( "createNode " + $shaderType + " -n " +
+			       $shaderName );
+	       $shader = eval($cmd);
+
+	       $mappings[size($mappings)] = $shaderName;
+	       $mappings[size($mappings)] = $shader;
+	       $in_shaderType = 0;
+	    }
+	    else
+	    {
+	       if ( $shaderName != "" )
+	       {
+		  $shader = "";
+		  $in_shaderType = 1;
+	       }
+	    }
+	 }
+      }
+   }
+
+   fclose $fileId;
+   return $mappings;
+}
+
+
+/** 
+ * This procedure finds the selected phenomenon nodes and expands
+ * them to show all its shaders, replacing the original phenomenon.
+ * 
+ * 
+ * @return (nothing)
+ */
+global proc mentalExpandPhenomena()
+{
+   global string $gMentalFactoryCmd;
+   string $phens[] = `ls -sl`;
+
+   for ( $phen in $phens )
+   {
+      string $phenType = `objectType $phen`;
+      string $cmd = $gMentalFactoryCmd + " -q -library " + $phenType;
+      string $miFile = eval($cmd);
+
+      string $mappings[]   = mentalParsePhenomena( $miFile, $phenType );
+      string $interfaces[] = mentalParseInterfaces( $miFile, $phenType );
+      string $roots[]      = mentalParseRoots( $miFile, $phenType );
+
+      string $src = $phen + ".message";
+      string $conns[] = `listConnections -p on -d on $src`;
+      
+      int $len = size($roots);
+      if ( $len > 1 )
+      {
+	 // If more than one root, create a mix node
+	 string $mixer = `createNode mib_color_mix`;
+	 setAttr ($mixer + ".num") ($len - 1);
+	 connectAttr -f ($roots[0] + ".outColor") ($mixer + ".color_base");
+	 for ( $i = 1; $i < $len; $i++ )
+	 {
+	    int $idx = $i - 1;
+	    setAttr ($mixer + ".mode_" + $idx) 1;
+	    connectAttr ($roots[$i] + ".outColor") 
+	                ($mixer + ".color_" + $idx);
+	 }
+	 $src = $mixer + ".message";
+      }
+      else
+      {
+	 $src = $roots[0] + ".message";
+      }
+
+      for ( $conn in $conns )
+      {
+	 string $cmd = "connectAttr -f " + $src + " " + $conn;
+	 catchQuiet( eval($cmd) );
+      }
+
+
+      int $len = size($interfaces);
+      int $i;
+      for ( $i = 0; $i < $len; $i += 2 )
+      {
+	 string $src = $phen + "." + $interfaces[$i];
+	 string $dst = $interfaces[$i+1];
+
+	 string $conns[] = `listConnections -p on -c on -s on -d on $src`;
+	 int $num = size($conns);
+	 if ( $num == 0 )
+	 {
+	    $dst = mayaParameter( $mappings, $dst );
+	    float  $vals[];
+	    string $val = "";
+	    string $type = `getAttr -type $src`;
+	    if ( $type == "" ) continue;
+
+	    if ( $type == "float2" || $type == "float3" ||
+		 $type == "matrix" || $type == "double2" ||
+		 $type == "double3" )
+	    {
+	       $vals = `getAttr $src`;
+	       for ( $v in $vals )
+	       {
+		  $val += " " + $v;
+	       }
+	    }
+	    else
+	    {
+	       $val = `getAttr $src`;
+	    }
+
+	    string $cmd = "setAttr " + $dst + " " + $val;
+	    catchQuiet( eval($cmd) );
+	 }
+	 else
+	 {
+	    int $j = 0;
+	    for( $j = 0; $j < $num; $j += 2 )
+	    {
+	       $src = $conns[$j+1];
+	       $dst = mayaInterface( $interfaces, $conns[$j] );
+	       $dst = mayaParameter( $mappings, $dst );
+	       connectAttr $src $dst;
+	    }
+	 }
+      }
+   }
+
+   delete $phens;
+}

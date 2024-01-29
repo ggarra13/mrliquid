@@ -1,0 +1,64 @@
+
+estimate of market:
+  900 windows versions
+  400 linux   versions
+
+#    rubyMEL   as of 18/10: 4568     +16
+#    rubyMEL   as of 13/10: 4552    +175
+#    rubyMEL   as of 08/10: 4337    +186
+#    rubyMEL   as of 01/10: 4151    +430 
+#    rubyMEL   as of 20/09: 3721
+#    rubyMEL   as of 05/09: 3516    (windows version)
+#    rubyMEL   as of 29/08: 2665
+#    rubyMEL   as of 24/08: 2660
+#    rubyMEL   as of 23/08: 2615
+#    rubyMEL   as of 21/08: 2578     
+#    rubyMEL   as of 16/08: 2183     when rubyMEL0.9
+
+#    rubyMEL   as of 16/08: 2167     
+#    rubyMEL   as of 13/02: 2107     2  per week
+#    rubyMEL   as of 07/02: 2105    ~15 per week
+#    rubyMEL   as of 14/01: 2077    
+
+#    rubyMEL   as of 31/12/06: 2055    ~5 per week
+#    rubyMEL   as of 16/12: 2046    ~6 per week
+#    rubyMEL   as of 06/12: 2040    
+#    rubyMEL   as of 20/11: 2027    ~8 per week
+#    rubyMEL   as of 10/11: 2019    ~3 per week
+#    rubyMEL   as of  5/11: 2016
+#    rubyMEL   as of 31/10: 2016
+
+#    mrClasses as of 16/08: 2621    49 per month
+#    mrClasses as of 13/02: 2323    20 per week
+#    mrClasses as of 07/02  2302
+#    mrClasses as of 14/01  2242
+#    mrClasses as of 03/01: 2224    ~14 per week
+#    mrClasses as of 31/12: 2210    ~15 per week
+#    mrClasses as of 18/12: 2186    ~10 per week
+#    mrClasses as of 06/12: 2146
+#    mrClasses as of 20/11: 2119   
+#    mrClasses as of 10/11: 2103    ~14 per week
+#    mrClasses as of  5/11: 2089
+#    mrClasses as of 31/10: 2070
+#    mrClasses as of 16/10: 2017
+#    mrClasses as of 18/ 9: 1914
+
+# of downloads as of      :  884
+# of downloads as of 22/02:  876      5 per week
+# of downloads as of 13/02:  871      7 per week
+# of downloads as of 07/02:  864     
+# of downloads as of 14/01:  831     
+# of downloads as of 31/12:  788      8 per week
+# of downloads as of 16/12:  772    ~22 per week
+# of downloads as of 06/12:  719
+# of downloads as of 28/11:  711    ~9  per week
+# of downloads as of 22/11:  702    ~30 per week
+# of downloads as of 10/11:  676    ~10 per week
+# of downloads as of  5/11:  666
+# of downloads as of 31/10:  657
+# of downloads as of 23/10:  637
+# of downloads as of 16/10:  615
+# of downloads as of  5/10:  595
+# of downloads as of  1/10:  588
+# of downloads as of  12/9:  533
+# of downloads as of  12/8:  499

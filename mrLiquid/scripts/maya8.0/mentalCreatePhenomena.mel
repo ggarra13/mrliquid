@@ -1,0 +1,858 @@
+source "mentalIsLoaded";
+
+
+
+/** 
+ * Get full hypergraph history of a node.
+ * 
+ * @param node a shading node
+ * 
+ * @return array with the node history.
+ */
+proc string[] mentalGetHistory( string $node )
+{
+   string $nodes[] = `listHistory -pdo on $node`;
+   int $i;
+   int $len = size($nodes);
+   for ( $i = 1; $i < $len; $i++ )
+   {
+      string $tmp[] = `mentalGetHistory $nodes[$i]`;
+      $nodes = stringArrayCatenate( $nodes, $tmp );
+   }
+   $nodes = stringArrayRemoveDuplicates($nodes);
+   return $nodes;
+}
+
+
+
+
+/** 
+ * Disconnect phenomena node
+ * 
+ * 
+ * @return nothing
+ */
+global proc mentalDisconnectPhenomena()
+{
+   string $nodes[] = `ls -sl -type mentalrayPhenomenon`;
+   for ($node in $nodes)
+   {
+      // phen.interface -> attr connections
+      string $conn[] = `listConnections -p on -s off -d on -c on $node`;
+      int $size = size($conn);
+      int $i;
+      for ( $i = 0; $i < $size; $i += 2 )
+      {
+	 disconnectAttr $conn[$i] $conn[$i+1];
+      }
+      // message -> phen.root connections
+      $conn = `listConnections -p on -s on -d off -c on $node`;
+      $size = size($conn);
+      for ( $i = 0; $i < $size; $i += 2 )
+      {
+	 disconnectAttr $conn[$i+1] $conn[$i];
+      }
+   }
+}
+
+
+
+
+/** 
+ * Connect a phenomena spitting node to a shading network.
+ * 
+ * @param sg           if root is shading group, and sg == 1,
+ *                     export as material phenomenon.
+ *                     Otherwise, export as shader with multiple roots.
+ * @param root         start of shading network
+ * @param scrollList   GUI of attrs to expose
+ * @param nameGUI      GUI of name of phenomena
+ * 
+ * @return phenomena name
+ */
+global proc string mentalConnectPhenomena(
+					  int $sg,
+					  string $root,
+					  string $scrollList,
+					  string $nameGUI
+					  )
+{
+
+   string $items[] = `textScrollList -q -si $scrollList`;
+   if ( size($items) == 0 )
+   {
+      error("No interface parameter selected for phenomena.");
+   }
+
+   string $name = `textFieldGrp -q -text $nameGUI`;
+   string $phenomena = `createNode mentalrayPhenomenon -n $name`;
+
+   string $type = `objectType $root`;
+   string $src, $dst;
+   if ( $type == "shadingEngine" )
+   {
+      if ( $sg == 1 )
+      {
+	 $src =      $root + ".message";
+	 $dst = $phenomena + ".rootMaterial";
+	 connectAttr $src $dst;
+      }
+      else
+      {
+	 string $maya_plugs[] = 
+	 {
+	 "surfaceShader",
+	 "root",
+	 "displacementShader",
+	 "root",
+	 "volumeShader",
+	 "rootVolume"
+	 };
+
+	 string $mray_plugs[] = {
+	 "miMaterialShader",
+	 "root",
+	 "miDisplacementShader",
+	 "root",
+	 "miVolumeShader",
+	 "rootVolume",
+	 "miShadowShader",
+	 "root",
+	 "miPhotonShader",
+	 "root",
+	 "miPhotonVolumeShader",
+	 "root",
+	 "miEnvironmentShader",
+	 "rootEnvironment",
+	 "miLightMapShader",
+	 "",
+	 "miContourShader",
+	 ""
+	 };
+
+	 int $i = 0;
+	 int $len = size($mray_plugs);
+	 for ( $i = 0; $i < $len; $i += 2 )
+	 {
+	    string $attrRoot = $mray_plugs[$i];
+	    string $attrPhen = $mray_plugs[$i+1];
+	    if ( $attrPhen == "" ) continue;
+
+
+	    string $attr = $root + "." + $attrRoot;
+	    string $nodes[] = `listConnections -s on -d off $attr`;
+	    for ( $node in $nodes )
+	    {
+	       $src = $node + ".message";
+	       $dst = $phenomena + "." + $attrPhen;
+	       print( "connectAttr -na " + $src + " " + $dst + "\n");
+	       connectAttr -na $src $dst;
+	    }
+	 }
+
+	 $len = size($maya_plugs);
+	 for ( $i = 0; $i < $len; $i += 2 )
+	 {
+	    string $attrRoot = $maya_plugs[$i];
+	    string $attrPhen = $maya_plugs[$i+1];
+	    if ( $attrPhen == "" ) continue;
+
+	    // If we have a connection from a mray plug, ignore maya plug.
+	    $dst = $phenomena + "." + $attrPhen;
+	    string $nodes[] = `listConnections -s on -d off $dst`;
+	    if ( size($nodes) != 0 ) continue;
+
+	    string $attr = $root + "." + $attrRoot;
+	    $nodes = `listConnections -s on -d off $attr`;
+	    for ( $node in $nodes )
+	    {
+	       $src = $node + ".message";
+	       $dst = $phenomena + "." + $attrPhen;
+	       print( "connectAttr -na " + $src + " " + $dst + "\n");
+	       connectAttr -na $src $dst;
+	    }
+	 }
+      }
+   }
+   else
+   {
+      $src =      $root + ".message";
+      $dst = $phenomena + ".root";
+      connectAttr -na $src $dst;
+   }
+
+   int $idx = 0;
+   for ( $dst in $items )
+   {
+      $src = $phenomena + ".interface[" + $idx + "]";
+      connectAttr $src $dst;
+      ++$idx;
+   }
+   return $phenomena;
+}
+
+
+
+/** 
+ * Save shading network as a phenomena tree into an .mi file
+ * (located in user's presets dir)
+ * 
+ * @param asSg         GUI of Export As Material
+ * @param root         start of shading network
+ * @param scrollList   GUI of attrs to expose
+ * @param nameGUI      GUI of name of phenomena
+ * 
+ * @return phenomena name
+ */
+global proc string mentalSavePhenomena(
+				       string $asSg,
+				       string $root,
+				       string $scrollList,
+				       string $nameGUI 
+				       )
+{
+   global string $gMentalCmd;
+
+   int $sg = 0;
+   if ( $asSg != "" )
+   {
+      $sg = `checkBox -q -v $asSg`;
+   }
+
+   string $phenomena = mentalConnectPhenomena( $sg,
+					       $root, $scrollList, $nameGUI );
+
+   string $cmd = "Mayatomr";
+   if ( mrLiquidIsLoaded() )
+   {
+      $cmd = $gMentalCmd;
+   }
+
+   /////// Save out .mi phenomena file
+   select -r $phenomena;
+   string $fileroot = `internalVar -userPresetsDir`;
+   string $name = `textFieldGrp -q -text $nameGUI`;
+   $fileroot += $name + ".mi";
+
+   string $filter = "11111111111111111111110";
+   string $run = $cmd;
+   $run += " -a -mi -f \"" + $fileroot;
+   $run += "\" -fe -namespace \"\" -exportFilterString \"" + $filter + "\"";
+   print($run + "\n");
+   eval($run);
+
+   mentalDisconnectPhenomena();
+   delete $phenomena;
+
+   // Reload .mi file
+   $run = $cmd;
+   $run += " -ai \"" + $fileroot + "\"";
+   print($run + "\n");
+   eval($run);
+
+   select -r $root;
+   return $phenomena;
+}
+
+
+/** 
+ * Given a phenomena that replaces the node's connections, 
+ * replace all of its connections
+ * 
+ * @param phenomena 
+ * @param node 
+ * 
+ * @return nothing
+ */
+proc mentalRecreateConnections( string $phenomena, string $node )
+{
+   /// Get connections of first node (where shading network begins)
+   string $conn[] = `listConnections -s off -d on -p on -c on $node`;
+
+
+   /// Recreate connections
+   int $num = size($conn);
+   int $i;
+   for ( $i = 0; $i < $num; $i += 2 )
+   {
+      string $item = $conn[$i];
+      string $node = `substitute "\\\..*" $item ""`;
+      string $attr = `substitute $node $item ""`;
+      string $dst  = $conn[$i+1];
+      string $src  = $phenomena + $attr;
+      print( "connectAttr -f " + $src + " " + $dst + "\n");
+      catch( `connectAttr -f $src $dst` );
+   }
+}
+
+
+/** 
+ * Given a phenomena with multiple roots and the shading group,
+ * replace shading group with it (maya8.5+)
+ * 
+ * @param phenomena multiroot phenomena
+ * @param node      shading group
+ * 
+ * @return nothing
+ */
+proc mentalRecreateConnectionsSG( string $phenomena, string $SG )
+{
+   /// Get connections of first node (where shading network begins)
+   string $conn[] = `listConnections -s off -d on -p on -c on $SG`;
+
+   string $hasMiMaterial[] = `listAttr -st miMaterial $SG`;
+   if ( size($hasMiMaterial) == 0 )
+     {
+       addAttr -ln "miMaterial" -at message $SG;
+     }
+
+   /// Create connection
+   string $dst  = $SG + ".miMaterial";
+   string $src  = $phenomena + ".message";
+   print( "connectAttr -f " + $src + " " + $dst + "\n");
+   catch( `connectAttr -f $src $dst` );
+}
+
+/** 
+ * Save shading network as a phenomena tree and replace it with a single
+ * phenomena node.
+ * 
+ * @param asSg         GUI of Export As Material
+ * @param root         start of shading network
+ * @param scrollList   GUI of attrs to expose
+ * @param nameGUI      GUI of name of phenomena
+ * 
+ * @return (nothing)
+ */
+global proc mentalSaveAndReplacePhenomena( string $asSG,
+					   string $root,
+					   string $scrollList,
+					   string $nameGUI )
+{
+   string $phenomenaType = mentalSavePhenomena( $asSG, $root, $scrollList,
+						$nameGUI );
+   
+   /// Create new phenomena object type
+   string $phenomena = `createNode $phenomenaType`;
+
+   ///// Get list of nodes we are about to remove
+   string $items[] = `textScrollList -q -si $scrollList`;
+   string $nodes[];
+   int $idx = 0;
+   for ( $item in $items )
+   {
+      string $node = `substitute "\\\..*" $item ""`;
+      $nodes[$idx++] = $node;
+   }
+
+   $nodes = stringArrayRemoveDuplicates($nodes);
+   $idx   = size($nodes)-1;
+
+   // If not creating a material phenomenon, skip shadingGroup and
+   // start from connected nodes.
+   string $node;
+   int $sg = 0;
+   if ( $asSG != "" )
+   {
+      $sg = `checkBox -q -v $asSG`;
+      if ($sg)
+      {
+	 mentalRecreateConnectionsSG( $phenomena, $root );
+      }
+      else
+      {	
+	 string $maya_plugs[] = 
+	 {
+	 "surfaceShader",
+	 "root",
+	 "displacementShader",
+	 "root",
+	 "volumeShader",
+	 "rootVolume"
+	 };
+
+	 string $mray_plugs[] = {
+	 "miMaterialShader",
+	 "root",
+	 "miDisplacementShader",
+	 "root",
+	 "miVolumeShader",
+	 "rootVolume",
+	 "miShadowShader",
+	 "root",
+	 "miPhotonShader",
+	 "root",
+	 "miPhotonVolumeShader",
+	 "root",
+	 "miEnvironmentShader",
+	 "rootEnvironment",
+	 "miLightMapShader",
+	 "",
+	 "miContourShader",
+	 ""
+	 };
+
+	 int $i = 0;
+	 int $len = size($mray_plugs);
+	 for ( $i = 0; $i < $len; $i += 2 )
+	 {
+	    string $attrRoot = $mray_plugs[$i];
+	    string $attrPhen = $mray_plugs[$i+1];
+	    if ( $attrPhen == "" ) continue;
+
+	    string $attr = $root + "." + $attrRoot;
+	    string $conns[] = `listConnections -s on -d off $attr`;
+	    for ( $node in $conns )
+	    {
+	       mentalRecreateConnections( $phenomena, $node );
+	    }
+	 }
+
+	 $len = size($maya_plugs);
+	 for ( $i = 0; $i < $len; $i += 2 )
+	 {
+	    string $attrRoot = $maya_plugs[$i];
+	    string $attrPhen = $maya_plugs[$i+1];
+	    if ( $attrPhen == "" ) continue;
+
+	    string $attr = $root + "." + $attrRoot;
+	    string $conns[] = `listConnections -s on -d off $attr`;
+	    for ( $node in $conns )
+	    {
+	       mentalRecreateConnections( $phenomena, $node );
+	    }
+	 }
+      }
+   }
+   else 
+   {
+      mentalRecreateConnections( $phenomena, $nodes[$idx] );
+   }
+
+   /// Delete all nodes we collapsed into phenomena
+   delete $nodes;
+}
+
+
+
+/** 
+ * Given a selected shader, pop up a window to allow user to create/save
+ * a new phenomena for it.
+ * 
+ * 
+ * @return nothing
+ */
+global proc mentalCreatePhenomenaFromShaders()
+{
+   //
+   // Get the list of valid shader nodes
+   //
+   string $validShaders[] = `listNodeTypes shader`;
+   string $tmp[] = `listNodeTypes texture`;
+   $validShaders = stringArrayCatenate( $validShaders, $tmp );
+   $tmp = `listNodeTypes utility`;
+   $validShaders = stringArrayCatenate( $validShaders, $tmp );
+   $tmp = `listNodeTypes rendernode`;
+   $validShaders = stringArrayCatenate( $validShaders, $tmp );
+
+   //
+   // For each selected and valid shader, create a phenomena shading network
+   // 	
+   string $shaders[] = `ls -sl`;
+
+   string $shaderTypes[];
+   int $idx = 0;
+   for ($shader in $shaders)
+   {
+      $shaderTypes[$idx++] = `objectType $shader`;
+   }
+
+   string $myIntersector = `stringArrayIntersector`;
+   stringArrayIntersector -edit -intersect $validShaders $myIntersector;
+   stringArrayIntersector -edit -intersect $shaderTypes  $myIntersector; 
+   $shaderTypes = `stringArrayIntersector -query $myIntersector`;
+   deleteUI $myIntersector;
+
+   if ( size($shaderTypes) == 0 )
+   {
+      error("No valid shader selected.");
+      return;
+   }
+
+   string $types = "";
+   for ( $type in $shaderTypes )
+   {
+      $types += " -type " + $type;
+   }
+
+   $shaders = eval( "ls " + $types + " -sl" );
+
+   string $validAttrs[];
+
+   string $ignoreAttrs[] = {
+   "hardwareShader",
+   "vrOverwriteDefaults",
+   "vrFillObject",
+   "vrEdgeWeight",
+   "vrEdgeColor",
+   "vrEdgeStyle",
+   "vrEdgePriority",
+   "vrHiddenEdges",
+   "vrHiddenEdgesOnTransparent",
+   "vrOutlinesAtIntersections",
+   "materialAlphaGain",
+   "pointCamera",
+   "caching",
+   "nodeState",
+   "rayDirection",
+   "miDeriveFromMaya",
+   "miRefractiveIndex",
+   "miRefractions",
+   "miAbsorbs",
+   "miDiffuse",
+   "miColor",
+   "miTransparency",
+   "miTranslucence",
+   "miTranslucenceFocus",
+   "miNormalCamera",
+   "normalCamera"
+   };
+
+
+   string $shader;
+   string $src, $dst;
+   for ($shader in $shaders)
+   {
+      string $nodes[] = mentalGetHistory($shader);
+      
+      int $len = size($nodes);
+      string $reversed[];
+      for ( $i = $len-1; $i >= 0; $i-- )
+      {
+	 $reversed[$i] = $nodes[$len-$i-1];
+      }
+
+
+      string $node;
+      $idx = 0;
+      for ($node in $reversed)
+      {
+	 string $type = `objectType $node`;
+	 if ( $type == "mentalrayTexture" ) continue;
+
+	 string $attr;
+	 string $attrs[] = `listAttr -v -c -w $node`;
+	 $attrs = stringArrayRemove( $ignoreAttrs, $attrs );
+	 for ($attr in $attrs)
+	 {
+	    int $len = size($attr);
+	    string $last = substring($attr, $len, $len);
+	    if ( $last == "R" || $last == "G" || $last == "B" ||
+		 $last == "X" || $last == "Y" || $last == "Z" ||
+		 $last == "U" || $last == "V" || $last == "W" )
+	    {
+	       continue;
+	    }
+
+	    $dst = $node + "." + $attr;
+	    string $conn[] = `listConnections -d on $dst`;
+	    if ( size($conn) != 0 ) continue;
+
+	    // Matrix attributes cannot be exposed as interfaces
+	    string $type = `getAttr -type $dst`;
+	    if ( $type == "matrix" ) continue;
+
+	    $validAttrs[$idx++] = $dst;
+	 }
+      }
+
+      // Create a GUI allowing user to select which attributes are
+      // to be exposed as interface parameters.	window
+      if ( size($validAttrs) == 0 )
+      {
+	 warning("No valid attributes to expose as phenomena parameters");
+      }
+
+      string $phenomenaWindow = `window -title "Create Phenomenon"`;
+      columnLayout -adjustableColumn true;
+      string $name = "phen_" + $nodes[0];
+      string $text = `textFieldGrp -label "Name" -text $name`;
+
+      text -l "Select Interface Parameters";
+      string $attrList = `textScrollList -numberOfRows 30 -allowMultiSelection true`; 
+      for ( $attr in $validAttrs )
+      {
+	 textScrollList -e -append $attr $attrList;
+	 textScrollList -e -si $attr $attrList;
+      }
+
+      string $cmd = "deleteUI " + $phenomenaWindow + ";";
+
+      rowLayout -nc 3
+                -columnAttach 1 "both" 	0
+ 		-columnAttach 2 "both"  0
+ 		-columnAttach 3 "both"  0;
+      button -label "Create" 
+      -c ("mentalSavePhenomena(0, \""+ $shader + "\",\"" + 
+	  $attrList + "\",\"" + $text + "\");" + $cmd);
+      button -label "Replace"
+      -c ("mentalSaveAndReplacePhenomena(0, \"" + $shader + "\",\"" + 
+	  $attrList +"\",\"" + $text + "\");" + $cmd) ReplaceButton;
+      if ( size($nodes) < 2 )
+      {
+	 button -edit -enable off ReplaceButton;
+      }
+      button -label "Cancel" -c $cmd;
+      showWindow;
+   }
+}
+
+
+
+/** 
+ * Given a selected shading group, pop up a window to allow user to 
+ * create/save a new phenomena for it.
+ * 
+ * 
+ * @return nothing
+ */
+global proc mentalCreatePhenomenaFromSG()
+{
+   //
+   // For each selected and valid shading network, create a 
+   // phenomena shading network
+   // 	
+   string $SGs[] = `ls -sl -type shadingEngine`;
+   if ( size($SGs) == 0 )
+   {
+      error("No shading group selected.");
+   }
+
+
+   //
+   // Get the list of valid shader nodes
+   //
+   string $validShaders[] = `listNodeTypes shader`;
+   string $tmp[] = `listNodeTypes texture`;
+   $validShaders = stringArrayCatenate( $validShaders, $tmp );
+   $tmp = `listNodeTypes utility`;
+   $validShaders = stringArrayCatenate( $validShaders, $tmp );
+   $tmp = `listNodeTypes rendernode`;
+   $validShaders = stringArrayCatenate( $validShaders, $tmp );
+
+
+
+   string $validAttrs[];
+
+   string $ignoreAttrs[] = {
+   "hardwareShader",
+   "vrOverwriteDefaults",
+   "vrFillObject",
+   "vrEdgeWeight",
+   "vrEdgeColor",
+   "vrEdgeStyle",
+   "vrEdgePriority",
+   "vrHiddenEdges",
+   "vrHiddenEdgesOnTransparent",
+   "vrOutlinesAtIntersections",
+   "materialAlphaGain",
+   "pointCamera",
+   "caching",
+   "nodeState",
+   "rayDirection",
+   "miDeriveFromMaya",
+   "miRefractiveIndex",
+   "miRefractions",
+   "miAbsorbs",
+   "miDiffuse",
+   "miColor",
+   "miTransparency",
+   "miTranslucence",
+   "miTranslucenceFocus",
+   "miNormalCamera",
+   "normalCamera"
+   };
+
+
+   string $shader;
+   string $src, $dst;
+   for ($sg in $SGs)
+   {
+      string $nodes[] = mentalGetHistory($sg);
+      
+      int $len = size($nodes);
+      string $reversed[];
+      for ( $i = $len-1; $i >= 0; $i-- )
+      {
+	 $reversed[$i] = $nodes[$len-$i-1];
+      }
+
+
+      string $node;
+      $idx = 0;
+      for ($node in $reversed)
+      {
+	 string $type = `objectType $node`;
+	 if ( $type == "mentalrayTexture" ||
+	      $type == "shadingEngine" ) continue;
+
+	 string $attr;
+	 string $attrs[] = `listAttr -v -c -w $node`;
+	 $attrs = stringArrayRemove( $ignoreAttrs, $attrs );
+	 for ($attr in $attrs)
+	 {
+	    int $len = size($attr);
+	    string $last = substring($attr, $len, $len);
+	    if ( $last == "R" || $last == "G" || $last == "B" ||
+		 $last == "X" || $last == "Y" || $last == "Z" ||
+		 $last == "U" || $last == "V" || $last == "W" )
+	    {
+	       continue;
+	    }
+
+
+	    if ( match("\\.", $attr) != "" )
+	    {
+	       // child of a compound array
+	       string $buffer[];
+	       int $numTokens = `tokenize $attr "." $buffer`;
+	       string $dst = $node + "." + $buffer[0];
+	       int $size = `getAttr -size $dst`;
+	       for ( $t = 0; $t < $size; $t++ )
+	       {
+		  $dst = ( $node + "." + $buffer[0] + "[" + $t + "]." +
+			   $buffer[1] );
+		  string $conn[] = `listConnections -d on $dst`;
+		  if ( size($conn) != 0 ) continue;
+		  $validAttrs[$idx++] = $dst;
+	       }
+	       continue;
+	    }
+	    else
+	    {
+	       $dst = $node + "." + $attr;
+
+	       int $size = `getAttr -size $dst`;
+	       if ( $size > 1 ) continue;  // array attribute, ignore
+
+	       string $conn[] = `listConnections -d on $dst`;
+	       if ( size($conn) != 0 ) continue;
+	    }
+	    // Matrix attributes cannot be exposed as interfaces
+	    string $type = `getAttr -type $dst`;
+	    if ( $type == "matrix" ) continue;
+
+	    $validAttrs[$idx++] = $dst;
+	 }
+      }
+
+      // Create a GUI allowing user to select which attributes are
+      // to be exposed as interface parameters.	window
+      if ( size($validAttrs) == 0 )
+      {
+	 warning("No valid attributes to expose as phenomena parameters");
+      }
+
+      string $phenomenaWindow = `window -title "Create Phenomenon"`;
+      columnLayout -adjustableColumn true;
+      string $name = "phen_" + $nodes[0];
+      string $text = `textFieldGrp -label "Name" -text $name`;
+
+      string $asSG = `checkBox -align left -l "Export as Material Phenomenon"`;
+
+      text -l "Select Interface Parameters";
+      string $attrList = `textScrollList -numberOfRows 30 -allowMultiSelection true`; 
+      for ( $attr in $validAttrs )
+      {
+	 textScrollList -e -append $attr $attrList;
+	 textScrollList -e -si $attr $attrList;
+      }
+
+      string $cmd = "deleteUI " + $phenomenaWindow + ";";
+
+      rowLayout -nc 3
+                -columnAttach 1 "both" 	0
+ 		-columnAttach 2 "both"  0
+ 		-columnAttach 3 "both"  0;
+      button -label "Create" 
+      -c ("mentalSavePhenomena(\"" + $asSG + "\", \""+ $sg + "\",\"" + 
+	  $attrList + "\",\"" + $text + "\");" + $cmd);
+      button -label "Replace"
+      -c ("mentalSaveAndReplacePhenomena(\"" + $asSG + 
+	  "\", \"" + $sg + "\",\"" + 
+	  $attrList +"\",\"" + $text + "\");" + $cmd) ReplaceButton;
+      button -label "Cancel" -c $cmd;
+      showWindow;
+   }
+
+}
+
+//---------------------------------------------------------------------------
+// getSGsFromShape
+//---------------------------------------------------------------------------
+/// Returns an array of the Shading Groups (shadingEngine nodes) responsible
+/// for shading the specified shape node.
+//---------------------------------------------------------------------------
+proc string[] getSGsFromShape( string $shape )
+{
+  string $shadingEngines[];
+
+  if ( `objExists $shape` )
+  {
+    $shadingEngines = `listConnections -destination true -source false
+      -plugs false -type "shadingEngine" $shape`;
+
+    // listConnections can return duplicates within its list.
+    //
+    $shadingEngines = stringArrayRemoveDuplicates( $shadingEngines );
+  }
+
+  return $shadingEngines;
+}
+
+
+/** 
+ * Main entry function to create a new phenomenon from selection
+ * (either shapes, shading groups or shaders)
+ * 
+ * 
+ * @return 
+ */
+global proc mentalCreatePhenomena()
+{
+   string $shape;
+   string $sel[] = `ls -l -sl`;
+   string $shapes[] = `ls -l -sl -dag`;
+   $shapes = `ls -l -s $shapes`;
+
+   string $SGs[];
+   if ( size($shapes) == 0 )
+   {
+      $SGs = `ls -sl -type shadingEngine`;
+      if ( size($SGs) == 0 )
+      {
+	 mentalCreatePhenomenaFromShaders();
+	 return;
+      }
+   }
+   else
+   {
+      for ( $shape in $shapes )
+      {
+	 string $tmp[] = getSGsFromShape( $shape );
+	 $SGs = stringArrayCatenate( $SGs, $tmp );
+      }
+
+      $SGs = stringArrayRemoveDuplicates( $SGs );
+   }
+
+
+   for ($sg in $SGs )
+   {
+      select -r -noExpand $sg;
+      mentalCreatePhenomenaFromSG();
+   }
+
+   select -r $sel;
+}
+

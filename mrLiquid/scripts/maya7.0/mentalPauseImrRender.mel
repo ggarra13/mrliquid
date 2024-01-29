@@ -1,0 +1,9 @@
+
+
+global proc mentalPauseImrRender(string $editor, int $pause)
+{
+    if (eval("mental -q -imr"))
+    {
+        eval("mental -pauseTuning " + $pause);
+    }
+}

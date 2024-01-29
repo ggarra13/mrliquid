@@ -1,0 +1,127 @@
+// Copyright (C) 1997-2004 Alias Systems Corp.
+// 
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias license agreement, without fee.
+// 
+// ALIAS DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+
+//****************************************************************************
+// Contains Maya node classificaation strings for known mental ray shaders.
+//****************************************************************************
+
+source "mentalCustomNodeClass.mel";
+
+global proc string mentalrayCustomNodeClass(string $nodeType)
+{
+	// Materials, Material surface shaders.
+	// Provides additional functionalities on top of
+	// Material shaders(rendernode/mentalray/material).
+	// "Assign New Material", "Assign Existing Material" RMB,
+	// Created with a SG.
+	// RMB on the node.
+
+	if ($nodeType == "mib_illum_lambert" ||
+	    $nodeType == "mib_illum_phong" ||
+	    $nodeType == "mib_illum_blinn" ||
+	    $nodeType == "mib_illum_cooktorr" ||
+	    $nodeType == "mib_illum_ward" ||
+	    $nodeType == "mib_illum_ward_deriv" ||
+	    $nodeType == "mib_illum_hair" ||
+	    $nodeType == "dgs_material" ||
+	    $nodeType == "dielectric_material" ||
+	    $nodeType == "path_material" ||
+	    $nodeType == "mi_car_paint_phen" ||
+	    $nodeType == "mi_metallic_paint" ||
+	    $nodeType == "misss_call_shader" ||
+	    $nodeType == "misss_fast_shader" ||
+	    $nodeType == "misss_fast_simple_maya" ||
+	    $nodeType == "misss_fast_skin_maya" ||	    
+	    $nodeType == "misss_physical" ||
+	    $nodeType == "misss_skin_specular" ||
+	    $nodeType == "transmat" )
+
+		return "rendernode/mentalray/material:shader/surface:swatch/mentalRaySwatchGen";
+	
+	// texture shaders supported by swatch
+	if( $nodeType == "mib_texture_checkerboard" ||
+		$nodeType == "mib_texture_polkadot" ||
+		$nodeType == "mib_texture_polkasphere" ||
+		$nodeType == "mib_texture_turbulence" ||
+		$nodeType == "mib_amb_occlusion" ||
+		$nodeType == "mib_texture_wave" )
+		return "rendernode/mentalray/texture:swatch/mentalRaySwatchGen";
+
+	// Contour
+	// Contour store functions
+
+	if ($nodeType == "contour_store_function" ||
+	    $nodeType == "contour_store_function_simple" )
+		return "rendernode/mentalray/contour/store";
+
+	// Contour contrast functions
+
+	if ($nodeType == "contour_contrast_function_levels" ||
+	    $nodeType == "contour_contrast_function_simple" )
+		return "rendernode/mentalray/contour/contrast";
+
+	// Contour shaders
+
+	if ($nodeType == "contour_shader_simple" ||
+	    $nodeType == "contour_shader_randomwidth" ||
+	    $nodeType == "contour_shader_randomtransparency" ||
+	    $nodeType == "contour_shader_curvature" ||
+	    $nodeType == "contour_shader_factorcolor" ||
+	    $nodeType == "contour_shader_depthfade" ||
+	    $nodeType == "contour_shader_framefade" ||
+	    $nodeType == "contour_shader_layerthinner" ||
+	    $nodeType == "contour_shader_widthfromcolor" ||
+	    $nodeType == "contour_shader_widthfromlightdir" ||
+	    $nodeType == "contour_shader_widthfromlight" ||
+	    $nodeType == "contour_shader_combi" )
+
+		return "rendernode/mentalray/contour/shader";
+
+	// Contour output shaders
+
+	if ($nodeType == "contour_only" ||
+	    $nodeType == "contour_composite" ||
+	    $nodeType == "contour_ps" )
+
+		return "rendernode/mentalray/contour/output";
+
+	// Sample Compositing
+
+	if ($nodeType == "mib_reflect" ||
+	    $nodeType == "mib_refract" ||
+	    $nodeType == "mib_transparency" ||
+	    $nodeType == "mib_opacity" ||
+	    $nodeType == "mib_dielectric" ||
+	    $nodeType == "mib_twosided" ||
+	    $nodeType == "mib_refraction_index" ||
+	    $nodeType == "mib_continue" )
+
+		return "rendernode/mentalray/composite:swatch/mentalRaySwatchGen";
+
+	// Data Conversion
+
+	if ($nodeType == "mib_color_alpha" ||
+	    $nodeType == "mib_color_average" ||
+	    $nodeType == "mib_color_intensity" ||
+	    $nodeType == "mib_color_interpolate" ||
+	    $nodeType == "mib_color_mix" ||
+	    $nodeType == "mib_color_spread" )
+
+		return "rendernode/mentalray/conversion:swatch/mentalRaySwatchGen";
+
+
+	return mentalCustomNodeClass($nodeType);
+}
+

@@ -1,0 +1,3012 @@
+// Copyright (C) 1997-2004 Alias Systems Corp.
+// 
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias license agreement, without fee.
+// 
+// ALIAS DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+
+//
+//  Description:
+//      This script initializes the Channel Box and Layer Editor.  
+//		Initialization involves determining the initial preferences, 
+//		creating the UI and setting the initial visibility.
+//
+source "mentalCreateMenus";
+
+// Description:  
+//      Take the original array, reverse the order of the
+//      array.   Return the new array.
+// 
+proc string [] reverseArray(string $originalArray[])
+{
+    string $newArray[] = $originalArray;
+    int $newArrayLength = size($newArray);
+    int $halfLength = $newArrayLength/2;
+    int $i;
+    for ($i = 0; $i <$halfLength; $i++)
+    {
+        string $tmpLayer = $newArray[$i];
+        int $j = $newArrayLength - $i -1;
+        $newArray[$i] = $newArray[$j];
+        $newArray[$j] = $tmpLayer;
+    }
+    return $newArray;
+}
+
+proc setLayerToMenuItems( string $menuName, string $menuNamePrefix, string $layers ){
+//
+//	Description:
+//		Create the Set Layer Menus and their child menuItems. The three
+//		menus are almost identical so they are coded once with the following
+//		arguments
+//
+//	Arguments:
+//		$menuName - The name of the menu
+//		$menuNamePrefix - The name for the menu (needed to enale/disable the menus.
+//		$layers - which layers to process: all, selected or onlySelected
+//
+
+	//Set All Layers
+	menuItem -l $menuName
+		-tearOff 1
+		-subMenu true
+		($menuNamePrefix + "Menu");
+		menuItem -l "Visible"
+			-ann "Set All Layers Visible"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".visibility\" 1")
+			;
+		menuItem -l "Invisible"
+			-ann "Set All Layers Invisible"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".visibility\" 0")
+			;
+		menuItem -divider true;
+
+		menuItem -l "Normal"
+			-ann "Set All Layers to Normal Display"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".displayType\" 0")
+			;
+		menuItem -l "Template"
+			-ann "Set All Layers to Template Display"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".displayType\" 1")
+			;
+		menuItem -l "Reference"
+			-ann "Set All Layers to Reference Display"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".displayType\" 2")
+			;
+		menuItem -divider true;
+
+		menuItem -l "Full Detail"
+			-ann "Set All Layers to Full Detail"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".levelOfDetail\" 0")
+			;
+		menuItem -l "Bounding Box"
+			-ann "Set All Layers to Bounding Box"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".levelOfDetail\" 1")
+			;
+		menuItem -divider true;
+
+		menuItem -l "Shaded"
+			-ann "Set All Layers to Shaded"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".shading\" 1")
+			;
+		menuItem -l "Unshaded"
+			-ann "Set All Layers to Unshaded"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".shading\" 0")
+			;
+		menuItem -divider true;
+
+		menuItem -l "Textured"
+			-ann "Set All Layers to Textured"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".texturing\" 1")
+			;
+		menuItem -l "Untextured"
+			-ann "Set All Layers to Untextured"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".texturing\" 0")
+			;
+		menuItem -divider true;
+
+		menuItem -l "Playback On"
+			-ann "Set All Layers Playback On"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".playback\" 1")
+			;
+		menuItem -l "Playback Off"
+			-ann "Set All Layers Playback Off"
+			-echoCommand true
+			-c ("setLayerTo " + $layers + "\".playback\" 0")
+			;
+	setParent -m ..;
+}
+
+proc createLayerEditor(string $parent)
+//
+//	Description:
+//		Create the Layer Editor UI.
+//
+//	Arguments:
+//		$parent - The parent layout. Must be a form layout.
+//
+{
+	global string $gCurrentLayerEditor;
+
+	//	Bail if the parent layout is not the expected type.
+	//
+	//	Option menu for displaying Display Layers versus Render Layers.
+	//
+	
+	string $requiredType = "formLayout";
+	if ($requiredType != `objectTypeUI $parent`) {
+		error ("Argument must be a " + $requiredType);
+		return;
+	}
+	setParent $parent;
+
+	string $radioDR = `radioButtonGrp -nrb 2 -l1 "Display" -l2 "Render" 
+		-cw2 60 60 -select 1 LayerEditorTypeRadio`;
+	string $tabLayout = `tabLayout -scrollable false -tabsVisible false
+		DisplayLayerUITabLayout`;
+
+	$gCurrentLayerEditor = $parent;
+	
+	//										//
+	// Begin Display layer tab.				//
+	//										//
+
+	
+	//	Need a menu bar layout for the menus.
+	//
+	setParent $tabLayout;
+	string $menuBarLayout = `menuBarLayout DisplayLayerTab`;
+
+	//
+	//	Create "Layers" pulldown menu
+	//
+	$editMenuForDispLayers = `menu -label "Layers" -allowOptionBoxes true`;
+
+	$newEmptyMenuItemForDispLayers = `menuItem -label "Create Empty Layer"`;
+
+	menuItem -divider true;
+
+	$selectObjectsMenuItemForDispLayers = `menuItem -label "Select Objects in Selected Layers"
+		LayerEditorEditMenuSelectObjectsMenuItemForDispLayers`;
+	$removeObjectsMenuItemForDispLayers = `menuItem -label "Remove Selected Objects from Selected Layers"
+		LayerEditorEditMenuRemoveObjectsMenuItemForDispLayers`;
+
+	menuItem -divider true;
+
+	$membershipMenuItemForDispLayers = `menuItem -label "Membership..."`;
+	$layerAttributesMenuItemForDispLayers = `menuItem -label "Attributes..."
+		LayerEditorEditMenuLayerAttributesMenuItemDispLayers`;
+
+	menuItem -divider true;
+
+	$deleteMenuItemForDispLayers = `menuItem -label "Delete Selected Layers"
+		LayerEditorEditMenuDeleteMenuItemForDispLayers`;
+	$deleteUnusedMenuItemForDispLayers = `menuItem -label "Delete Unused Layers"`;
+
+	menuItem -divider true;
+
+	// set layers to menus
+	setLayerToMenuItems "Set All Layers" "LayerEditorEditMenuSetAllLayers" "all";
+	setLayerToMenuItems "Set Selected Layers" "LayerEditorEditMenuSetSelectedLayers" "selected";
+	setLayerToMenuItems "Set Only Selected Layers" "LayerEditorEditMenuSetOnlySelectedLayers" "onlySelected";
+
+	menuItem -divider true;
+
+	$alphaSortMenuItemForDispLayers = `menuItem -label "Sort Layers Alphabetically" LayerEditorEditMenuSortAlphaMenuItemDispLayers`;
+	$chronoSortMenuItemForDispLayers = `menuItem -label "Sort Layers Chronologically" LayerEditorEditMenuSortChronoMenuItemDispLayers`;
+
+	//	Create "Options" pulldown menu
+	//
+	$optionsMenuForDispLayers = `menu -label "Options"`;
+	menuItem -checkBox false -label "Make New Layers Current"
+		-command ("optionVar -intValue displayLayerCurrent #1;"
+			+ "optionVar -intValue displayLayerCurrent #1;")
+		LayerEditorOptionsMenuMakeCurrentMenuItemDispLayers;
+	menuItem -checkBox false -label "Add New Objects to Current Layer"
+		LayerEditorOptionsMenuUseCurrentMenuItemDispLayers;
+	menuItem -checkBox false -label "Auto Overrides"
+        -command ("editRenderLayerGlobals -enableAutoAdjustments #1")
+		LayerEditorOptionsMenuAutoAdjustmentMenuItemDispLayers;
+	menuItem -checkBox false -label "Show Namespace"
+		-command ("optionVar -intValue displayLayerShowNamespace #1;updateLayerEditor;")
+		LayerEditorOptionsMenuShowNamespaceMenuItemDispLayers;
+
+	// Create the help menu
+	menu -label "Help";
+	menuItem -label "Help on Display Layers" -command "showHelp DisplayLayer";
+	menuItem -label "Help on Render Layers" -command "showHelp RenderLayers";
+
+	//	Create form layout for rest of editor.
+	//
+	$form = `formLayout`;
+
+
+	//	Button for creating new layers.
+	//
+	$emptyDispLayer = `symbolButton -image "newLayerEmpty.xpm"
+		-annotation "Create a new layer" emptyDispLayer`;
+	//	Tab layout with two children. One for display layers, the other
+	//	for render layers.
+	//
+	setParent $form;	
+	
+	scrollLayout -horizontalScrollBarThickness 0 DisplayLayerScrollLayout;
+	gridLayout
+		-allowEmptyCells     false
+		-autoGrow            true
+		-numberOfColumns     1
+		-cellWidthHeight     350 20
+		LayerEditorDisplayLayerLayout;
+	
+	//									//
+	//  End of Display layer tab.		//
+	//									//
+	
+	
+	
+	//									//
+	//	Begin Render layer tab.			//
+	//									//
+	
+	
+	//	Need a menu bar layout for the menus.
+	//
+	setParent $tabLayout;
+	menuBarLayout RenderLayerTab;
+
+	//	Create "Layers" pulldown menu
+	//
+	$editMenuForRenLayers = `menu -label "Layers" -allowOptionBoxes true`;
+
+	$newEmptyMenuItemForRenLayers = `menuItem -label "Create Empty Layer"`;
+	$newFromSelectedMenuItemForRenLayers = `menuItem -label "Create Layer from Selected"`;
+
+	menuItem -divider true;
+
+	$selectObjectsMenuItemForRenLayers = 
+		`menuItem -label "Select Objects in Selected Layers"
+		LayerEditorEditMenuSelectObjectsMenuItemForRenLayers`;
+	$removeObjectsMenuItemForRenLayers = 
+		`menuItem -label "Remove Selected Objects from Selected Layers"
+		LayerEditorEditMenuRemoveObjectsMenuItemForRenLayers`;
+
+	menuItem -divider true;
+
+	$membershipMenuItemForRenLayers = `menuItem -label "Membership..."`;
+	$layerAttributesMenuItemForRenLayers = `menuItem -label "Attributes..."
+		LayerEditorEditMenuLayerAttributesMenuItemRenLayers`;
+
+	menuItem -divider true;
+
+	$deleteMenuItemForRenLayers = `menuItem -label "Delete Selected Layers"
+		LayerEditorEditMenuDeleteMenuItemForRenLayers`;
+	$deleteUnusedMenuItemForRenLayers = `menuItem -label "Delete Unused Layers"`;
+
+	menuItem -divider true;
+
+	$alphaSortMenuItemForRenLayers = `menuItem -label "Sort Layers Alphabetically" LayerEditorEditMenuSortAlphaMenuItemRenLayers`;
+	$chronoSortMenuItemForRenLayers = `menuItem -label "Sort Layers Chronologically" LayerEditorEditMenuSortChronoMenuItemRenLayers`;
+
+	//	Create "Options" pulldown menu
+	//
+	$optionsMenuForRenLayers = `menu -label "Options" -allowOptionBoxes true`;
+	menuItem -checkBox false -label "Make New Layers Current"
+		-command ("optionVar -intValue renderLayerCurrent #1;"
+			+ "optionVar -intValue renderLayerCurrent #1;")
+		LayerEditorOptionsMenuMakeCurrentMenuItemRenLayers;
+	menuItem -checkBox false -label "Add New Objects to Current Layer"
+		LayerEditorOptionsMenuUseCurrentMenuItemRenLayers;
+	menuItem -checkBox false -label "Auto Overrides"
+        -command ("editRenderLayerGlobals -enableAutoAdjustments #1")
+		LayerEditorOptionsMenuAutoAdjustmentMenuItemRenLayers;
+	menuItem -checkBox false -label "Show Namespace"
+		-command ("optionVar -intValue renderLayerShowNamespace #1;updateLayerEditor;")
+		LayerEditorOptionsMenuShowNamespaceMenuItemRenLayers;
+	
+	menuItem -divider true;
+
+    menuItem -checkBox false -label "Render All Layers"
+		-command "switchRenderAllLayers" 
+		LayerEditorOptionsRenderAllLayersRenLayers;
+
+    menuItem -optionBox true
+		-command "switchRenderAllLayersOptBox";
+
+	// Create the help menu
+	menu -label "Help";
+	menuItem -label "Help on Display Layers" -command "showHelp DisplayLayer";
+	menuItem -label "Help on Render Layers" -command "showHelp RenderLayers";
+
+	formLayout  RenderLayerFormLayout;
+		// Presently, I will have blend modes w.r.t PSD.
+		string $blendModeOptions[] = {
+			"Normal",
+			"Lighten",
+			"Darken",
+			"Multiply",
+			"Screen",
+			"Overlay"
+		};
+					
+		string $blendModeOptionMenu = `optionMenu -cc layerBlendModeChanged LayerEditorBlendModeOptionMenu`;
+			int $index;
+			for($index = 0; $index < size($blendModeOptions); $index++){
+				menuItem -label $blendModeOptions[$index];
+			}
+
+		string $emptyRenLayerButton = `symbolButton -image "newLayerEmpty.xpm"  -annotation "Create new empty Layer"`;
+		string $selectedRenLayerButton = `symbolButton -image "newLayerSelected.xpm"  -annotation "Create new layer and assign selected objects"`;
+
+	scrollLayout -horizontalScrollBarThickness 0 RenderLayerScrollLayout;
+	gridLayout
+		-allowEmptyCells     false
+		-autoGrow            true
+		-numberOfColumns     1
+		-cellWidthHeight     350 20
+		LayerEditorRenderLayerLayout;
+
+	radioButtonGrp -edit
+		-changeCommand ("layerEditorDisplayTypeChange")
+		$radioDR;
+
+	formLayout	-e  
+			-attachForm $blendModeOptionMenu "top" 5
+			-attachForm $blendModeOptionMenu "left" 2
+			-attachControl $blendModeOptionMenu "right" 20 $emptyRenLayerButton
+			-attachNone $blendModeOptionMenu "bottom"
+			
+			-attachForm  $selectedRenLayerButton "top" 1
+			-attachForm  $selectedRenLayerButton "right" 2
+			-attachNone  $selectedRenLayerButton "bottom"
+			-attachNone  $selectedRenLayerButton "left" 
+			
+			-attachForm $emptyRenLayerButton "top" 1
+			-attachControl $emptyRenLayerButton "right" 1 $selectedRenLayerButton
+			-attachNone $emptyRenLayerButton "bottom"
+			-attachNone $emptyRenLayerButton "left"
+ 
+			-attachForm RenderLayerScrollLayout "left" 0
+			-attachForm RenderLayerScrollLayout "right" 0
+			-attachControl RenderLayerScrollLayout "top" 2 $blendModeOptionMenu
+			-attachForm  RenderLayerScrollLayout "bottom"	0
+	RenderLayerFormLayout;
+
+	//							//
+	// End of Render layer tab.	//
+	//							//
+				
+	formLayout -edit
+		-attachForm     $emptyDispLayer     "top"    1
+		-attachNone     $emptyDispLayer     "left"
+		-attachNone     $emptyDispLayer     "bottom"
+		-attachForm     $emptyDispLayer     "right"  1
+		
+		-attachControl     DisplayLayerScrollLayout     "top"    1 $emptyDispLayer
+		-attachForm     DisplayLayerScrollLayout     "left" 0
+		-attachForm     DisplayLayerScrollLayout     "bottom" 0
+		-attachForm     DisplayLayerScrollLayout     "right"  1
+		
+		$form;
+
+	formLayout -edit
+		-attachForm     $radioDR "top"   5
+		-attachForm     $radioDR "left"   2
+		-attachNone     $radioDR "bottom" 
+		-attachForm     $radioDR "right"  2
+		
+		-attachControl  $tabLayout "top" 2 $radioDR 
+		-attachForm     $tabLayout "left"   0
+		-attachForm     $tabLayout "bottom" 0
+		-attachForm     $tabLayout "right"  0
+		$parent;
+
+	//	Attach commands to menu items and buttons.
+	//
+	menu -edit -postMenuCommand ("layerEditorShowEditMenu " + $editMenuForDispLayers) $editMenuForDispLayers;
+	menu -edit -postMenuCommand ("layerEditorShowOptionsMenu " + $optionsMenuForDispLayers) $optionsMenuForDispLayers;
+
+	menu -edit -postMenuCommand ("layerEditorShowEditMenu " + $editMenuForRenLayers) $editMenuForRenLayers;
+	menu -edit -postMenuCommand ("layerEditorShowOptionsMenu " + $optionsMenuForRenLayers) $optionsMenuForRenLayers;
+	
+	menuItem -edit -command ("layerEditorCreateLayer") $newEmptyMenuItemForDispLayers;
+	menuItem -edit -command ("layerEditorCreateRenderLayer 1") $newEmptyMenuItemForRenLayers;
+	menuItem -edit -command ("layerEditorCreateRenderLayer 2") $newFromSelectedMenuItemForRenLayers;
+	
+	menuItem -edit -command ("layerEditorDeleteLayer \"\"") $deleteMenuItemForDispLayers;
+	menuItem -edit -command ("layerEditorDeleteLayer \"\"") $deleteMenuItemForRenLayers;
+	
+	menuItem -edit -command ("layerEditorSelectObjects \"\"") $selectObjectsMenuItemForDispLayers;
+	menuItem -edit -command ("layerEditorSelectObjects \"\"") $selectObjectsMenuItemForRenLayers;
+	
+	menuItem -edit -command ("layerEditorRemoveObjects \"\"") $removeObjectsMenuItemForDispLayers;
+	menuItem -edit -command ("layerEditorRemoveObjects \"\"") $removeObjectsMenuItemForRenLayers;
+	
+	menuItem -edit -command ("layerEditorSelectUnused;layerEditorDeleteLayer \"\"") $deleteUnusedMenuItemForDispLayers;
+	menuItem -edit -command ("layerEditorSelectUnused;layerEditorDeleteLayer \"\"") $deleteUnusedMenuItemForRenLayers;
+	
+	menuItem -edit -command ("reorderLayers 1; updateLayerOrderByType \"Display\";") $alphaSortMenuItemForDispLayers;
+	menuItem -edit -command ("reorderLayers 1; updateLayerOrderByType \"Render\";") $alphaSortMenuItemForRenLayers;
+	
+	menuItem -edit -command ("reorderLayers 0; updateLayerOrderByType \"Display\"") $chronoSortMenuItemForDispLayers;
+	menuItem -edit -command ("reorderLayers 0; updateLayerOrderByType \"Render\";") $chronoSortMenuItemForRenLayers;
+	
+	menuItem -edit -command ("layerEditorLayerAttributes \"\"") $layerAttributesMenuItemForDispLayers;
+	menuItem -edit -command ("layerEditorLayerAttributes \"\"") $layerAttributesMenuItemForRenLayers;
+	
+	menuItem -edit -command ("layerEditorMembership \"\"") $membershipMenuItemForDispLayers;
+	menuItem -edit -command ("layerEditorMembership \"\"") $membershipMenuItemForRenLayers;
+
+	symbolButton -edit -command ("layerEditorCreateLayer") $emptyDispLayer;
+	symbolButton -edit -command ("layerEditorCreateRenderLayer 1") $emptyRenLayerButton;
+	symbolButton -edit -command ("layerEditorCreateRenderLayer 2") $selectedRenLayerButton ;
+
+	//	Attach script jobs for detecting when user creates new scene 
+	//	or opens a scene.
+	//
+	scriptJob -permanent -parent $parent -event NewSceneOpened ("layerEditorNewScene");
+	scriptJob -permanent -parent $parent -event SceneOpened ("layerEditorOpenScene");
+
+	//	Attach a script job that detects creation/deletion of layer nodes.
+	//
+	scriptJob -permanent -parent $parent -event displayLayerChange ("layerEditorDisplayLayerChange");
+	scriptJob -permanent -parent $parent -event renderLayerChange ("layerEditorRenderLayerChange");
+}
+
+global proc layerBlendModeChanged()
+{
+        string $selectedItem = mentalGetCurrentRenderLayer();
+	if (size($selectedItem) <= 0) return;
+
+	string $currentItem = `optionMenu -q -value LayerEditorBlendModeOptionMenu`;
+	int $blendMode;
+	switch($currentItem)
+	{
+		case "Normal":
+				$blendMode = 1;
+				break;
+		case "Darken":
+				$blendMode = 3;
+				break;
+		case "Multiply":
+				$blendMode = 4;
+				break;
+		case	"Lighten":
+				$blendMode = 7;
+				break;
+		case "Screen":
+				$blendMode = 8;
+				break;
+		case "Overlay":
+				$blendMode = 11;
+				break;
+		default:
+				$blendMode = 1;
+				break;
+	}
+	setAttr ($selectedItem+".psdBlendMode") $blendMode;
+}
+
+proc string getShortName(string $name)
+//
+//	Description:
+//		Given a full path name to an object return the short name.
+//
+//	Arguments:
+//		$name - Full path name to an object.
+//
+//	Returns:
+//		The short name.
+//
+{
+	string $result = "", $tokenArray[];
+	int    $tokenCount;
+
+	//	To get the short name from a long name tokenize the long name
+	//	using "|" as the split character because that is the path
+	//	separator. The short name is simply the last token.
+	//
+	$tokenCount = `tokenize $name "|" $tokenArray`;
+	if (0 < $tokenCount) $result = $tokenArray[$tokenCount - 1];
+
+	return $result;
+}
+
+proc int isValidName(string $name)
+//
+//	Description:
+//		Determine if the given string is potentially a valid name.
+//		Note that this procedure does not test to see if the name is
+//		unique, it just tests the string characters.
+//
+//      Check to ensure that the string does not begin with a number and
+//      is followed only by alphanumeric characters, underscores, and
+//      semi-colons (used for namespace).
+//
+//	Arguments:
+//		$name - The name.
+//
+//	Returns:
+//		True if the name is valid, false otherwise.
+//
+{
+	int $result = false;
+
+	if ("" != $name) {
+		//
+		//	Begins with letter or underscore, followed by
+		//	letters, digits, or underscores.
+		//
+        string $regExpr = "([:a-zA-Z_]+)([[:a-zA-Z0-9_])*";
+		string $temp = match($regExpr, $name);
+		if ($temp == $name) {
+			$result = true;
+		}
+	}
+
+	return $result;
+}
+
+proc string getLayerDisplayType()
+//
+//	Description:
+//		Return the current type of layer being displayed in the 
+//		Layer Editor.
+//
+//	Returns:
+//		"Display" or "Render".
+//
+{
+	global string $gCurrentLayerEditor;
+
+	//	Verify the current layer editor.
+	//
+	if ("" == $gCurrentLayerEditor) {
+		error ("There is no current Layer Editor");
+		return "";
+	}
+
+	//	Set the parent to the current layer editor. We can now use short
+	//	names of our controls and be certain they reference the correct
+	//	control.
+	//
+	setParent $gCurrentLayerEditor;
+
+	//	Get the current type of layers being displayed.
+	//
+	int $type = `radioButtonGrp -query -select LayerEditorTypeRadio`;
+
+	if ($type == 1) return "Display";
+	return "Render";
+}
+
+proc string [] getLayerSelection(string $type)
+//
+//	Description:
+//		Return the current layer selection for the specified layer type.
+//
+//	Arguments:
+//		$type - Valid values are: "Display", "Render", or
+//		        an emtpy string. In the case of an empty string the
+//				current layer type displayed in the editor will be used.
+//
+//	Returns:
+//		A string array containing the names of the selected layers.
+//
+{
+	global string $gCurrentLayerEditor;
+
+	string $selectionArray[];
+	string $buttonLayout = "", $button, $buttonArray[];
+	int    $index = 0;
+
+	//	If type argument not specified then determine it.
+	//
+	if ("" == $type) {
+		$type = getLayerDisplayType();
+	}
+
+	//	Set the parent to the current layer editor. We can now use short
+	//	names of our controls and be certain they reference the correct
+	//	control.
+	//
+	setParent $gCurrentLayerEditor;
+
+	//	Get the correct layout of layer buttons depending on the type of
+	//	layers currently being shown.
+	//
+	if ("Display" == $type) {
+		$buttonLayout = "LayerEditorDisplayLayerLayout";
+
+	} else if ("Render" == $type) {
+		$buttonLayout = "LayerEditorRenderLayerLayout";
+
+	} else {
+		error ("Invalid layer type: " + $type);
+		return $selectionArray;
+	}
+
+	//	Get all the buttons in the layout.
+	//
+	$buttonArray = `layout -query -childArray $buttonLayout`;
+
+	//	For each button check to see if it is selected.
+	//
+	for ($button in $buttonArray) {
+		if (("Display" == $type && `layerButton -query -select $button`)
+			|| ("Render" == $type && `renderLayerButton -query -select $button`)) {
+			$selectionArray[$index++] = $button;
+		}
+	}
+
+	return $selectionArray;
+}
+
+proc string getCurrentLayer(string $type)
+//
+//	Description:
+//		Return the current layer for the specified layer type.
+//
+//	Arguments:
+//		$type - Valid values are: "Display", "Render", or
+//		        an emtpy string. In the case of an empty string the
+//				current layer type displayed in the editor will be used.
+//
+//	Returns:
+//		A string containing the name of the current layer.
+//
+{
+	global string $gCurrentLayerEditor;
+
+	string $currentLayer = "";
+	string $buttonLayout = "", $button, $buttonArray[];
+
+	//	If type argument not specified then determine it.
+	//
+	if ("" == $type) {
+		$type = getLayerDisplayType();
+	}
+
+	//	Set the parent to the current layer editor. We can now use short
+	//	names of our controls and be certain they reference the correct
+	//	control.
+	//
+	setParent $gCurrentLayerEditor;
+
+	//	Get the correct layout of layer buttons depending on the type of
+	//	layers currently being shown.
+	//
+	if ("Display" == $type) {
+		$buttonLayout = "LayerEditorDisplayLayerLayout";
+
+	} else if ("Render" == $type) {
+		$buttonLayout = "LayerEditorRenderLayerLayout";
+
+	} else {
+		error ("Invalid layer type: " + $type);
+		return $currentLayer;
+	}
+
+	//	Get all the buttons in the layout.
+	//
+	$buttonArray = `layout -query -childArray $buttonLayout`;
+
+	//	For each button check to see if it is the current layer.
+	//
+	for ($button in $buttonArray) {
+		if (("Display" == $type && `layerButton -query -current $button`)
+			|| ("Render" == $type && `renderLayerButton -query -current $button`)) {
+			$currentLayer = $button;
+			break;
+		}
+	}
+
+	return $currentLayer;
+}
+
+proc removeAllLayerButtons()
+//
+//	Description:
+//		Remove all the layer buttons in the Layer Editor.
+//
+//		This method needs to be (and should only be) called when a scene is
+//		opened or a new scene is created.
+//
+{
+	global string $gCurrentLayerEditor;
+
+	if ("" == $gCurrentLayerEditor) {
+		error ("There is no current Layer Editor");
+		return;
+	}
+
+	setParent $gCurrentLayerEditor;
+
+	string $button, $buttonArray[], $buttonLayout;
+
+	//	Delete all the display layer buttons.
+	//
+	$buttonLayout = "LayerEditorDisplayLayerLayout";
+	$buttonArray = `layout -query -childArray $buttonLayout`;
+	for ($button in $buttonArray) {
+		deleteUI $button;
+	}
+
+	//	Delete all the render layer buttons.
+	//
+	$buttonLayout = "LayerEditorRenderLayerLayout";
+	$buttonArray = `layout -query -childArray $buttonLayout`;
+	for ($button in $buttonArray) {
+		deleteUI $button;
+	}
+}
+
+
+global proc layerEditorNewScene()
+//
+//	Description:
+//		This procedure is called whenever the user creates a new scene.
+//
+//		Update the Layer Editor to reflect any layer changes.
+//
+{
+	removeAllLayerButtons();
+	updateLayerEditor();
+}
+
+global proc layerEditorOpenScene()
+//
+//	Description:
+//		This procedure is called whenever the user opens a new scene.
+//
+//		Update the Layer Editor to reflect any layer changes.
+//
+{
+	removeAllLayerButtons();
+	updateLayerEditor();
+}
+
+global proc layerEditorDisplayLayerChange()
+//
+//	Description:
+//		This procedure is called whenever the user creates or deletes
+//		a display layer.
+//
+//		Update the Layer Editor to reflect the layer changes.
+//
+{
+	updateLayersByType("Display");
+}
+
+global proc layerEditorRenderLayerChange()
+//
+//	Description:
+//		This procedure is called whenever the user creates or deletes
+//		a render layer.
+//
+//		Update the Layer Editor to reflect the layer changes.
+//
+{
+	updateLayersByType("Render");
+}
+
+global proc layerEditorLayerButtonSelect(
+	int    $modifiers,
+	string $layerButton)
+//
+//	Description:
+//		This procedure is called whenever the selects a layer in
+//		the editor.
+//
+//	Arguments:
+//		$modifiers   - The state of the mouse modifiers.
+//
+//		$layerButton - The name of the layer selected.
+//
+{
+	global string $gCurrentLayerEditor;
+	global int    $gLayerEditorLastButtonSelection;
+
+	string $currentSelection[], $remove[], $orderArray[];
+	string $item, $gridLayout;
+	int    $select, $count = 0, $index, $startIndex, $endIndex;
+	int    $selectionPosition;
+
+	//	Get the type of layers currently displayed in the editor.
+	//
+	$type = getLayerDisplayType();
+
+	//	Set the parent to the current layer editor. We can now use short
+	//	names of our controls and be certain they reference the correct
+	//	control.
+	//
+	setParent $gCurrentLayerEditor;
+
+	//	Get the current layer selection.
+	//
+	$currentSelection = getLayerSelection($type);
+
+	//	Get the layout containing the layer buttons.
+	//
+	if ("Display" == $type) {
+		$gridLayout = "LayerEditorDisplayLayerLayout";
+	} else {
+		$gridLayout = "LayerEditorRenderLayerLayout";
+	}
+
+	if (0 == $modifiers) {
+		//
+		//	No modifiers. Select the button and deselect any currently
+		//	selected buttons. Also make the selected button the current
+		//	layer.
+		//
+		if ("Display" == $type) {
+			if (`layerButton -exists $layerButton`) {
+				if (`objExists $layerButton`) {
+					if (catch(`editDisplayLayerGlobals -currentDisplayLayer $layerButton`)) {
+						//
+						//	If there was an error then that means that the layer belongs
+						//	to a layer in a referenced scene. Don't select the layer.
+						//
+						return;
+					}
+				}
+				layerButton -edit -select true -current true $layerButton;
+			}
+
+		} else if ("Render" == $type) {
+			if (`renderLayerButton -exists $layerButton`) {
+				if (`objExists $layerButton`) {
+				  if (catch(`mentalSetCurrentRenderLayer($layerButton)`)) {
+						//
+						//	If there was an error then that means that the layer belongs
+						//	to a layer in a referenced scene. Don't select the layer.
+						//
+						return;
+					}
+				}
+				renderLayerButton -edit -select true -current true $layerButton;
+				
+				int $blendMode = getAttr ($layerButton+".psdBlendMode") ;
+				string $blendString;
+				switch($blendMode)
+				{
+					case 1:
+							$blendString = "Normal";
+							break;
+					case 3:
+							$blendString = "Darken";
+							break;
+					case 4:
+							$blendString = "Multiply";
+							break;
+					case	7:
+							$blendString = "Lighten";
+							break;
+					case 8:
+							$blendString = "Screen";
+							break;
+					case 11:
+							$blendString = "Overlay";
+							break;
+					default:
+							$blendString = "Normal";
+							break;
+				}
+				optionMenu -e -value $blendString LayerEditorBlendModeOptionMenu;
+				
+			}
+		}
+
+		//	Get the order array of layer buttons in the layout.
+		//
+		$orderArray = `gridLayout -query -gridOrder $gridLayout`;
+
+		//	If the selected button is already selected then remove
+		//	it from the list of buttons to deselect.
+		//
+		$remove[0] = $layerButton;
+		$currentSelection = AWRemoveStringsFromStringArray(
+			$remove, $currentSelection);
+
+		//	Deselect previously selected buttons.
+		//
+		for ($item in $currentSelection) {
+			if ("Display" == $type) {
+				layerButton -edit -select false $item;
+			} else if ("Render" == $type) {
+				renderLayerButton -edit -select false $item;
+			}
+		}
+
+		//	Make sure the previous current layer (if any) is reset.
+		//
+		for ($item in $orderArray) {
+			if ("(null)" == $item) continue;
+			if ($item != $layerButton) {
+
+				if ("Display" == $type) {
+					if (`layerButton -query -current $item`) {
+						layerButton -edit -current false $item;
+					}
+
+				} else if ("Render" == $type) {
+					if (`renderLayerButton -query -current $item`) {
+						renderLayerButton -edit -current false $item;
+					}
+				}
+			}
+		}
+
+		//	Determine and save the position of the selected button.
+		//	Need the position of this button for range selecting with
+		//	the Shift modifier.
+		//
+		for ($index = 0; $index < size($orderArray); $index++) {
+			if ($layerButton == $orderArray[$index]) {
+				$gLayerEditorLastButtonSelection = $index;
+				break;
+			}
+		}
+
+	} else if (1 == $modifiers) {
+		//
+		//	Shift modifier. Select the range of buttons from the button
+		//	that was just pressed to the last button pressed.
+		//
+
+		//	Determine the position of the selected button.
+		//
+		$orderArray = `gridLayout -query -gridOrder $gridLayout`;
+		for ($index = 0; $index < size($orderArray); $index++) {
+			if ($layerButton == $orderArray[$index]) {
+				$selectionPosition = $index;
+				break;
+			}
+		}
+
+		$startIndex = $endIndex = 0;
+
+		if ($selectionPosition <= $gLayerEditorLastButtonSelection) {
+			$startIndex = $selectionPosition;
+			$endIndex = $gLayerEditorLastButtonSelection;
+
+		} else if ($selectionPosition > $gLayerEditorLastButtonSelection) {
+			$startIndex = $gLayerEditorLastButtonSelection;
+			$endIndex = $selectionPosition;
+		}
+
+		for ($index = 0; $index < size($orderArray); $index++) {
+			if ("(null)" == $orderArray[$index]) continue;
+			$select = false;
+			if ($index >= $startIndex && $index <= $endIndex) $select = true;
+			if ("Display" == $type) {
+				layerButton -edit -select $select $orderArray[$index];
+			} else if ("Render" == $type) {
+				renderLayerButton -edit -select $select $orderArray[$index];
+			}
+		}
+
+	} else if (4 == $modifiers) {
+		//
+		//	Ctrl modifier. Toggle the selection of the button.
+		//
+		if ("Display" == $type) {
+			$select = `layerButton -query -select $layerButton`;
+			layerButton -edit -select (!$select) $layerButton;
+		} else if ("Render" == $type) {
+			$select = `renderLayerButton -query -select $layerButton`;
+			renderLayerButton -edit -select (!$select) $layerButton;
+		}
+
+		//	Is this layer also the current one? If it is then make the
+		//	default layer current and mark this layer as no longer being
+		//	current.
+		//
+		if ("Display" == $type) {
+			if (`layerButton -exists $layerButton`) {
+				if (`layerButton -query -current $layerButton`) {
+					layerButton -edit -current false $layerButton;
+					editDisplayLayerGlobals -currentDisplayLayer "defaultLayer";
+				}
+			}
+
+		} else if ("Render" == $type) {
+			if (`renderLayerButton -exists $layerButton`) {
+				if (`renderLayerButton -query -current $layerButton`) {
+					renderLayerButton -edit -current false $layerButton;
+					mentalSetCurrentRenderLayer("defaultRenderLayer");
+				}
+			}
+		}
+	}
+}
+
+global proc layerEditorQuickEditWindowSave(string $layerArray[])
+//
+//	Description:
+//		This procedure is called when the user presses the Save button
+//		or the layer is renamed in the Layer Edit window.
+//
+//		Take the edit window values and apply them to the layer(s).
+//
+//	Arguments:
+//		$layerArray - The layer(s) being edited.
+//
+{
+	global string $gCurrentLayerEditor;
+
+	if (!`window -exists LayerEditorQuickEditWindow`) return;
+	
+	string $name, $layer, $layerType, $newName;
+	int    $visible, $renderable, $colorIndex, $type;
+	int    $layerCount;
+
+	//	Determine the layer type.
+	//
+	$layer = $layerArray[0];
+	$layerType = `objectType $layer`;
+
+	$layerCount = size($layerArray);
+
+	setParent LayerEditorQuickEditWindow;
+
+	//	Determine the layer name from the edit window.
+	//
+	$name = `textFieldGrp -query -text NameField`;
+
+	//	Get the layer attributes from the window according to the
+	//	layer type.
+	//
+	if ("displayLayer" == $layerType) {
+		$visible = `checkBoxGrp -query -value1 VisibleCheckBox`;
+		$type = `optionMenuGrp -query -select TypeOptionMenu`;
+		$colorIndex = `palettePort -query -setCurCell ColorPalette`;
+
+	} else if ("renderLayer" == $layerType) {
+		$renderable = `checkBoxGrp -query -value1 RenderableCheckBox`;
+	}
+
+	if (1 == $layerCount) {
+		//
+		//	Only one layer edited.
+		//
+		if ($name == $layer) {
+			//
+			//	User has not changed name of object. Just apply the
+			//	attributes.
+			//
+            string $command;
+			if ("displayLayer" == $layerType) {
+				$command += "setAttr " + $layer+".visibility " + $visible;
+                $command += "; ";
+				$command += "setAttr " + $layer+".displayType " + ($type - 1);
+                $command += "; ";
+				$command += "setAttr " + $layer+".color " + $colorIndex;
+
+			} else if ("renderLayer" == $layerType) {
+				$command = "setAttr " + $layer+".renderable " + $renderable;
+			}
+            evalEcho($command);
+
+		} else {
+			//
+			//	User has changed the name value.
+			//
+			//	Check for empty name or invalid name.
+			//
+			if ("" == $name || !isValidName($name)) {
+				confirmDialog
+					-title "Warning"
+					-parent LayerEditorQuickEditWindow
+					-button        "OK"
+					-defaultButton "OK"
+					-message ("The name \"" + $name + "\" is invalid. Valid names "
+						+ "contain alphanumeric\ncharacters only. Whitespace "
+						+ "characters are not allowed.");
+				return;
+
+			} else {
+				//
+				//	Name change. Must check if an object by that name already
+				//	exists.
+				//
+				if (`objExists $name`) {
+					confirmDialog
+						-title "Warning"
+						-parent LayerEditorQuickEditWindow
+						-button        "OK"
+						-defaultButton "OK"
+						-message ("An object by the name \"" + $name 
+							+ "\" already exists.\nEnter a different name.");
+					return;
+
+				} else {
+					//
+					//	Apply the attribute values.
+					//
+                    string $command;
+					if ("displayLayer" == $layerType) {
+						$command += "setAttr " + $layer+".visibility " + $visible;
+                        $command += "; ";
+						$command += "setAttr " + $layer+".displayType " + ($type - 1);
+                        $command += "; ";
+						$command += "setAttr " + $layer+".color " + $colorIndex;
+
+					} else if ("renderLayer" == $layerType) {
+						$command += "setAttr " + $layer+".renderable " + $renderable;
+					}
+
+                    $command += "; ";
+
+					//	Rename the layer object.
+					//
+					//	The renaming of the corresponding layer button will
+					//	happen in the proc assigned with the button's
+					//	-rc/renameCommand flag.
+					//
+					$command += "rename " + $layer + " " + $name;
+
+                    evalEcho($command);
+                }
+			}
+		}
+
+	} else {
+		//
+		//	More than one layer edited.
+		//
+        string $command;
+		for ($layer in $layerArray) {
+            if ($command != "") $command += "; ";
+			if ("displayLayer" == $layerType) {
+				$command += "setAttr " + $layer+".visibility " + $visible;
+                $command += "; ";
+				$command += "setAttr " + $layer+".displayType " + ($type - 1);
+                $command += "; ";
+				$command += "setAttr " + $layer+".color " + $colorIndex;
+
+			} else if ("renderLayer" == $layerType) {
+				$command += "setAttr " + $layer+".renderable " + $renderable;
+			}
+		}
+        evalEcho($command);
+	}
+
+	evalDeferred("deleteUI -window LayerEditorQuickEditWindow");
+}
+
+global proc createLayerEditorQuickEditWindow(string $layerArray[])
+//
+//	Description:
+//		Create a quick edit window for the user to modify the layer
+//		attributes.
+//
+//	Arguments:
+//		$layerArray - The layer(s) to edit.
+//
+{
+	string $window, $form, $body, $buttonForm;
+	string $name, $nameField, $visibleCheckBox, $typeOptionMenu;
+	string $colorLabel, $colorPalette, $saveButton, $cancelButton;
+	string $renderableCheckBox, $layer, $layerType;
+	string $windowTitle;
+	int    $visible, $displayType, $colorIndex, $renderable, $index;
+	int    $layerCount;
+
+	//	Make sure an argument has been supplied.
+	//
+	$layerCount = size($layerArray);
+	if (1 > $layerCount) {
+		error ("Must supply a layer argument");
+		return;
+	}
+
+	$layer = $layerArray[0];
+
+	//	Get the layer type.
+	//
+	$layerType = `objectType $layer`;
+
+	//	Delete the window if it already exists.
+	//
+	if (`window -exists LayerEditorQuickEditWindow`) {
+		deleteUI -window LayerEditorQuickEditWindow;
+	}
+
+	//	Create the window and the top level layout.
+	//
+	if (1 < $layerCount) $windowTitle = "Edit Layers";
+	else $windowTitle = "Edit Layer";
+	$window = `window -title $windowTitle -iconName $windowTitle LayerEditorQuickEditWindow`;
+	$form = `formLayout`;
+	
+	//	Activate the default UI template for consistent alignment.
+	//
+	setUITemplate -pushTemplate OptionsTemplate;
+
+	//	Get the name of the first layer. If we are editing more than one 
+	//	layer then construct a string that contains all the layer names. 
+	//	It should look something like:
+	//
+	//	layer1, layer2, layer3...
+	//
+	//	Append ellispes if there are too many layers.
+	//
+	int $kNameDisplayLimit = 3;
+	$name = $layer;
+	if (1 < $layerCount) {
+		for ($index = 1; ($index < $layerCount && $index < $kNameDisplayLimit); $index++) {
+			$name += ", ";
+			$name += $layerArray[$index];
+		}
+		if ($layerCount > $kNameDisplayLimit) {
+			$name += "...";
+		}
+	}
+
+	if ("displayLayer" == $layerType) {
+		$visible = `getAttr ($layer + ".visibility")`;
+		$displayType = `getAttr ($layer + ".displayType")`;
+		$colorIndex = `getAttr ($layer + ".color")`;
+
+	} else if ("renderLayer" == $layerType) {
+		$renderable = `getAttr ($layer + ".renderable")`;
+	}
+
+	// ----------------------------------------------------------------------
+	//
+	//	Body.
+	//
+	setParent $form;
+	$body = `columnLayout -rowSpacing 4`;
+
+	$nameField = `textFieldGrp -label "Name" -text $name
+		-editable (1 == $layerCount) NameField`;
+
+	if ("displayLayer" == $layerType) {
+		$typeOptionMenu = `optionMenuGrp -label "Display Type" TypeOptionMenu`;
+		menuItem -label "Normal";
+		menuItem -label "Template";
+		menuItem -label "Reference";
+		optionMenuGrp -edit -select ($displayType + 1) $typeOptionMenu;
+
+		$visibleCheckBox = `checkBoxGrp -numberOfCheckBoxes 1
+			-label "" -label1 "Visible"
+			-value1 $visible
+			VisibleCheckBox`;
+
+		rowLayout -numberOfColumns 2 -columnAttach 2 "left" 0;
+
+		$colorLabel = `text -label "Color" -align "right"`;
+		frameLayout -labelVisible false -borderStyle "in"
+			-collapsable false -collapse false;
+
+		int $cellHeight = 17, $cellWidth = 17;
+		int $rows = 2, $columns = 16;
+
+		$colorPalette = `palettePort 
+			-dimensions    $columns $rows
+			-width         ($columns * $cellWidth)
+			-height        ($rows * $cellHeight)
+			-transparent   0
+			-topDown       true
+			-colorEditable false
+			-setCurCell    $colorIndex
+			ColorPalette`;
+
+		//	Fill in the colour palette with the color's mapped to the
+		//	colour indecies.
+		//
+		float $colorComponentArray[];
+		for ($index = 1; $index <= 31; $index++) {
+			$colorComponentArray = `colorIndex -query $index`;
+			palettePort -edit -rgbValue $index
+				$colorComponentArray[0]
+				$colorComponentArray[1]
+				$colorComponentArray[2]
+				$colorPalette;
+		}
+
+		//	Set the colour of the "transparent" cell to be a light grey.
+		//	Note that the "transparent" cell really indicates "no colour
+		//	assignment".
+		//
+		palettePort -edit -rgbValue 0 0.60 0.60 0.60 $colorPalette;
+
+	} else if ("renderLayer" == $layerType) {
+		$renderableCheckBox = `checkBoxGrp -numberOfCheckBoxes 1
+			-label "" -label1 "Renderable"
+			-value1 $renderable
+			RenderableCheckBox`;
+	}
+
+	// ----------------------------------------------------------------------
+	//
+	//	Buttons.
+	//
+	setParent $form;
+	$buttonForm = `formLayout -parent $form`;
+
+	//	Save button.
+	//
+	string $saveCommandStr = "layerEditorQuickEditWindowSave { ";
+	for ($index = 0; $index < $layerCount; $index++) {
+		$saveCommandStr += ("\"" + $layerArray[$index] + "\"");
+		if ($index < ($layerCount - 1)) {
+			$saveCommandStr += ", ";
+		}
+	}
+	$saveCommandStr += " }";
+
+	$saveButton = `button -label "Save" -command ($saveCommandStr)`;
+
+	//	Cancel button.
+	//
+	$cancelButton = `button -label "Cancel"
+		-command ("deleteUI -window " + $window)`;
+
+	formLayout -edit
+		-attachForm     $saveButton   "top"    0
+		-attachForm     $saveButton   "left"   0
+		-attachForm     $saveButton   "bottom" 0
+		-attachPosition $saveButton   "right"  2 50
+
+		-attachForm     $cancelButton "top"    0
+		-attachPosition $cancelButton "left"   2 50
+		-attachForm     $cancelButton "bottom" 0
+		-attachForm     $cancelButton "right"  0
+		$buttonForm;
+
+	formLayout -edit
+		-attachForm     $body         "top"    4
+		-attachForm     $body         "left"   4
+		-attachControl  $body         "bottom" 4 $buttonForm
+		-attachForm     $body         "right"  4
+
+		-attachNone     $buttonForm   "top"
+		-attachForm     $buttonForm   "left"   4
+		-attachForm     $buttonForm   "bottom" 4
+		-attachForm     $buttonForm   "right"  4
+		$form;
+
+	//	Deactivate the default UI template.
+	//
+	setUITemplate -popTemplate;
+
+	showWindow $window;
+}
+
+global proc layerEditorLayerButtonRename(
+	string $oldName,
+	string $newName)
+//
+//	Description:
+//		This procedure is called whenever a layer node is renamed.
+//		It is necessary to also rename the corresponding layer button.
+//
+//	Arguments:
+//		oldName - The old layer name.
+//
+//		newName - The new layer name.
+//
+{
+	global string $gCurrentLayerEditor;
+
+	setParent $gCurrentLayerEditor;
+
+	renameUI $oldName $newName;
+
+    //
+    // Now re-label the control
+    //
+
+    if (`nodeType $newName` == "displayLayer") {
+		$showNamespace = `optionVar -query displayLayerShowNamespace`;
+		layerButton -edit -label (`displayLabel $showNamespace $newName `) $newName;
+    }
+    else {
+		$showNamespace = `optionVar -query renderLayerShowNamespace`;
+		renderLayerButton -edit -label (`displayLabel $showNamespace $newName `) $newName;
+    }
+}
+
+global proc layerEditorLayerButtonVisibilityChange(string $layer)
+//
+//	Description:
+//		This procedure is called whenever the user presses the visibility
+//		indicator in a display layer button.
+//
+//		Toggle the visibility of the layer.
+//
+//	Arguments:
+//		$layer - The layer.
+//
+{
+	int $visible = `getAttr ($layer + ".visibility")`;
+	
+	if (0 == $visible) $visible = true;
+	else $visible = false;
+		
+	setAttr ($layer + ".visibility") $visible;
+}
+
+global proc layerEditorLayerButtonTypeChange(string $layer)
+//
+//	Description:
+//		This procedure is called whenever the user presses the type
+//		indicator in a display layer button.
+//
+//		Cycle the type of the layer.
+//
+//		Current layer types are: Normal, Reference, and Template.
+//
+//	Arguments:
+//		$layer - The layer.
+//
+{
+	int $type = `getAttr ($layer + ".displayType")`;
+	
+	if (0 == $type) $type = 1;
+	else if (1 == $type) $type = 2;
+	else $type = 0;
+		
+	setAttr ($layer + ".displayType") $type;
+}
+
+global proc layerEditorLayerButtonRenderabilityChange(string $layer)
+//
+//	Description:
+//		This procedure is called whenever the user presses the renderable
+//		indicator in a render layer button.
+//
+//		Toggle the renderability of the layer.
+//
+//	Arguments:
+//		$layer - The layer.
+//
+{
+	int $renderable = `getAttr ($layer + ".renderable")`;
+	
+	if (0 == $renderable) $renderable = true;
+	else $renderable = false;
+		
+	setAttr ($layer + ".renderable") $renderable;
+}
+
+global proc string [] layerEditorLayerButtonDrag(
+	string $dragControl,
+	int    $x, 
+	int    $y, 
+	int    $mods)
+//
+//	Description:
+//		This procedure is called whenever the user begins a drag from
+//		a layer button.
+//
+//		Set up a drag message so we can detect it on the drop callback.
+//
+//	Arguments:
+//		$dragControl - The layer button where the drag occurred.
+//
+//		$x, $y       - Location of the drag event.
+//
+//		$mods        - State of the mouse modifiers.
+//
+//	Returns:
+//		A string array value representing the type of drag message.
+//
+{
+	string $result[] = {"LayerButtonDragMessage"};
+	return $result;
+}
+
+global proc layerEditorLayerButtonDrop(
+	string $dragControl,
+	string $dropControl, 
+	string $messages[],
+	int    $x, 
+	int    $y, 
+	int    $dragType)
+//
+//	Description:
+//		This procedure is called whenever the user ends a drag from
+//		a layer button to another layer button.
+//
+//		If the drag message is the correct type then reorder the
+//		layer buttons.
+//
+//	Arguments:
+//		$dragControl - The layer button where the drag occurred.
+//
+//		$dropControl - The layer button where the drop occurred.
+//
+//		$messages[]  - The drag messages corresponding to the event.
+//
+//		$x, $y       - Location of the drag event.
+//
+//		$dragType    - Type of drag event.
+//
+{
+	global string $gCurrentLayerEditor;
+
+	string $type, $gridLayout = "";
+
+	//	Get the type of layers currently displayed in the editor.
+	//
+	$type = getLayerDisplayType();
+
+	//	Set the parent to the current layer editor. We can now use short
+	//	names of our controls and be certain they reference the correct
+	//	control.
+	//
+	setParent $gCurrentLayerEditor;
+
+	if ("Display" == $type) {
+		$gridLayout = "LayerEditorDisplayLayerLayout";
+
+	} else if ("Render" == $type) {
+		$gridLayout = "LayerEditorRenderLayerLayout";
+	}
+
+	if ("LayerButtonDragMessage" == $messages[0]) {
+        gridLayoutRowDragAndDrop($gridLayout, $dragControl, $dropControl);
+	}
+	
+	updateLayerOrderByType($type);
+}
+
+global proc layerEditorShowEditMenu(string $menu)
+//
+//	Description:
+//		This procedure is called whenever the user shows the Edit menu.
+//
+//		Update the enable state of the menu items to reflect the possible
+//		options.
+//
+//	Arguments:
+//		$menu - The menu.
+//
+{
+	string $selection[] = `ls -selection`;
+	string $layerSelection[] = getLayerSelection("");
+	string $layerContents[], $remove[];
+	string $currentLayer = getCurrentLayer("");
+	string $type;
+	int    $enable = false;
+	
+	$type = getLayerDisplayType();
+
+	string $layers[];
+    if ($type == "Display") {
+        $layers = `ls -type displayLayer`;
+    }
+    else {
+        $layers = `listConnections renderLayerManager.renderLayerId`;
+    }
+	
+    //	Determine the number of selected layers
+	//
+	int $numLayers = `size $layers`;
+
+	//	Remove layers from the selection list.
+	//
+	$selection = AWRemoveStringsFromStringArray($layers, $selection);
+	
+	setParent -menu $menu;
+
+	//	Delete layer. Enable if there is at least one layer selected.
+	//
+	$enable = false;
+	if (0 < size($layerSelection)) $enable = true;
+	if($type == "Display"){
+		menuItem -edit -enable $enable LayerEditorEditMenuDeleteMenuItemForDispLayers;
+	}else{
+		menuItem -edit -enable $enable LayerEditorEditMenuDeleteMenuItemForRenLayers;
+	}
+
+	//	Select objects in selected layer(s). Enable if there is at least
+	//	one layer selected and there is at least one object in any of 
+	//	those layers.
+	//
+	$enable = false;
+	for ($layer in $layerSelection) {
+		if ("Display" == $type) {
+			$layerContents = `editDisplayLayerMembers -query $layer`;
+		} else if ("Render" == $type) {
+			$layerContents = `editRenderLayerMembers -query $layer`;
+		}
+		if (0 < size($layerContents)) {
+			$enable = true;
+			break;
+		}
+	}
+	if($type == "Display"){
+		menuItem -edit -enable $enable LayerEditorEditMenuSelectObjectsMenuItemForDispLayers;
+	}else{
+		menuItem -edit -enable $enable LayerEditorEditMenuSelectObjectsMenuItemForRenLayers;
+	}
+
+	//	Remove objects from selected layer(s). Enable if there is at least
+	//	one layer selected and there is at least one object in any of
+	//	those layers.
+	//
+	$enable = false;
+	for ($layer in $layerSelection) {
+		if ("Display" == $type) {
+			$layerContents = `editDisplayLayerMembers -query $layer`;
+		} else if ("Render" == $type) {
+			$layerContents = `editRenderLayerMembers -query $layer`;
+		}
+		if (0 < size($layerContents)) {
+			$enable = true;
+			break;
+		}
+	}
+	if($type == "Display"){
+	    //	Enable this item if there are selected objects.
+        $enable = false;
+        if (0 < size($selection)) $enable = true;
+		menuItem -edit -enable $enable LayerEditorEditMenuRemoveObjectsMenuItemForDispLayers;
+	}else{
+	    //	Enable this item if there are selected objects too.
+	    if (0 == size($selection)) $enable = false;
+		menuItem -edit -enable $enable LayerEditorEditMenuRemoveObjectsMenuItemForRenLayers;
+	}
+
+	//	Set All Layers, Sort Alpha/Chrono,  
+	//	Enable if more than 1 layer exists
+	//
+	$enable = false;
+	if ($numLayers > 1) $enable = true;
+	
+	
+	if($type == "Display"){
+		menuItem -edit -enable $enable LayerEditorEditMenuSetAllLayersMenu;
+		menuItem -edit -enable $enable LayerEditorEditMenuSortAlphaMenuItemDispLayers;
+		menuItem -edit -enable $enable LayerEditorEditMenuSortChronoMenuItemDispLayers;
+	}else{
+		menuItem -edit -enable $enable LayerEditorEditMenuSortAlphaMenuItemRenLayers;
+		menuItem -edit -enable $enable LayerEditorEditMenuSortChronoMenuItemRenLayers;
+	}
+
+	//	Set Selected Layers and Set Only Selected Layers
+	//	Enable if there is a current layer
+	$enable = false;
+	if ("" != $currentLayer) $enable = true;
+	
+	// Presently it is there only for display layers.
+	if($type == "Display"){
+		menuItem -edit -enable $enable LayerEditorEditMenuSetSelectedLayersMenu;
+		menuItem -edit -enable $enable LayerEditorEditMenuSetOnlySelectedLayersMenu;
+	}
+
+	//	Show Layer Attributes. Enable if there is a current layer.
+	//
+	$enable = false;
+	if ("" != $currentLayer) $enable = true;
+	menuItem -edit -enable $enable LayerEditorEditMenuLayerAttributesMenuItemDispLayers;
+	menuItem -edit -enable $enable LayerEditorEditMenuLayerAttributesMenuItemRenLayers;
+}
+
+global proc layerEditorShowOptionsMenu(string $menu)
+//
+//	Description:
+//		This procedure is called whenever the user shows the Options menu.
+//
+//		Update the state of the menu items.
+//
+//	Arguments:
+//		$menu - The menu.
+//
+{
+	setParent -menu $menu;
+
+	$value = `optionVar -query displayLayerCurrent`;
+	menuItem -edit -checkBox $value LayerEditorOptionsMenuMakeCurrentMenuItemDispLayers;
+	$value = `optionVar -query renderLayerCurrent`;
+	menuItem -edit -checkBox $value LayerEditorOptionsMenuMakeCurrentMenuItemRenLayers;
+
+	string $type = getLayerDisplayType();
+    if ($type == "Display") {
+	    $value = `editDisplayLayerGlobals -query -useCurrent`;
+	    menuItem -edit -checkBox $value
+		    -command "editDisplayLayerGlobals -useCurrent #1"
+             LayerEditorOptionsMenuUseCurrentMenuItemDispLayers;
+
+	    menuItem -edit -enable false
+            LayerEditorOptionsMenuAutoAdjustmentMenuItemDispLayers;
+    }
+    else if ($type == "Render") {
+	    $value = `editRenderLayerGlobals -query -useCurrent`;
+	    menuItem -edit -checkBox $value
+		    -command "editRenderLayerGlobals -useCurrent #1"
+            LayerEditorOptionsMenuUseCurrentMenuItemRenLayers;
+
+	    $value = `editRenderLayerGlobals -query -enableAutoAdjustments`;
+	    menuItem -edit -checkBox $value -enable true
+            LayerEditorOptionsMenuAutoAdjustmentMenuItemRenLayers;
+
+		menuItem -e -checkBox (`optionVar -q renderViewRenderAllLayers`)
+			LayerEditorOptionsRenderAllLayersRenLayers;
+    }
+
+	$value = `optionVar -query displayLayerShowNamespace`;
+	menuItem -edit -checkBox $value LayerEditorOptionsMenuShowNamespaceMenuItemDispLayers;
+	
+	$value = `optionVar -query renderLayerShowNamespace`;
+	menuItem -edit -checkBox $value LayerEditorOptionsMenuShowNamespaceMenuItemRenLayers;
+
+}
+
+// Cretaes a meterial override for the given layer. If $type if not
+// empty, create a new node of this type and uses it. If type is
+// empty, $shader is supposed to be a valid shader to be used.
+global proc hookShaderOverride(string $layer, string $type, string $shader) 
+{
+	if ($type != "")
+		$shader = `shadingNode -asShader $type`;
+
+	string $shadingGroupArray[] = 
+		`listConnections -source false -destination true 
+		-type "shadingEngine" $shader`;
+
+	// Create a shading group if non exist yet
+	string $sg;
+	if (size($shadingGroupArray) < 1) {
+		$sg = `sets -renderable true -noSurfaceShader true
+            -empty -name ($shader+"SG")`;
+		
+        defaultNavigation -connectToExisting
+            -source $shader -destination $sg;
+	} else {
+		$sg = $shadingGroupArray[0];
+	}
+	connectAttr -f ($sg+".message") ($layer+".shadingGroupOverride");
+}
+
+//
+// 
+//
+proc addMaterialOverrideMenus(string $layer) 
+{
+	$classification = "shader/surface";
+	
+	menuItem -label "Create New Material Override" -subMenu true ;
+
+	string $types[] = `listNodeTypes -ex "rendernode/mentalray" $classification`;
+	
+	for ($type in $types) {
+		// Check whether node should appear in this UI, based on
+		// certain variables
+		if (!shouldAppearInNodeCreateUI($type)) continue;
+
+		string $typeString = `interToUI $type`;
+		menuItem -label $typeString 
+			-command ("hookShaderOverride(\"" + $layer + "\",\"" + $type + "\", \"\")");
+	}
+	if (`pluginInfo -query -loaded Mayatomr`) {
+		menuItem -divider true;
+		$types = `listNodeTypes "rendernode/mentalray:shader/surface"`;
+		for ($type in $types) {
+			string $typeString = `interToUI $type`;
+			menuItem -label $typeString 
+				-command ("hookShaderOverride(\"" + $layer + "\",\"" + $type + "\", \"\")");
+		}
+	}
+
+	setParent -menu ..;
+
+	menuItem -label "Assign Existing Material Override" -subMenu true ;
+	$types = `listNodeTypes $classification`;
+	for ($type in $types)
+	{
+		// Get a list of all material nodes which have the current node type
+		//
+		string $material;
+		string $materialArray[] = `ls -exactType $type`;
+
+		for ( $material in $materialArray ) 
+		{
+			menuItem -l $material 
+				-command ("hookShaderOverride(\"" + $layer + "\", \"\", \"" + $material + "\")");
+		}
+	}
+	setParent -menu ..;
+
+	string $connections[] = `listConnections -source true -destination false 
+		($layer+".shadingGroupOverride")` ;
+    menuItem -label "Remove Material Override" 
+		-enable `renderLayerButton -q -hasMaterialOverride $layer`
+	    -command ("disconnectAttr "+$connections[0]+".message "+
+				  $layer+".shadingGroupOverride");
+
+	menuItem -label "Remove Render Flag Overrides" 
+		-enable `renderLayerButton -q -hasRenderFlagOverride $layer`
+	    -command ("setAttr "+$layer+".attributeOverrideScript -type \"string\" \"\"");
+
+	menuItem -label "Remove Render Setting Overrides" 
+		-enable `renderLayerButton -q -hasRenderSettingsOverride $layer`
+	    -command ("deleteAllRenderSettingOverrides(\""+$layer+"\")");
+}
+
+global proc layerEditorShowPopupMenu(string $menu, string $layerButton)
+//
+//	Description:
+//		This procedure is called when the popup menu on layer buttons
+//		is shown.
+//
+//		Create the menu items.
+//
+//	Arguments:
+//		$menu  - The parent menu.
+//
+//		$layer - The full path name to the layer button.
+//
+{
+	string $selection[] = `ls -selection`;
+	string $layerContents[], $type, $layer;
+	int    $enable = false;
+
+	//	Get the current layer type.
+	//
+	$type = getLayerDisplayType();
+
+	//	Get the short name of the layer from the layer button argument.
+	//
+	$layer = getShortName($layerButton);
+
+	//	Get the contents of this layer.
+	//
+	if ("Display" == $type) {
+		$layerContents = `editDisplayLayerMembers -query $layer`;
+	} else if ("Render" == $type) {
+		$layerContents = `editRenderLayerMembers -query $layer`;
+	}
+
+	//	Remove layers from the selection list.
+	//
+    $remove = `ls -type displayLayer`;
+	$selection = AWRemoveStringsFromStringArray($remove, $selection);
+	$remove = `listConnections renderLayerManager.renderLayerId`;
+	$selection = AWRemoveStringsFromStringArray($remove, $selection);
+	
+	//	Set the menu parent and delete all the items in the menu.
+	//
+	setParent -menu $menu;
+	menu -edit -deleteAllItems $menu;
+
+	//
+	//	Now create the menu items...
+	//
+
+	// Layer name.
+	//
+	string $title = $layer + "...";
+	menuItem -label $title -command ("createLayerEditorQuickEditWindow {\"" + $layer + "\"}");
+	menuItem -divider true;
+	menuItem -divider true;
+	menuItem -divider true;
+
+	//	Add selected objects to this layer. Enable if there is at least
+	//	one object on the selection list.
+	//
+	$enable = false;
+	if (0 < size($selection)) $enable = true;
+	menuItem -label "Add Selected Objects" -enable $enable
+		-command ("layerEditorAddObjects " + $layer);
+
+	//	Remove selected objects from this layer. Enable if there is at least
+	//	one object on the selection list.
+	//
+	$enable = false;
+	if (0 < size($selection)) $enable = true;
+	menuItem -label "Remove Selected Objects" -enable $enable
+		-command ("layerEditorRemoveObjects " + $layer);
+
+	//	Select objects in this layer. Enable if this layer contains
+	//	an object.
+	//
+	$enable = false;
+	if (0 < size($layerContents)) $enable = true;
+	menuItem -label "Select Objects" -enable $enable
+		-command ("layerEditorSelectObjects " + $layer);
+
+    if ($type == "Render") {
+        // Create a menu with sub-items for the built-in and user presets.
+        //
+		menuItem -divider true;
+        string $menu = `menuItem -label "Presets" -subMenu true`;
+            setParent -menu ..;
+
+        menuItem -e 
+            -postMenuCommand ("renderLayerPresetMenu "+$menu+" "+$layer)
+            $menu;
+
+		menuItem -divider true;
+
+		addMaterialOverrideMenus($layer);
+    }
+	// The menu items don't seem to apply for render layers. So making this active only for display layers.
+	if($type == "Display"){
+		menuItem -divider true;
+		setLayerToMenuItems "Set All Layers" "LayerEditorEditMenuSetAllLayersPopup" "all";
+		setLayerToMenuItems "Set Selected Layers" "LayerEditorEditMenuSetSelectedLayersPopup" "selected";
+		setLayerToMenuItems "Set Only Selected Layers" "LayerEditorEditMenuSetOnlySelectedLayersPopup" "onlySelected";
+	}
+
+	menuItem -divider true;
+
+	//	Empty the layer (remove all objects). Enable if this layer contains
+	//	an object.
+	//
+	$enable = false;
+	if (0 < size($layerContents)) $enable = true;
+    menuItem -label "Empty the Layer" -enable $enable
+	    -command ("layerEditorEmpty " + $layer);
+	menuItem -label "Delete Layer"
+		-command ("evalDeferred (\"layerEditorDeleteLayer " + $layer + "\")");
+	menuItem -label "Membership..."
+		-command ("layerEditorMembership " + $layer);
+	menuItem -label "Attributes..."
+		-command ("layerEditorLayerAttributes " + $layer);
+}
+
+global proc layerEditorCreateRenderLayer(int $contents)
+	//
+//	Description:
+//		Create a new render layer and update the editor to reflect
+//      the change.
+//
+//	Arguments:
+//		$contents - 1 for empty, 2 for selected, etc.
+//
+{
+	global string $gCurrentLayerEditor;
+
+	string $newLayer, $layer, $currentSelection[];
+
+
+    // If before we create the new layer, the only render layer
+    // is the master render layer, then we make the master layer
+    // non-renderable.
+    //
+    string $layerArray[] = `listConnections renderLayerManager.renderLayerId`;
+    if (size($layerArray) == 1 
+        && 0 == `getAttr ($layerArray[0] + ".identification")`)
+    {
+        setAttr ($layerArray[0]+".renderable") 0;
+    }
+
+	//	Set the parent to the current layer editor. We can now use short
+	//	names of our controls and be certain they reference the correct
+	//	control.
+	//
+	setParent $gCurrentLayerEditor;
+
+
+	int $previous = `optionVar -q renderLayerContents`;
+	optionVar -iv renderLayerContents $contents;
+	performCreateRenderLayer 0;
+	optionVar -iv renderLayerContents $previous;
+	
+	updateLayersByType("Render");
+
+	//	Select and make current the new layer if the option to do so is set.
+	//
+	if (`optionVar -query renderLayerCurrent`) {
+
+		//	Deselect any selected layers.
+		//
+		$currentSelection = getLayerSelection("Render");
+		for ($layer in $currentSelection) {
+				renderLayerButton -edit -select false -current false $layer;
+		}
+
+		//	Select and make current the new layer.
+		//
+		$newLayer = mentalGetCurrentRenderLayer();
+		if (`renderLayerButton -exists $newLayer`) {
+			renderLayerButton -edit -select true -current true $newLayer;
+		}
+	}
+}
+
+global proc layerEditorCreateLayer()
+//
+//	Description:
+//		Create a new layer of the appropriate type and update the 
+//		editor to reflect the change.
+//
+{
+	global string $gCurrentLayerEditor;
+
+	string $type, $createLayerCmd = "";
+	string $newLayer, $layer, $currentSelection[];
+
+	//	Get the type of layers currently displayed in the editor.
+	//
+	$type = getLayerDisplayType();
+
+	//	Set the parent to the current layer editor. We can now use short
+	//	names of our controls and be certain they reference the correct
+	//	control.
+	//
+	setParent $gCurrentLayerEditor;
+
+	if ("Display" == $type) {
+		$createLayerCmd = "performCreateDisplayLayer 0";
+
+	} else if ("Render" == $type) {
+		$createLayerCmd = "performCreateRenderLayer 0";
+	}
+
+	if ("" != $createLayerCmd) {
+		eval ($createLayerCmd);
+	}
+	
+	updateLayersByType($type);
+
+	//	Select and make current the new layer if the option to do so is set.
+	//
+	if (`optionVar -query displayLayerCurrent`) {
+
+		//	Deselect any selected layers.
+		//
+		$currentSelection = getLayerSelection($type);
+		for ($layer in $currentSelection) {
+			if ("Display" == $type) {
+				layerButton -edit -select false -current false $layer;
+			} 
+		}
+
+		//	Select and make current the new layer.
+		//
+		if ("Display" == $type) {
+			$newLayer = `editDisplayLayerGlobals -query -currentDisplayLayer`;
+			if (`layerButton -exists $newLayer`) {
+				layerButton -edit -select true -current true $newLayer;
+			}
+		} 
+	}
+	
+	// For Render layer.
+	if (`optionVar -query renderLayerCurrent`) {
+
+		//	Deselect any selected layers.
+		//
+		$currentSelection = getLayerSelection($type);
+		for ($layer in $currentSelection) {
+			if ("Render" == $type) {
+				renderLayerButton -edit -select false -current false $layer;
+			}
+		}
+
+		//	Select and make current the new layer.
+		//
+		 if ("Render" == $type) {
+		        $newLayer = mentalGetCurrentRenderLayer();
+			if (`renderLayerButton -exists $newLayer`) {
+				renderLayerButton -edit -select true -current true $newLayer;
+			}
+		}
+	}
+}
+
+global proc layerEditorDeleteLayer(string $inLayer)
+//
+//	Description:
+//		Delete the specified layer or if no layer argument given then
+//		delete all the selected layers.
+//
+//	Arguments:
+//		$layer - The specific layer to delete, or an empty string to
+//		         delete all selected layers.
+//
+{
+	//	Get the type of layers currently displayed in the editor.
+	//
+	$type = getLayerDisplayType();
+
+	//	Get the layers if the argument is an empty string.
+	//
+    string $layers[];
+    if ("" == $inLayer) {
+		//
+		//	Get the highlighted layers.
+		//
+        $layers = getLayerSelection($type);
+    }
+    else {
+        $layers[0] = $inLayer;
+    }
+
+    if ($type == "Render") {
+        // Remove the default layer from the list.
+        //
+
+        string $items[] = $layers;
+        clear($layers);
+        for ($item in $items) {
+            if ($item != "defaultRenderLayer") {
+                $layers[size($layers)] = $item;
+            }
+        }
+        
+        // Ensure the current layer is not deleted.
+        //
+
+        string $currentLayer = mentalGetCurrentRenderLayer();
+
+        for ($layer in $layers) {
+            if ($layer == $currentLayer) {
+				renderLayerButton -edit -current true defaultRenderLayer;
+
+                // Make the default layer current.
+                //
+                evalEcho("mentalSetCurrentRenderLayer(\"defaultRenderLayer\")");
+
+                break;
+            }
+        }
+    }
+
+    for ($layer in $layers) {
+		//	Delete the layer button.
+			//
+			deleteUI -control $layer;
+
+		//	Delete the layer object.
+		//
+		evalEcho("delete "+$layer);
+    }
+
+    if ($type == "Render") 
+    {
+        // Check if only one render layer is left.
+        // If so, makes this only render layer renderable.
+        //
+        string $layerArray[] = `listConnections renderLayerManager.renderLayerId`;
+        if (size($layerArray) == 1)
+        {
+            setAttr ($layerArray[0]+".renderable") 1;
+        }
+        
+        // clean up invalid adjustment and
+        // renderLayerManager.renderLayerId
+        renderLayerCleanup();
+    }
+
+	updateLayersByType($type);
+}
+
+global proc layerEditorEditLayer(string $layer)
+//
+//	Description:
+//		Edit the specified layer or if no layer argument given then
+//		edit the selected layers.
+//
+//	Arguments:
+//		$layer - The specific layer to edit, or an empty string to
+//		         edit the selected layers.
+//
+{
+	string $layerArray[];
+	
+	//	Get the layer selection if the argument is an empty string.
+	//
+	if ("" == $layer) {
+		$layerArray = getLayerSelection("");
+
+	} else {
+		$layerArray[0] = $layer;
+	}
+
+	//	Show the layer edit window.
+	//
+	createLayerEditorQuickEditWindow($layerArray);
+}
+
+global proc layerEditorSelectObjects(string $layer)
+//
+//	Description:
+//		Select the objects contained in the specified layer or if no 
+//		layer argument given then select all the objects in the selected
+//		layers.
+//
+//	Arguments:
+//		$layer - The specific layer to select the objects from, or an empty 
+//		         string to select all the objects from all selected layers.
+//
+{
+	string $type, $item, $currentSelection[];
+
+	//	Clear the current object selection list.
+	//
+	select -clear;
+
+	//	Get the type of layers currently displayed in the editor.
+	//
+	$type = getLayerDisplayType();
+
+	if ("" != $layer) {
+		//
+		//	Select the objects in the given layer.
+		//
+		if ("Display" == $type) {
+			select -add `editDisplayLayerMembers -fullNames -query $layer`;
+		} else if ("Render" == $type) {
+			select -add `editRenderLayerMembers -fullNames -query $layer`;
+		}
+
+	} else {
+		//
+		//	Get the selected layers.
+		//
+		$currentSelection = getLayerSelection($type);
+
+		//	Add to the selection list the objects contained in each 
+		//	selected layer.
+		//
+		for ($item in $currentSelection) {
+			if ("Display" == $type) {
+				select -add `editDisplayLayerMembers -fullNames -query $item`;
+			} else if ("Render" == $type) {
+				select -add `editRenderLayerMembers -fullNames -query $item`;
+			}
+		}
+	}
+}
+
+global proc layerEditorAddObjects(string $inLayer)
+//
+//	Description:
+//		Add the objects on the selection list to the specified layer. If
+//		no layer argument is given, objects are added to all highlighted
+//      render layers, or the objects are added to the current display
+//      layer.
+//
+//      This code may be invoked from either the RMB pop-up menu of the
+//      layer button in which case $inLayer will be specified, or from the
+//      "Layers" drop down menu, in which case $inLayer which be "".
+//
+//	Arguments:
+//		$inLayer - The specific layer to add the objects to.
+//
+{
+	//	Get the type of layers currently displayed in the editor.
+	//
+	string $type = getLayerDisplayType();
+
+	//	Get the layers if the argument is an empty string.
+	//
+    string $layers[];
+    if ("" == $inLayer) {
+        if ($type == "Display") {
+            $layers[0] = getCurrentLayer("");
+        }
+        else {
+		    //
+		    //	Get the highlighted layers.
+		    //
+            $layers = getLayerSelection($type);
+        }
+    }
+    else {
+        $layers[0] = $inLayer;
+    }
+
+    for ($layer in $layers) {
+	    if ("Display" == $type) {
+		    if (`optionVar -query displayLayerContents` == 2) {
+			evalEcho("editDisplayLayerMembers -noRecurse "+$layer+" `ls -selection`");
+		    } else {
+				evalEcho("editDisplayLayerMembers "+$layer+" `ls -selection`");
+		    }
+        }
+        else {
+			evalEcho("editRenderLayerMembers -noRecurse "+$layer+" `ls -selection`");
+        }
+    }
+}
+
+global proc layerEditorRemoveObjects(string $inLayer)
+//
+//	Description:
+//		Remove the selected objects from the specified layer. If no layer
+//      argument given, remove the selected objects from all highlighted
+//		render layers.  As display layer membership is mutually exclusive,
+//      removing an object from one layer guarantees it will not be in
+//      another layer - no coding is needed to handle the multiple display
+//      layers.
+//
+//      This code may be invoked from either the RMB pop-up menu of the
+//      layer button in which case $inLayer will be specified, or from the
+//      "Layers" drop down menu, in which case $inLayer which be "".
+//
+//	Arguments:
+//		$inLayer - The specific layer to remove the objects from.
+//
+{
+	//	Get the type of layers currently displayed in the editor.
+	//
+	$type = getLayerDisplayType();
+
+    if ($type == "Display") {
+		//
+		//	Add all selected objects to the default layer.
+		//
+		evalEcho("editDisplayLayerMembers \"defaultLayer\" `ls -selection`");
+    }
+    else {
+        string $layers[];
+        if ("" == $inLayer) {
+		    //
+		    //	Get the highlighted layers.
+		    //
+		    $layers = getLayerSelection($type);
+        }
+        else {
+            $layers[0] = $inLayer;
+        }
+
+        for ($layer in $layers) {
+		    evalEcho("editRenderLayerMembers -remove -noRecurse "+$layer+" `ls -selection`");
+        }
+    }
+}
+
+global proc layerEditorEmpty(string $inLayer)
+//
+//	Description:
+//		Remove all the objects contained in the specified layer or if no 
+//		layer argument given then remove all the objects in the selected
+//		layers.
+//
+//      This code may be invoked from either the RMB pop-up menu of the
+//      layer button in which case $inLayer will be specified, or from the
+//      "Layers" drop down menu, in which case $inLayer which be "".
+//
+//	Arguments:
+//		$layer - The specific layer to remove the objects from, or an empty 
+//		         string to remove all the objects from all selected layers.
+//
+{
+	//	Get the type of layers currently displayed in the editor.
+	//
+	$type = getLayerDisplayType();
+
+    string $layers[];
+    if ("" == $inLayer) {
+		//
+		//	Get the highlighted layers.
+		//
+		$layers = getLayerSelection($type);
+    }
+    else {
+        $layers[0] = $inLayer;
+    }
+
+	for ($layer in $layers) {
+		if ("Display" == $type) {
+		    //	Add to the default layer all the objects in the selected
+		    //	layer(s).
+		    //
+			evalEcho("editDisplayLayerMembers \"defaultLayer\""+
+				"`editDisplayLayerMembers -fullNames -query "+$layer+"`");
+		} else if ("Render" == $type) {
+			evalEcho("editRenderLayerMembers -remove -noRecurse "+$layer+
+				"`editRenderLayerMembers -fullNames -query "+$layer+"`");
+		}
+    }
+}
+
+global proc layerEditorSelectUnused()
+//
+//	Description:
+//		Select all the layers that don't have any objects in them.
+//
+{
+	global string $gCurrentLayerEditor;
+
+	string $type, $layer, $layout;
+	string $layerArray[], $layerContents[];
+	string $selectArray[], $currentSelection[];
+	int    $index;
+
+	//	Get the type of layers currently displayed in the editor.
+	//
+	$type = getLayerDisplayType();
+
+	//	Set the parent to the current layer editor. We can now use short
+	//	names of our controls and be certain they reference the correct
+	//	control.
+	//
+	setParent $gCurrentLayerEditor;
+
+	//	Get the current layer selection.
+	//
+	$currentSelection = getLayerSelection($type);
+
+	//	Get all layers of the appropriate type.
+	//
+	if ("Display" == $type) {
+        $layerArray = `ls -type displayLayer`;
+	} else {
+        $layerArray = `listConnections renderLayerManager.renderLayerId`;
+	}
+
+	//	Determine the contents of each layer. Ignore default layers.
+	//
+	$index = 0;
+	for ($layer in $layerArray) {
+
+		//	Ignore default layers. Default layers have an id of 0.
+        //
+		if (0 < `getAttr ($layer + ".identification")`) {
+			if ("Display" == $type) {
+				$layerContents = `editDisplayLayerMembers -query $layer`;
+			} else if ("Render" == $type) {
+				$layerContents = `editRenderLayerMembers -query $layer`;
+			}
+			if (0 == size($layerContents)) {
+				//
+				//	This layer has nothing in it. Add it to array.
+				//
+				$selectArray[$index++] = $layer;
+			}
+		}
+	}
+
+	//
+	//	Deselect any selected layers.
+	//
+	for ($layer in $currentSelection) {
+		if ("Display" == $type) {
+			layerButton -edit -select false -current false $layer;
+		} else if ("Render" == $type) {
+			renderLayerButton -edit -select false -current false $layer;
+		}
+	}
+
+	//	Select all the unused layers.
+	//
+	for ($layer in $selectArray) {
+		if ("Display" == $type) {
+			layerButton -edit -select true $layer;
+		} else if ("Render" == $type) {
+			renderLayerButton -edit -select true $layer;
+		}
+	}
+}
+
+global proc layerEditorRemoveFromLayer()
+//
+//	Description:
+//		Remove the selected objects from whatever layer they might be in.
+//
+{
+	string $type, $object, $selection[], $remove[];
+
+	$type = getLayerDisplayType();
+
+	//	Get the selection list.
+	//
+	$selection = `ls -selection`;
+
+	//	Remove layers from the selection list.
+	//
+    $remove = `ls -type displayLayer`;
+	$selection = AWRemoveStringsFromStringArray($remove, $selection);
+	$remove = `listConnections renderLayerManager.renderLayerId`;
+	$selection = AWRemoveStringsFromStringArray($remove, $selection);
+
+	for ($object in $selection) {
+		if ("Display" == $type) {
+			editDisplayLayerMembers "defaultLayer" $object;
+		} else if ("Render" == $type) {
+            string $layers[] = `listConnections renderLayerManager.renderLayerId`;
+            for ($layer in $layers) {
+                // Remove object from non-global layers.
+                if (!`getAttr ($layer+".global")`) {
+			        editRenderLayerMembers -remove $layer $object;
+                }
+            }
+		}
+	}
+}
+
+global proc layerEditorLayerAttributes(string $layer)
+//
+//	Description:
+//		Show the Attribute Editor for the specified layer or if
+//		no layer argument given then use the current layer.
+//
+//	Arguments:
+//		$layer - The specific layer to show the Attribute Editor for,
+//		         or an empty string to show the editor for the current layer.
+//
+{
+	//	Get the current layer if the argument is an empty string.
+	//
+	if ("" == $layer) $layer = getCurrentLayer("");
+
+	//	Get the current layer.
+	//
+	if ("" != $layer) {
+
+		//	Actually select the layer object.
+		//
+		select -replace $layer;
+
+		//	Show the Attribute Editor.
+		//
+		editSelected();
+	}
+}
+
+global proc layerEditorMembership(string $layer)
+//
+//	Description:
+//		Show the Relationship Editor for the specified layer or if
+//		no layer argument given then use the layer selection.
+//
+//	Arguments:
+//		$layer - The specific layer to show the Relationship Editor for,
+//		         or an empty string to show the editor for the selected
+//		         layers.
+//
+{
+	string $selection[];
+
+	if ("" != $layer) {
+		$selection[0] = $layer;
+
+	} else {
+		//
+		//	Get the current selection.
+		//
+		$selection = getLayerSelection("");
+	}
+
+	//	Display the relationship editor for the type of layers.
+	//
+	string $type = getLayerDisplayType();
+
+	if ("Display" == $type) {
+	    relationshipEditor("displayLayers", 7, $selection, {});
+	} else if ("Render" == $type) {
+	    relationshipEditor("renderLayers", 8, $selection, {});
+	}
+}
+
+global proc layerEditorDisplayTypeChange()
+//
+//	Description:
+//		This procedure is called whenever the user changes the type
+//		of layers displayed in the Layer Editor.
+//
+{
+	global string $gCurrentLayerEditor;
+
+	string $type, $tab = "";
+
+	//	Get the type of layers currently displayed in the editor.
+	//
+	$type = getLayerDisplayType();
+
+	if ("Display" == $type) {
+		$tab = "DisplayLayerTab";
+	} else if ("Render" == $type) {
+		$tab = "RenderLayerTab";
+	}
+
+	setParent $gCurrentLayerEditor;
+
+	if ("" != $tab) {
+		tabLayout -edit -selectTab $tab DisplayLayerUITabLayout;
+	}	
+}
+
+global proc string displayLabel( int $showNamespace, string $layer )
+//
+//	Description:
+//		Given a layer name, and whether or not we want the namespace displayed,
+//	return the appropriate label.
+//
+{
+	string $label = $layer;
+	if( !$showNamespace){
+		// Replace namespace by "...:" if there is one
+		//
+		string $tokens[];
+		int $numTokens = `tokenize $layer ":" $tokens`;
+		if( $numTokens > 1 ){
+			$label = ("...:" + $tokens[$numTokens-1]);
+		}
+	}
+	return( $label );
+}
+
+global proc string displayLabelRenderLayer( int $showNamespace, string $layer )
+//
+//	Description:
+//		Given a render layer layer name, and whether or not we want the namespace displayed,
+//	return the appropriate label.
+//
+{
+    string $label = $layer;
+    string $tokens[];
+    int $numTokens = `tokenize $layer ":" $tokens`;
+    if ($tokens[$numTokens-1] == "defaultRenderLayer")
+    {
+        // Replace defaultRenderLayer by masterLayer.
+        //
+        int $nameLength = size($layer);
+        if ($nameLength == 18)
+        {
+            return "masterLayer";
+        }
+        // The layer name might include the name space, say,
+        // name_space:defaultRenderLayer.  We want to change
+        // it to name_space:masterLayer. 
+        // 
+        int $position = $nameLength - 18; 
+        $label = `substring $layer 1 $position` + "masterLayer";
+    }
+
+    return displayLabel($showNamespace, $layer);
+}
+
+global proc updateLayersByType(string $type)
+//
+//	Description:
+//		Update the Layer Editor according to the specified type.
+//
+//		Create and/or delete layer buttons as necessary.
+//
+//	Arguments:
+//		$type - Type of layers to update. Values are "Display" or
+//		        "Render".
+//
+{
+	global string $gCurrentLayerEditor;
+
+	if ("" == $gCurrentLayerEditor) {
+		error ("There is no current Layer Editor");
+		return;
+	}
+
+	setParent $gCurrentLayerEditor;
+
+	string $buttonLayout;
+	string $layer, $layerArray[];
+	string $button, $buttonArray[];
+	string $removeArray[];
+	int    $layerID, $index, $colorIndex, $transparent;
+
+	//	Width of layer buttons.
+	//
+	int    $kLayerButtonWidth = 350;
+
+	//	Get all layers of the appropriate type.
+	//
+	if ("Display" == $type) {
+		$buttonLayout = "LayerEditorDisplayLayerLayout";
+        $layerArray = `ls -type displayLayer`;
+
+	} else if ("Render" == $type) {
+		$buttonLayout = "LayerEditorRenderLayerLayout";
+        $layerArray = `listConnections renderLayerManager.renderLayerId`;
+
+	} else {
+		error ("Invalid layer type: " + $type);
+		return;
+	}
+
+    if ($type == "Display") {
+	    //	Remove the default layers. Default layers have an id of 0.
+	    //
+	    $index = 0;
+	    for ($layer in $layerArray) {
+		    if (0 == `getAttr ($layer + ".identification")`) {
+			    $removeArray[$index++] = $layer;
+		    }
+	    }
+	    $layerArray = AWRemoveStringsFromStringArray($removeArray, $layerArray);
+    }
+
+	//	Now sort the remaining layers according to their display order.
+	//
+	$layerArray = sortLayers($layerArray);
+
+    // Reverse the order of the layerArray, so that we can list the
+    // layers from the bottom to the top in the render layer editor
+    // just like in photoshop.
+    //
+    $layerArray = reverseArray($layerArray);
+
+	//	Get the current array of layer buttons.
+	//
+	$buttonArray = `layout -query -childArray $buttonLayout`;
+
+	//	Remove the old layer buttons.
+	//
+	for ($button in $buttonArray) {
+        //
+        //	Delete button.
+        //
+        deleteUI $button;
+	}
+	
+	int $showNamespace;
+	if("Display" == $type)
+	{
+		$showNamespace = `optionVar -query displayLayerShowNamespace`;
+    }
+	else if ("Render" == $type)
+	{
+		$showNamespace = `optionVar -query renderLayerShowNamespace`;
+    }
+	
+	//	Add buttons for layers.
+	//
+    if ("Render" == $type && size($layerArray) == 1 
+        && 0 == `getAttr ($layerArray[0] + ".identification")`)
+    {
+        // Do not add any button.
+        //
+        ;
+    }
+    else
+    {
+	    for ($layer in $layerArray) {
+			//
+			//	Create button.
+			//
+			if ("Display" == $type) {
+				$transparent = false;
+				$colorIndex = `getAttr ($layer + ".color")`;
+				if (0 == $colorIndex) $transparent = true;
+
+				layerButton -parent $buttonLayout
+					-label              (`displayLabel $showNamespace $layer `)
+					-name               $layer
+					-transparent        $transparent
+					-width              $kLayerButtonWidth
+					-command            ("layerEditorLayerButtonSelect #m #1")
+					-doubleClickCommand ("createLayerEditorQuickEditWindow { \"#1\" }")
+					-renameCommand      ("layerEditorLayerButtonRename #1 #2")
+					-typeCommand        ("layerEditorLayerButtonTypeChange #1")
+					-visibleCommand     ("layerEditorLayerButtonVisibilityChange #1")
+					-dropCallback       ("layerEditorLayerButtonDrop")
+					-dragCallback       ("layerEditorLayerButtonDrag")
+					$layer;
+
+			} else if ("Render" == $type) {
+				renderLayerButton -parent $buttonLayout
+					-label              (`displayLabelRenderLayer $showNamespace $layer `)
+					-name               $layer
+					-width              $kLayerButtonWidth
+                    -command            ("layerEditorLayerButtonSelect #m #1")
+					-renameCommand      ("layerEditorLayerButtonRename #1 #2")
+					-renderableCommand  ("layerEditorLayerButtonRenderabilityChange #1")
+					-materialOverrideCommand ("layerEditorLayerButtonMaterialOverride #1")
+					-renderFlagOverrideCommand ("layerEditorLayerButtonRenderFlagOverride #1")
+					-renderSettingsOverrideCommand ("unifiedRenderGlobalsWindow")
+					-dropCallback       ("layerEditorLayerButtonDrop")
+					-dragCallback       ("layerEditorLayerButtonDrag")
+					$layer;
+
+                // Allow user to change the name of the render layer,
+                // unless it is the defaultRenderLayer.
+                //
+                if ($layer != "defaultRenderLayer")
+                {
+                    renderLayerButton -edit
+                        -doubleClickCommand ("createLayerEditorQuickEditWindow { \"#1\" }")
+                        $layer;
+                }
+			}
+
+			if ("Render" == $type && $layer == "defaultRenderLayer") 
+            {
+                // Do not attach popup menu to the defaultRenderLayer's
+                // button.
+                //
+                ;
+            }
+            else
+            {
+			    //	Attach a popup menu to each layer button.
+			    //
+			    $popupMenu = `popupMenu -button 3 -parent $layer`;
+			    popupMenu -edit
+				    -postMenuCommand ("layerEditorShowPopupMenu #1 #2")
+				    $popupMenu;
+            }
+
+        }
+
+        // Highlight the active render or display layer.
+        //
+        if ("Render" == $type) 
+        {
+	    string $selectedItem = mentalGetCurrentRenderLayer();
+            renderLayerButton -edit -select true -current true $selectedItem;   
+		}else if( "Display" == $type ){
+			string $selectedItem = `editDisplayLayerGlobals -query -currentDisplayLayer`;
+
+			// Check if the button exists, since there is no button for the
+			// default display layer.
+			//
+			if( `layerButton -exists $selectedItem` )
+				layerButton -edit -select true -current true $selectedItem;
+		}
+	}
+}
+
+global proc layerEditorLayerButtonMaterialOverride(string $layer)
+{
+	string $connections[] = `listConnections -source true -destination false ($layer+".shadingGroupOverride")` ;
+	if(size($connections) > 0) {
+		showEditor $connections[0];
+	} else {
+		layerEditorLayerButtonSelect(0, $layer);
+		    HypershadeWindow;
+        }
+	}
+
+global proc layerEditorLayerButtonRenderFlagOverride(string $layer)
+{
+	showEditor $layer;
+}
+
+global proc updateLayerOrderByType(string $type)
+//
+//	Description:
+//		Update the order of layers given their current display order.
+//
+//		Set the layer's display order attribute based on the layer
+//		button's position in the editor.
+//
+//	Arguments:
+//		$type - Type of layer. Values are "Display" or "Render".
+//
+{
+	global string $gCurrentLayerEditor;
+
+	if ("" == $gCurrentLayerEditor) {
+		error ("There is no current Layer Editor");
+		return;
+	}
+
+	setParent $gCurrentLayerEditor;
+
+	//	Get all the layers of the appropriate type.
+	//
+    string $buttonLayout;
+	if ("Display" == $type) {
+		$buttonLayout = "LayerEditorDisplayLayerLayout";
+
+	} else if ("Render" == $type) {
+		$buttonLayout = "LayerEditorRenderLayerLayout";
+
+	} else {
+		error ("Invalid layer type: " + $type);
+		return;
+	}
+
+    string $layerArray[] = `gridLayout -query -gridOrder $buttonLayout`;
+    $layerArray = reverseArray($layerArray);
+    string $nulls[]; $nulls[0] = "(null)";
+    $layerArray = stringArrayRemove($nulls, $layerArray);
+    if (size($layerArray) > 0) {
+        // Re-index the layers based on the position of the first layer;
+        // ensuring that the display order is unique and increasing.
+        //
+
+        string $command;
+
+        int $previousIndex = getAttr ($layerArray[0]+".displayOrder");
+		
+        for ($i = 1; $i < size($layerArray); $i++) {
+            string $layer = $layerArray[$i];
+            
+            int $index = `getAttr ($layer+".displayOrder")`;
+           
+            if ($index <= $previousIndex)
+            {
+                // Set the display order of the current layer to be greater
+                // than the previous layer.
+                $index = $previousIndex + 1;
+                if ($command != "") $command += "; ";
+                $command += "setAttr " + $layer+".displayOrder " + $index;
+            }
+            
+            $previousIndex = $index;
+        }
+    
+        if ($command != "") evalEcho($command);
+    }
+}
+
+global proc updateLayerEditor()
+//
+//	Description:
+//		Update the Layer Editor.
+//
+//		This procedure must be called whenever the state of layers in
+//		the scene changes. For example, a new scene is created, or a 
+//		scene is opened, or a layer is added or removed.
+//
+{
+	updateLayersByType("Display");
+	updateLayersByType("Render");
+}
+
+global proc int layerEditorVisibilityStateChange(
+	int    $newState,
+	string $layout)
+//
+//	Description:
+//		This procedure is called whenever the visibility state of the 
+//		Layer Editor is changed.
+//
+//	Arguments:
+//		newState - The new visibile state of the Layer Editor.
+//
+//		layout - The parent layout for the Layer Editor.
+//
+//	Returns:
+//		true - If the change of state is to be allowed.
+//
+//		false - If the state change is rejected.
+//
+{
+	int $result = true;
+
+	//	Defer these commands because this proc is called when the visibility
+	//	state is about to change. This proc must return true to accept 
+	//	the state change. After this proc returns then restore the
+	//	panel focus and update the pref menu.
+	//
+	evalDeferred("restoreLastPanelWithFocus(); updatePrefsMenu()");
+
+	return $result;
+}
+
+//
+//	Description:
+//		Create the Layer Editor UI.
+//
+{
+	global string $gLayerEditorForm;
+
+	//	Create the Layer Editor.
+	//
+	createLayerEditor($gLayerEditorForm);
+
+	//	Update the Layer Editor.
+	//
+	updateLayerEditor();
+}

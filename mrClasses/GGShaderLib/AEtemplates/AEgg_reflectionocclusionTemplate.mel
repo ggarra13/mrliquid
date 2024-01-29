@@ -1,0 +1,46 @@
+
+
+
+
+eval("source gg_mray_aux.mel");
+
+
+global proc AEgg_reflectionocclusionTemplate( string $nodeName )
+{
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	   editorTemplate 
+	     -beginLayout "Reflection Occlusion Shader Attributes" 
+	     -collapse 0;
+
+		editorTemplate -beginLayout "Main" -collapse 0;
+		   editorTemplate -addControl "blocker";
+		   editorTemplate -addControl "useProbes";
+		editorTemplate -endLayout;
+
+		editorTemplate -beginLayout "Sampling" -collapse 0;
+		     editorTemplate -addControl "nearSamples";
+		     editorTemplate -addControl "nearDistance";
+		     editorTemplate -addControl "farSamples";
+		     editorTemplate -addControl "farDistance";
+		editorTemplate -endLayout;
+
+		editorTemplate -addControl "transparency";
+
+		editorTemplate -beginLayout "Ray" -collapse 0;
+		   editorTemplate -label "Spread"    -addControl "angle";
+		   editorTemplate -label "Near Attenuation" -addControl "minFalloff";
+		   editorTemplate -label "Far  Attenuation" -addControl "maxFalloff";
+		editorTemplate -endLayout;
+
+	   editorTemplate -endLayout;
+
+	   editorTemplate -suppress "normalCamera";
+
+	   AEdependNodeTemplate $nodeName;
+
+	   editorTemplate -addExtraControls;
+
+	editorTemplate -endScrollLayout;
+}

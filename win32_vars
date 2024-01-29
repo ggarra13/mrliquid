@@ -1,0 +1,8 @@
+#!/bin/bash
+
+
+if [[ $GGA_OS == 'mingw' ]]; then
+    #export OPENEXR_ROOT="/z/code/PD/libraries/Deploy/win32/openexr-1.6.1"
+    export OPENEXR_ROOT="/z/code/PD/libraries/Deploy/win32/openexr-1.4"
+    #export OPENEXR_ROOT="/z/code/PD/libraries/openexr-1.4.0/vc/"
+fi

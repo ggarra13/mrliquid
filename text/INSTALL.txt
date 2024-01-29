@@ -1,0 +1,56 @@
+For compilation, you will need to:
+
+On Windows, access each project's properties and modify the path for the
+resulting .dll/.mll in the Project preferences.  If you set MAYA_LOCATION,
+the project will try to compile the stuff into MAYA_LOCATION/Aura/plug-ins
+and MAYA_LOCATION/Aura/shaders.
+
+For Unix systems, modify the accompanying Makefile to point to all the
+right path locations.
+
+--------------------------------------------
+
+For proper installation, you need to:
+
+* Copy the mrLiquid.so/mll onto a valid plugin path, like:
+  $MAYA_LOCATION/bin/plug-ins
+
+* Copy the MEL scripts in the scripts/ directory to a valid maya script 
+  dir, like:
+  $MAYA_LOCATION/scripts/others
+
+* Copy the mrLiquid shaders (mrl_shaders.so/dll, mrLibrary.so/dll) 
+  to a valid path for mental ray shaders, like:
+  $MAYA_LOCATION/mentalray/lib
+
+* Copy the mrLiquid shaders' mi description (mrl_shaders.mi) 
+  to a valid path for mental ray shaders, like:
+  $MAYA_LOCATION/mentalray/include
+
+* Copy the mrLibrary auxiliary mi file (maya.auxlibs.mi) to a valid path 
+  for mental ray shaders, like:
+  $MAYA_LOCATION/mentalray/include
+
+* For batch rendering using mrLiquid's super cool batch tool, you need
+  to install the great Ruby scripting language.  The easisest way to do so
+  is by downloading the Ruby One-Click Installer (available at:
+    www.rubyforge.org/)
+
+  After that is done, copy the rubyMEL.so[g]/dll plugin to a valid 
+  plugin path, like:
+  $MAYA_LOCATION/bin/plug-ins
+  rubyMEL is needed for doing batch renders only (if you will write your
+  own mel scripts for batch renders, you don't need this).
+  Finally, make sure your PATH variable is pointing towards where the ruby
+  library is (usually the ruby bin directory), before firing up maya.
+
+
+OPTIONAL:
+
+* Copy the mrClasses demo shaders (mray_shaders.so/dll) to a valid shader
+  path ($MAYA_LOCATION/mentalray/lib) and its .mi file to a valid include
+  path ($MAYA_LOCATION/mentalray/include).
+
+* Copy the optional gg_mrliquid (.so/.dll/.mi) shader to
+  equivalent mental ray shader paths like above mrl_shaders.
+  This shader is mostly a demo of using mrLiquid thru the mray API.

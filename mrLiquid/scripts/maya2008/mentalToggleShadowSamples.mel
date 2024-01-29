@@ -1,0 +1,77 @@
+/**
+ * @file   mentalToggleShadowSamples.mel
+ * @author gga
+ * @date   Wed Aug 15 18:14:56 2007
+ * 
+ * @brief  This file implements a command to toggle on and off all shadow
+ *         samples in scene down to 1 sample.
+ * 
+ * 
+ */
+
+int    $gMentalShadowLightsMode = 1;
+string $gMentalShadowLights[]   = {};
+
+
+global proc mentalToggleShadowSamples()
+{
+  global int    $gMentalShadowLightsMode;
+  global string $gMentalShadowLights[];
+
+  string $light, $store;
+  string $lights[] = `ls -lights`;
+
+
+  if ( $gMentalShadowLightsMode == 0 )
+    {
+      $gMentalShadowLightsMode = 1;
+      for ( $store in $gMentalShadowLights )
+	{
+	  string $buffer[];
+	  int $num = `tokenize $store "!" $buffer`;
+	  $light = $buffer[0];
+	  for ( $i = 1; $i < $num; $i++ )
+	    {
+	      string $val[];
+	      tokenize $buffer[$i] $val;
+
+	      string $cmd = "setAttr \"";
+              $cmd += $light + "." + $val[0] + "\" " + $val[1];
+	      eval($cmd);
+	    }
+	}
+    }
+  else
+    {
+      $gMentalShadowLightsMode = 0;
+      $gMentalShadowLights = {};
+
+      string $attrs[] = {
+	"shadowRays",
+	"rayDepthLimit",
+	"smapSamples",
+	"smapDetailSamples"
+      };
+
+      for ( $light in $lights )
+	{
+	  string $store = $light;
+
+	  for ($attr in $attrs)
+	    {
+	      string $ok[] = `listAttr -st $attr $light`;
+	      if (size($ok) == 0) continue;
+
+	      string $plug = $light + "." + $attr;
+
+	      string $val  = `getAttr $plug`;
+	      $store += "!" + $attr + " " + $val;
+
+	      setAttr $plug 1;
+	    }
+
+	  $gMentalShadowLights[size($gMentalShadowLights)] = $store;
+	}
+    }
+
+}

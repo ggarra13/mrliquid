@@ -1,0 +1,9 @@
+
+global proc mentalRefreshImr()
+{
+    if (eval("mental -q -imr"))
+    {
+//         print("\tshould refresh\n");
+//         eval("mental -preview");
+    }
+}

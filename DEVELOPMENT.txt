@@ -1,0 +1,7 @@
+The enclosed files include mrClasses and mrLiquid as far as they were developed.
+The testing of these files was done with maya8.0 up to maya2008.
+To adapt it to newer mayas, mrShaderLightAttrs has to be updated to reflect the
+indices of the light attributes and the grammar.y and fileobjgrammar.y and 
+grammar.lex need to be updated.
+The raylib version of mrLiquid was never tested.  Most likely it needs to fix
+the initialization and the update of the IPR.

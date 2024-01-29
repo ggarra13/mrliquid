@@ -1,0 +1,46 @@
+
+CREATE DATABASE queue;
+USE queue;
+
+CREATE TABLE host (
+	 id            INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+	 name	       VARCHAR(255) NOT NULL,
+	 ip	       VARCHAR(14)  NOT NULL,
+	 no_cpus       TINYINT UNSIGNED NOT NULL,
+	 cpu	       VARCHAR(255),
+	 memory	       INTEGER UNSIGNED,
+	 status	       ENUM('Offline', 'Online', 'Dead')
+		       NOT NULL DEFAULT 'Online',
+	 PRIMARY KEY (id)
+       );
+
+
+CREATE TABLE job (
+	 id            INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+	 submitted     TIMESTAMP NOT NULL,
+	 memory	       INTEGER UNSIGNED NOT NULL,
+	 no_cpus       TINYINT UNSIGNED NOT NULL,
+	 PRIMARY KEY (id)
+       );
+
+
+CREATE TABLE hostlist (
+       id    INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+       job   INTEGER UNSIGNED NOT NULL REFERENCES job(id),
+       host  INTEGER UNSIGNED NOT NULL REFERENCES host(id),
+       PRIMARY KEY (id)
+       );
+
+
+CREATE TABLE frame (
+       job     INTEGER UNSIGNED NOT NULL REFERENCES job(id),
+       number  INTEGER NOT NULL,
+       id      INTEGER NOT NULL,
+       status  ENUM('Done', 'Queued', 'Running', 'Died', 'Failed', 'License')
+	       NOT NULL DEFAULT 'Queued',
+       start   TIMESTAMP NOT NULL,
+       done    TIMESTAMP,
+       comment VARCHAR(80),
+       PRIMARY KEY (job, id)
+       );
+

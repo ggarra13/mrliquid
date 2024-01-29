@@ -1,0 +1,185 @@
+#
+# This is a valgrind suppression file for Maya (8.5-x64) 
+# that should be used when using valgrind.
+#
+#
+
+{
+   Tfield::losingFocusCallback(void*)
+   Memcheck:Cond
+   fun:_ZN6Tfield19losingFocusCallbackEPv
+}
+
+{
+   Tstring::setDouble(double, int, bool) 
+   Memcheck:Cond
+   fun:_ZN7Tstring9setDoubleEdib
+}
+
+{
+   TcreatePolyCubeCtxCmd::doEditFlags()    
+   Memcheck:Cond
+   fun:_ZN21TcreatePolyCubeCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreatePolyCylinderCtxCmd::doEditFlags()
+   Memcheck:Cond
+   fun:_ZN25TcreatePolyCylinderCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreatePolySphereCtxCmd::doEditFlags()
+   Memcheck:Cond
+   fun:_ZN23TcreatePolySphereCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreatePolyConeCtxCmd::doEditFlags()
+   Memcheck:Cond
+   fun:_ZN21TcreatePolyConeCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreatePolyPlaneCtxCmd::doEditFlags()
+   Memcheck:Cond
+   fun:_ZN22TcreatePolyPlaneCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreatePolyTorusCtxCmd::doEditFlags()
+   Memcheck:Cond
+   fun:_ZN22TcreatePolyTorusCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreatePolyPrismCtxCmd::doEditFlags()
+   Memcheck:Cond
+   fun:_ZN22TcreatePolyPrismCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreatePolyPyramidCtxCmd::doEditFlags()
+   Memcheck:Cond
+   fun:_ZN24TcreatePolyPyramidCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreatePolyPipeCtxCmd::doEditFlags()
+   Memcheck:Cond   
+   fun:_ZN21TcreatePolyPipeCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreatePolyHelixCtxCmd::doEditFlags()
+   Memcheck:Cond
+   fun:_ZN22TcreatePolyHelixCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreateNurbsSphereCtxCmd::doEditFlags() 
+   Memcheck:Cond
+   fun:_ZN24TcreateNurbsSphereCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreateNurbsPlaneCtxCmd::doEditFlags() 
+   Memcheck:Cond   
+   fun:_ZN23TcreateNurbsPlaneCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreateNurbsCylinderCtxCmd::doEditFlags() 
+   Memcheck:Cond
+   fun:_ZN26TcreateNurbsCylinderCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreateNurbsConeCtxCmd::doEditFlags() 
+   Memcheck:Cond  
+   fun:_ZN22TcreateNurbsConeCtxCmd11doEditFlagsEv
+}
+
+
+{
+   TcreateNurbsCubeCtxCmd::doEditFlags() 
+   Memcheck:Cond  
+   fun:_ZN22TcreateNurbsCubeCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreateNurbsTorusCtxCmd::doEditFlags() 
+   Memcheck:Cond   
+   fun:_ZN23TcreateNurbsTorusCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreateNurbsCircleCtxCmd::doEditFlags() 
+   Memcheck:Cond
+   fun:_ZN24TcreateNurbsCircleCtxCmd11doEditFlagsEv
+}
+
+{
+   TcreateNurbsSquareCtxCmd::doEditFlags() 
+   Memcheck:Cond
+   fun:_ZN24TcreateNurbsSquareCtxCmd11doEditFlagsEv
+}
+
+{
+   TpolySplitRingBehaviourOptions::editOptions(TargParser*)
+   Memcheck:Cond
+   fun:_ZN30TpolySplitRingBehaviourOptions11editOptionsEP10TargParser
+}
+
+{
+   <insert a suppression name here>
+   Memcheck:Free
+   fun:_ZdlPv
+   fun:_ZN9TSFactoryC2Ev
+}
+
+{
+   <insert a suppression name here>
+   Memcheck:Free
+   fun:_ZdlPv
+   fun:_ZN16TSBLayoutFactoryC2E17TSLayoutStyleEnum
+}
+
+{
+   <insert a suppression name here>
+   Memcheck:Free
+   fun:_ZdlPv
+   fun:_ZN7TSGraphC2EP11TSOMLObjecti
+}
+
+{
+   strcpy on exit
+   Memcheck:Overlap
+   fun:strcpy
+   fun:_ZN13TsafeFileSave13setupForWriteEv
+}
+
+{
+   <insert a suppression name here>
+   Memcheck:Free
+   fun:_ZdlPv
+   fun:_ZN8TSDGraphC2EP11TSOMLObjectiP9TSFactory
+}
+
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:_ZN8TcpTable14clearSelectionEb
+}
+
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:_ZN8TcpTable12drawItemProcER12TdrawContextjj
+}
+
+{
+   <insert a suppression name here>
+   Memcheck:Cond
+   fun:_ZN11TchannelBox9doRebuildERK6Tevent
+}

@@ -1,0 +1,791 @@
+// Copyright (C) 1997-2004 Alias Systems Corp.
+// 
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias license agreement, without fee.
+// 
+// ALIAS DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+
+//****************************************************************************
+// Definition of user interface for mental ray approximation attributes.
+//****************************************************************************
+
+
+source "mentalrayApproxEditor.mel";
+
+
+proc int checkCompatible(string $approxNodeType, string $shapeNode)
+{
+	//check for node compatibility
+	int $compatible;
+	string $shapeNodeType = `nodeType $shapeNode`;
+	if(($shapeNodeType == "subdiv") || ($shapeNodeType == "mesh"))
+	{
+		if(($approxNodeType == "mentalrayDisplaceApprox") || 
+		   ($approxNodeType == "mentalraySubdivApprox"))
+		{
+			$compatible = 1;
+		}
+		else 
+		{
+			$compatible = 0;
+		}
+	}
+	else if($shapeNodeType == "nurbsSurface")
+	{
+		if($approxNodeType != "mentalraySubdivApprox")
+		{
+			$compatible = 1;
+		}
+		else
+		{
+			$compatible = 0;
+		}
+	}
+	return $compatible;
+}
+
+proc addApproxListAttribute(string $shapeNode)
+{
+   addAttr -ln miApproxList -sn mapl -multi -im off -at message $shapeNode;
+}
+
+proc addApproxAttribute(string $attrLongName, string $attrShortName, string $shapeNode)
+{
+	addAttr -ln $attrLongName -sn $attrShortName -at message $shapeNode;
+}
+
+proc string createApproxNode(string $approxNodeType)
+{
+	string $approxNode;
+	string $mrItemsListAttr;
+	string $mrItemsListNodeList[];
+	string $mrItemsListNode;
+	switch ($approxNodeType) 
+	{
+		case "mentalrayDisplaceApprox":
+			$mrItemsListAttr = "displaceApproxs";
+			break;
+		case "mentalraySurfaceApprox":
+			$mrItemsListAttr = "surfaceApproxs";
+			break;
+		case "mentalrayCurveApprox":
+			$mrItemsListAttr = "curveApproxs";
+			$attrShortName = "mitca";
+			break;
+		case "mentalraySubdivApprox":
+			$mrItemsListAttr = "subdivApproxs";
+			break;
+	}
+	$approxNode = `createNode $approxNodeType`;
+	$mrItemsListNodeList = `ls -type mentalrayItemsList`;
+	if(size($mrItemsListNodeList) == 0)
+	{
+		$mrItemsListNode = `createNode -name mentalrayItemsList mentalrayItemsList`;
+	}
+	else 
+	{
+		$mrItemsListNode = $mrItemsListNodeList[0];
+	}
+	connectAttr -na ($approxNode + ".message") ($mrItemsListNode + "." + $mrItemsListAttr);
+
+	return $approxNode;
+}
+
+
+proc connectApproxListAttr(string $approxNode, string $shapeNode)
+{
+   connectAttr -na -f ($approxNode + ".message") ($shapeNode + ".miApproxList");
+}
+
+proc connectApproxAttr(string $approxNode, string $shapeNode, string $attrLongName)
+{
+   connectAttr -f ($approxNode + ".message") ($shapeNode + "." + $attrLongName);
+}
+
+proc disconnectApproxAttr(string $approxNode, string $shapeNode, string $attrLongName)
+{
+   disconnectAttr ($approxNode + ".message") ($shapeNode + "." + $attrLongName);
+}
+
+global proc int isFlaggedApproximation( string $approxNode )
+{
+   int $flagged = 0;
+   string $attrs[] = `listAttr -st miVisible $approxNode`;
+   if ( size($attrs) > 0 )
+   {
+      $flagged = 1;
+   }
+   return $flagged;
+}
+
+proc string[] findSelection()
+{
+   string $selectionList[] = `ls -l -sl`;
+   return $selectionList;
+}
+
+proc string findApproxNodeName(string $approxNodeTypeShort)
+{
+   string $rowLayout = ("mrlApproxEditorWindow|cc|rb|cl|rl" + $approxNodeTypeShort);
+   string $optionMenu = ($rowLayout + "|omrl|om");
+   $approxNode = `optionMenu -query -value $optionMenu`;
+   return $approxNode;
+}
+
+proc string findCreateOptions()
+{
+   string $multiSingle;
+   int $radioSelcection;
+   $radioBtnGrp = "mrlApproxEditorWindow|cc|rb|singleMultiRadioGrp";
+   $radioSelcection = `radioButtonGrp -query -sl $radioBtnGrp`;
+   if ($radioSelcection == 1)
+   {
+      $multiSingle = "single";
+   }
+   else if ($radioSelcection == 2)
+   {
+      $multiSingle = "multi";
+   }
+   return $multiSingle;
+}
+
+proc selectApproxMenu(string $approxNode, string $approxNodeTypeShort)
+{
+   string $rowLayout = ("mrlApproxEditorWindow|cc|rb|cl|rl" + $approxNodeTypeShort);
+   string $optionMenu = ($rowLayout + "|omrl|om");	
+   string $menuList[];
+   string $menuLabel;
+   $menuList = `optionMenu -q -ill $optionMenu`;
+
+   for($i=0; $i<(size($menuList)); $i++)
+   {
+      $menuLabel = `menuItem -q -label $menuList[$i]`;
+      if ($menuLabel == $approxNode)
+      {  
+	 optionMenu -edit -select ($i+1) $optionMenu;
+      }
+   }
+}
+
+proc showHypergraph(string $createApproxNodeList[])
+{
+   tearOffPanel "Hypergraph" "hyperGraphPanel" true;
+   $hypergraphName = `getPanel -wl "Hypergraph"`;
+   select -r $createApproxNodeList;
+   showDGLevel ($hypergraphName + "HyperGraphEd");
+}
+
+proc assignApproxNode(string $approxNode, string $selectionList[])
+{	
+   string $approxNodeType = `nodeType $approxNode`;
+   string $shapeNodes[];
+   string $existApproxAttrList[];
+   string $existNodeConnections[];
+   string $attrLongName;
+   string $attrShortName;
+		
+   switch ($approxNodeType) 
+   {
+      case "mentalrayDisplaceApprox":
+	 $attrLongName = "miDisplaceApprox";
+	 $attrShortName = "mida";
+	 break;
+      case "mentalraySurfaceApprox":
+	 $attrLongName = "miSurfaceApprox";
+	 $attrShortName = "misa";
+	 break;
+      case "mentalrayCurveApprox":
+	 $attrLongName = "miCurveApprox";
+	 $attrShortName = "mitca";
+	 break;
+      case "mentalraySubdivApprox":
+	 $attrLongName = "miSubdivApprox";
+	 $attrShortName = "miva";
+	 break;
+   }
+
+   for($i=0; $i<(size($selectionList)); $i++)
+   {
+      $shapeNodes = `listRelatives -fullPath -allDescendents -type subdiv -type mesh -type nurbsSurface $selectionList[$i]`;
+      for($j=0; $j<(size($shapeNodes)); $j++)
+      {
+	 if((checkCompatible($approxNodeType, $shapeNodes[$j])) == 1)
+	 {				
+	    $existApproxAttrList = `listAttr -st $attrLongName $shapeNodes[$j]`;
+	    if(size($existApproxAttrList) > 0)
+	    {
+	       $existNodeConnections = `listConnections -d off -s on ($shapeNodes[$j] + "." + $attrLongName)`;
+	       if(size($existNodeConnections) > 0)
+	       {
+		  miWarn("Disconnecting existing " + $attrLongName + " on " + $shapeNodes[$j] + ". Assign a new approximation node\n");
+		  disconnectApproxAttr($existNodeConnections[0], $shapeNodes[$j], $attrLongName);
+	       }
+	       connectApproxAttr($approxNode, $shapeNodes[$j], $attrLongName);
+	    }				
+	    else 
+	    {
+	       addApproxAttribute($attrLongName, $attrShortName, $shapeNodes[$j]);
+	       connectApproxAttr($approxNode, $shapeNodes[$j], $attrLongName);
+	    }
+	 }
+	 else
+	 {
+	    miWarn("SKIPPED " + $approxNode + " : " + $shapeNodes[$j] + " not compatible");
+	 }
+      }
+   }
+}
+
+
+proc assignFlaggedApproxNode(string $approxNode, string $selectionList[])
+{	
+   string $approxNodeType = `nodeType $approxNode`;
+   string $shapeNodes[];
+   string $existApproxAttrList[];
+   string $existNodeConnections[];
+   string $attrLongName;
+   string $attrShortName;
+		
+   switch ($approxNodeType) 
+   {
+      case "mentalrayDisplaceApprox":
+	 $attrLongName = "miDisplaceApprox";
+	 $attrShortName = "mida";
+	 break;
+      case "mentalraySurfaceApprox":
+	 $attrLongName = "miSurfaceApprox";
+	 $attrShortName = "misa";
+	 break;
+      case "mentalrayCurveApprox":
+	 $attrLongName = "miCurveApprox";
+	 $attrShortName = "mitca";
+	 break;
+      case "mentalraySubdivApprox":
+	 $attrLongName = "miSubdivApprox";
+	 $attrShortName = "miva";
+	 break;
+   }
+
+   for($i=0; $i<(size($selectionList)); $i++)
+   {
+      $shapeNodes = `listRelatives -fullPath -allDescendents -type subdiv -type mesh -type nurbsSurface $selectionList[$i]`;
+      for($j=0; $j<(size($shapeNodes)); $j++)
+      {
+	 if((checkCompatible($approxNodeType, $shapeNodes[$j])) == 1)
+	 {				
+	    $existApproxAttrList = `listAttr -st miApproxList $shapeNodes[$j]`;
+	    if(size($existApproxAttrList) > 0)
+	    {
+	       $existNodeConnections = `listConnections -d off -s on ($shapeNodes[$j] + ".miApproxList")`;
+	       if(size($existNodeConnections) > 0)
+	       {
+		  // verify we are not connected already...
+		  int $connected = 0;
+		  for( $conn in $existNodeConnections )
+		  {
+		     if ( $conn == $approxNode )
+		     {
+			miWarn($approxNode + " : already connected to " + 
+			       $shapeNodes[$j]);
+			$connected = 1;
+			break;
+		     }
+		  }
+		  if ( $connected ) continue;
+	       }
+	       connectApproxListAttr($approxNode, $shapeNodes[$j]);
+	    }				
+	    else 
+	    {
+	       addApproxListAttribute($shapeNodes[$j]);
+	       connectApproxListAttr($approxNode, $shapeNodes[$j]);
+	    }
+	 }
+	 else
+	 {
+	    miWarn("SKIPPED " + $approxNode + " : " + $shapeNodes[$j] + " not compatible");
+	 }
+      }
+   }
+}
+
+
+proc doAssignFlaggedApproxNode(string $approxNode)
+{
+   string $selectionList[];
+   $selectionList = findSelection();
+   assignFlaggedApproxNode($approxNode, $selectionList);
+}
+
+proc doAssignApproxNode(string $approxNode)
+{
+   string $selectionList[];
+   $selectionList = findSelection();
+   assignApproxNode($approxNode, $selectionList);
+}
+
+proc updateApproxNodeList(string $approxNodeTypeShort)
+{
+   string $approxNodeList[];
+   string $rowLayout = ("mrlApproxEditorWindow|cc|rb|cl|rl" + $approxNodeTypeShort);
+   string $optionMenu = ($rowLayout + "|omrl|om");	
+   string $approxNodeType;
+   string $menuLabel;
+   string $multiSingle;
+   switch ($approxNodeTypeShort) 
+   {
+      case "displaceApprox":
+	 $approxNodeType = "mentalrayDisplaceApprox";
+	 break;
+      case "surfaceApprox":
+	 $approxNodeType = "mentalraySurfaceApprox";
+	 break;
+      case "curveApprox":
+	 $approxNodeType = "mentalrayCurveApprox";
+	 break;
+      case "subdivApprox":
+	 $approxNodeType = "mentalraySubdivApprox";
+	 break;
+   }
+
+   $approxNodeList = `ls -l -type $approxNodeType`;
+
+   $menuList = `optionMenu -q -ill $optionMenu`;
+
+   for($i=1; $i<(size($menuList)); $i++)
+   {
+      $menuLabel = `menuItem -q -label $menuList[$i]`;
+      if ($menuLabel != "DeriveFromMaya")
+      {  
+	 deleteUI $menuList[$i];
+      }
+   }
+
+   for($i=0; $i<(size($approxNodeList)); $i++)
+   {
+      $menu = `menuItem -label ($approxNodeList[$i]) -parent $optionMenu`;
+   }
+
+   $multiSingle = findCreateOptions();
+}
+
+proc disableEnableEditAssign(string $approxNodeTypeShort)
+{
+   string $approxNode = findApproxNodeName($approxNodeTypeShort);
+   string $rowLayout = ("mrlApproxEditorWindow|cc|rb|cl|rl" + $approxNodeTypeShort);
+   string $assignButton = ($rowLayout + "|assignButton");
+   string $editButton = ($rowLayout + "|editButton");
+   string $createButton = ($rowLayout + "|createButton");
+   string $flaggedUI = "mrlApproxEditorWindow|cc|rb|flaggedApproximationCheck";
+   int $flagged = `checkBoxGrp -q -v1 $flaggedUI`;
+   if ($approxNode == "DeriveFromMaya")
+   {
+      button -edit -enable false $editButton;
+      button -edit -enable false $assignButton;
+      if ($flagged)
+      {
+	 button -edit -l "Create Flag." -enable true $createButton;
+      }
+      else
+      {
+	 button -edit -l "Create" -enable true $createButton;
+      }
+   }
+   if ($approxNode != "DeriveFromMaya") 
+   {
+      button -edit -enable true $editButton;
+      if ($flagged)
+      {
+	 button -edit -l "Create Flag." -enable true $createButton;
+	 if ( isFlaggedApproximation( $approxNode ) )
+	 {
+	    button -edit -enable true $assignButton;
+	 }
+	 else
+	 {
+	    button -edit -enable false $assignButton;
+	 }
+      }
+      else
+      {
+	 button -edit -l "Create" -enable false $createButton;
+	 button -edit -enable true $assignButton;
+      }
+   }
+}
+
+proc createFlaggedApproxFlags(string $approxNode)
+{
+   addAttr -ln miVisible   -sn miv -at bool $approxNode;
+   addAttr -ln miTrace     -sn mit -at bool $approxNode;
+   addAttr -ln miShadow    -sn mis -at bool $approxNode;
+   addAttr -ln miCaustic   -sn mic -at bool $approxNode;
+   addAttr -ln miGlobIllum -sn mig -at bool $approxNode;
+}
+
+proc createAssignFlaggedApproxNode(string $approxNodeTypeShort, 
+				   string $multiSingle)
+{
+   string $selectionList[];
+   string $multiSelection[];
+   $selectionList = findSelection();
+   string $approxNodeType;
+   string $approxNode;
+   string $createApproxNodeList[];
+   switch ($approxNodeTypeShort) 
+   {
+      case "displaceApprox":
+	 $approxNodeType = "mentalrayDisplaceApprox";
+	 break;
+      case "surfaceApprox":
+	 $approxNodeType = "mentalraySurfaceApprox";
+	 break;
+      case "curveApprox":
+	 $approxNodeType = "mentalrayCurveApprox";
+	 break;
+      case "subdivApprox":
+	 $approxNodeType = "mentalraySubdivApprox";
+	 break;
+   }
+	
+   if($multiSingle == "single")
+   {
+      $approxNode = createApproxNode($approxNodeType);
+      createFlaggedApproxFlags($approxNode);
+      assignFlaggedApproxNode($approxNode, $selectionList);
+      $createApproxNodeList[0] = $approxNode;
+   }
+   else if($multiSingle == "multi")
+   {
+      for($i=0; $i<(size($selectionList)); $i++)
+      {
+	 $approxNode = createApproxNode($approxNodeType);
+	 createFlaggedApproxFlags($approxNode);
+	 $createApproxNodeList[$i] = $approxNode;
+	 $multiSelection[0] = $selectionList[$i];
+	 assignFlaggedApproxNode($approxNode, $multiSelection);
+      }
+   }
+
+   updateApproxNodeList($approxNodeTypeShort);
+   if( `checkBoxGrp -q -v1 showHypergraphCheck`)
+   {
+      showHypergraph($createApproxNodeList);
+   }
+
+   if ($multiSingle == "single")
+   {
+      selectApproxMenu($approxNode, $approxNodeTypeShort);
+   }
+   disableEnableEditAssign($approxNodeTypeShort);
+}
+
+
+
+proc createAssignApproxNode(string $approxNodeTypeShort, string $multiSingle)
+{
+   string $selectionList[];
+   string $multiSelection[];
+   $selectionList = findSelection();
+   string $approxNodeType;
+   string $approxNode;
+   string $createApproxNodeList[];
+   switch ($approxNodeTypeShort) 
+   {
+      case "displaceApprox":
+	 $approxNodeType = "mentalrayDisplaceApprox";
+	 break;
+      case "surfaceApprox":
+	 $approxNodeType = "mentalraySurfaceApprox";
+	 break;
+      case "curveApprox":
+	 $approxNodeType = "mentalrayCurveApprox";
+	 break;
+      case "subdivApprox":
+	 $approxNodeType = "mentalraySubdivApprox";
+	 break;
+   }
+	
+   if($multiSingle == "single")
+   {
+      $approxNode = createApproxNode($approxNodeType);
+      assignApproxNode($approxNode, $selectionList);
+      $createApproxNodeList[0] = $approxNode;
+   }
+   else if($multiSingle == "multi")
+   {
+      for($i=0; $i<(size($selectionList)); $i++)
+      {
+	 $approxNode = createApproxNode($approxNodeType);
+	 $createApproxNodeList[$i] = $approxNode;
+	 $multiSelection[0] = $selectionList[$i];
+	 assignApproxNode($approxNode, $multiSelection);
+      }
+   }
+
+   updateApproxNodeList($approxNodeTypeShort);
+   if( `checkBoxGrp -q -v1 showHypergraphCheck`)
+   {
+      showHypergraph($createApproxNodeList);
+   }
+
+   if ($multiSingle == "single")
+   {
+      selectApproxMenu($approxNode, $approxNodeTypeShort);
+   }
+   disableEnableEditAssign($approxNodeTypeShort);
+}
+
+global proc mrl_call_disableEnableEditAssign()
+{
+   // disable/enable the Edit and Assign buttons 
+   // if the $approxNode = "DeriveFromMaya" or if flagged is on.
+   disableEnableEditAssign "surfaceApprox";
+   disableEnableEditAssign "curveApprox";
+   disableEnableEditAssign "displaceApprox";
+   disableEnableEditAssign "subdivApprox";
+}
+
+
+global proc update_mentalApproxEditor()
+{
+   // update the menuItems for all four.
+   updateApproxNodeList "surfaceApprox";
+   updateApproxNodeList "curveApprox";
+   updateApproxNodeList "displaceApprox";
+   updateApproxNodeList "subdivApprox";
+}
+
+
+global proc mrl_call_AE(string $approxNodeTypeShort)
+{
+	string $approxNode = findApproxNodeName($approxNodeTypeShort);
+	evalDeferred("showEditor " + $approxNode);
+}
+
+global proc mrl_call_createAssignApproxNode(string $approxNodeTypeShort)
+{
+   string $multiSingle = findCreateOptions();
+   string $flagged = "mrlApproxEditorWindow|cc|rb|flaggedApproximationCheck";
+   if (`checkBoxGrp -q -v1 $flagged`)
+   {
+      createAssignFlaggedApproxNode $approxNodeTypeShort $multiSingle;
+   }
+   else
+   {
+      createAssignApproxNode $approxNodeTypeShort $multiSingle;
+   }
+
+}
+
+global proc mrl_call_doAssignApproxNode(string $approxNodeTypeShort)
+{
+   string $approxNode = findApproxNodeName($approxNodeTypeShort);
+
+   if ( isFlaggedApproximation( $approxNode ) )
+   {
+      doAssignFlaggedApproxNode $approxNode;
+      $createApproxNodeList[0] = $approxNode;
+      if( `checkBoxGrp -q -v1 showHypergraphCheck`)
+      {
+	 showHypergraph($createApproxNodeList);
+      }
+   }
+   else
+   {
+      doAssignApproxNode $approxNode;
+      $createApproxNodeList[0] = $approxNode;
+      if( `checkBoxGrp -q -v1 showHypergraphCheck`)
+      {
+	 showHypergraph($createApproxNodeList);
+      }
+   }
+}
+
+global proc mrl_update_approxNodeOptionMenu()
+{
+   $selectionList = `ls -l -sl`;
+   string $approxNodeTypeShort;
+   string $approxNodeType;
+   string $approxNode;
+   string $lookForApproxNodes[] = {"mentalrayDisplaceApprox", "mentalraySurfaceApprox", "mentalrayCurveApprox", "mentalraySubdivApprox"};
+   string $connectedApproxNodes[];
+   string $attrLongName;
+   string $attrShortName;
+
+   // This needs to work only if a single surface is selected.
+   if (size($selectionList) == 1)
+   {
+      // now check if the selection is a surface.
+      $shapeNodes = `listRelatives -fullPath -allDescendents -type subdiv -type mesh -type nurbsSurface $selectionList[0]`;
+      if (size($shapeNodes) > 0)
+      {
+	 // find all the approximation nodes connected to it and update the option menu
+	 for($i=0; $i<(size($lookForApproxNodes)); $i++)
+	 {
+	    $approxNodeType = $lookForApproxNodes[$i];
+	    switch ($approxNodeType) 
+	    {
+	       case "mentalrayDisplaceApprox":
+		  $approxNodeTypeShort = "displaceApprox";
+		  break;
+	       case "mentalraySurfaceApprox":
+		  $approxNodeTypeShort = "surfaceApprox";
+		  break;
+	       case "mentalrayCurveApprox":
+		  $approxNodeTypeShort = "curveApprox";
+		  break;
+	       case "mentalraySubdivApprox":
+		  $approxNodeTypeShort = "subdivApprox";
+		  break;
+	    }	
+	    $connectedApproxNodes = `listConnections -type $lookForApproxNodes[$i] $shapeNodes[0]`;
+	    if (size($connectedApproxNodes) == 1)
+	    {
+	       // navigate to the appropriate optionMenu and set it to the $connectedApproxNode
+	       $approxNode = $connectedApproxNodes[0];	
+	       selectApproxMenu($approxNode, $approxNodeTypeShort);
+	       disableEnableEditAssign($approxNodeTypeShort);	 
+	    }
+	    else if (size($connectedApproxNodes) == 0)
+	    {
+	       // navigate to the appropriate optionMenu and set it to "derive from maya"
+	       $approxNode = "DeriveFromMaya";
+	       selectApproxMenu($approxNode, $approxNodeTypeShort);
+	       disableEnableEditAssign($approxNodeTypeShort);
+	    }
+	 }
+      }
+   }
+   else if (size($selectionList) == 0)
+   {
+      for($i=0; $i<(size($lookForApproxNodes)); $i++)
+      {
+	 $approxNodeType = $lookForApproxNodes[$i];
+	 switch ($approxNodeType) 
+	 {
+	    case "mentalrayDisplaceApprox":
+	       $approxNodeTypeShort = "displaceApprox";
+	       break;
+	    case "mentalraySurfaceApprox":
+	       $approxNodeTypeShort = "surfaceApprox";
+	       break;
+	    case "mentalrayCurveApprox":
+	       $approxNodeTypeShort = "curveApprox";
+	       break;
+	    case "mentalraySubdivApprox":
+	       $approxNodeTypeShort = "subdivApprox";
+	       break;
+	 }
+	 $approxNode = "DeriveFromMaya";
+	 selectApproxMenu($approxNode, $approxNodeTypeShort);
+	 disableEnableEditAssign($approxNodeTypeShort);
+      }
+   }
+}
+
+proc createControl(string $title, string $approxNodeTypeShort)
+{
+   rowLayout 
+   -numberOfColumns 5
+   -columnWidth 1 200 -columnWidth 2 200 
+   ("rl" + $approxNodeTypeShort);
+
+   text 
+   -width 150
+   -label $title t;
+		
+   rowLayout
+   -width 200
+   -columnAttach 1 "left" 0
+   omrl;
+
+   optionMenu 
+   -label ""
+   -changeCommand ("mrl_call_disableEnableEditAssign") om;
+
+   menuItem 
+   -label "DeriveFromMaya" "Default";
+
+   setParent -menu ..;
+
+   setParent ..;
+
+   button 
+   -label "Create"
+   -command ("mrl_call_createAssignApproxNode " + $approxNodeTypeShort)
+   -annotation "Create new approximation" 
+   createButton;
+
+   button 
+   -label "Edit"
+   -command ("mrl_call_AE " + $approxNodeTypeShort)
+   -annotation "Edit approximation" 
+   editButton;
+
+   button 
+   -label "Assign"
+   -command ("mrl_call_doAssignApproxNode " + $approxNodeTypeShort)
+   -annotation "Assign approximation to selected object" 
+   assignButton;
+
+   setParent ..;
+}
+
+
+
+global proc mentalApproxEditor()
+{
+   if (!`window -exists mrlApproxEditorWindow`) 
+   {
+      window 
+      -resizeToFitChildren true
+      -title "mental ray Approximation Editor"
+      mrlApproxEditorWindow;
+
+      columnLayout cc;
+      separator -style "none" -height 5;
+		
+      columnLayout rb;
+      radioButtonGrp -numberOfRadioButtons 2
+      -label "Approx nodes created" -labelArray2 "Single" "Multi \(per selection\)" -select 1 singleMultiRadioGrp;
+
+      checkBoxGrp  -numberOfCheckBoxes 1 
+      -label "Show in Hypergraph" -v1 false showHypergraphCheck ;
+
+      checkBoxGrp  -numberOfCheckBoxes 1 
+        -label "Flagged Approximation" -v1 false
+        -changeCommand ("mrl_call_disableEnableEditAssign")
+        flaggedApproximationCheck;
+
+      setUITemplate -pushTemplate attributeEditorTemplate;
+      columnLayout cl;
+      createControl "Surface Approx.\(NURBS\)" "surfaceApprox";
+      createControl "Trim Curve Approx.\(NURBS\)" "curveApprox";
+      createControl "Displace Approx.\(NURBS, Poly, Subdiv\)" "displaceApprox";
+      createControl "Subdivision Approx. \(Poly, Subdiv\)" "subdivApprox";
+      setParent ..;
+      setUITemplate -popTemplate;
+
+      setParent ..;
+
+      scriptJob 
+      -parent mrlApproxEditorWindow
+      -event deleteAll update_mentalApproxEditor;
+
+      scriptJob 
+      -parent mrlApproxEditorWindow
+      -event SelectionChanged mrl_update_approxNodeOptionMenu;
+   }
+   showWindow mrlApproxEditorWindow;
+   update_mentalApproxEditor;
+   mrl_call_disableEnableEditAssign;
+}

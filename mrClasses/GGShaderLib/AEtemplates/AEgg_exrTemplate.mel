@@ -1,0 +1,195 @@
+
+
+// For ggShowHelp() 
+source "gg_mray_aux.mel";
+
+//      Desc: Shows the help string for the passed checkBox
+// $checkBox: the checkBox the user clicked on...
+global proc AEgg_exrTemplateDocs( string $checkBox,
+				  string $name )
+{
+   //=========================
+   // define help texts
+   //=========================
+   string $tx;
+   switch ( $name )
+   {
+      case "Compression":
+	 $tx =
+	 "This determines the compression to use when saving image.\n" +
+	 "\n" +
+	 "NONE  means no compression.  File size will be biggest, but load\n" +
+	 "      access should be fast.\n" +
+	 "RLE   means Run Length Encoding.  This mode compresses adjacent\n" +
+	 "      pixels when they are identical.  Fast to load but may not\n" +
+	 "      compress much on complex images.\n" +
+	 "PIZ   A wavelet transform is applied to the pixel data, and the\n" +
+	 "      result is Huffman-encoded.  This scheme tends to provide\n" +
+	 "      the best compression ratio for the types of images that\n" +
+	 "      are typically processed at Industrial Light & Magic. Files\n" +
+	 "      are compressed and decompressed at roughly the same speed.\n" +
+	 "      For photographic images with film grain, the files are\n" +
+	 "      reduced between 35 and 55 percent of their uncompressed\n" +
+	 "      size.\n" +
+	 "      PIZ compression works well for scan-line-based files, and\n" +
+	 "      also for tiled files with large tiles, but small tiles do\n" +
+	 "      not shrink much. (PIZ-compressed data start with a\n" +
+	 "      relatively long header; if the input to the compressor is\n" +
+	 "      short, adding the header tends to offset any size\n" +
+	 "      reduction of the input.)\n" +
+	 "PIZ12 is like PIZ, but the data is reduced to 12-bits first.\n" +
+	 "      Format is not lossless.\n" +
+	 "ZIP   Differences between horizontally adjacent pixels are\n" +
+	 "      compressed using the open source zlib library, in blocks\n" +
+	 "      of 16 scan lines. ZIP decompression is faster than PIZ\n" +
+	 "      decompression, but ZIP compression is significantly\n" +
+	 "      slower. Photographic images tend to shrink to between\n" +
+	 "      45 and 55 percent of their uncompressed size.\n" +
+	 "      Multiresolution files are often used as texture maps for\n" +
+	 "      3D renderers. For this application, fast read accesses are\n" +
+	 "      usually more important than fast writes, or maximum\n" +
+	 "      compression. For texture maps, ZIP is probably the best\n" +
+	 "      compression method. \n" +
+	 "ZIPS  is like ZIP, but only one scan line at a time.\n" +
+	 "PXR24 is Pixar's 24-bit compression format.  This is a lossy\n" +
+	 "      format (ie. it discards data), but can be useful for Z\n" +
+	 "      channel images.\n";
+	 break;
+      case "Pixel Type":
+	 $tx =
+	 "This determines the pixel type to use for " +
+	 "user frame buffers.\n\n" +
+	 "FLOAT saves data as a full 32-bit float.\n" +
+	 "HALF  saves data as a 16-bit float, loosing some precision.\n" +
+	 "UINT  saves data as a 32-bit unsigned integer.\n";
+	 break;
+   }
+   
+   ggShowHelp( $checkBox, "gg_exr Shader", $name, $tx );
+}
+
+//
+//  Procedure Name:
+//	AEgg_exrNameNew 
+//
+
+global proc AEgg_exrNameNew (string $fileAttribute)
+{
+   setUITemplate -pst attributeEditorTemplate;
+   rowLayout -nc 3 textureNameLayout;
+   text -l "Image Name";
+   textField textureNameField;
+   symbolButton -image "navButtonBrowse.xpm" browser;
+   setParent ..;
+   setUITemplate -ppt;
+	
+   AEgg_exrNameReplace $fileAttribute;
+}
+
+//
+//  Procedure Name:
+//	AEgg_exrNameReplace
+//
+
+global proc AEgg_exrNameReplace (string $fileAttribute)
+{
+   connectControl -fileName textureNameField $fileAttribute;
+
+   string $command = "AEgg_assignTextureCB "+" "+$fileAttribute;
+
+   button -e -c
+     ("AEgg_fileTextureBrowser \"" + $command + "\"" ) browser;
+}
+
+global proc AEgg_exrPixelTypeNew( string $plug )
+{
+   rowLayout -nc 2
+   -columnAlign  1 "right"
+   -columnAlign  2 "left"
+   -columnAttach 1 "both"  0
+   -columnAttach 2 "both"  0;
+   symbolButton -width 20 -image "gg_info.xpm" -c ("AEgg_exrTemplateDocs \"gg_exrPixelType\" \"Pixel Type\"") gg_exrPixelType;
+   attrEnumOptionMenuGrp
+              -l "PixelType"
+              -at $plug
+              -ei  0 "Half"
+              -ei  1 "Float"
+              -ei  2 "Uint"
+	exrPixelTypeCtrl
+	;
+   setParent ..;
+}
+
+
+//
+// Routine to replace a pulldown of whats
+//
+global proc AEgg_exrPixelTypeReplace( string $plug )
+{
+  attrEnumOptionMenuGrp -e -at $plug exrPixelTypeCtrl;
+}
+
+
+global proc AEgg_exrCompressionNew( string $plug )
+{
+   rowLayout -nc 2
+   -columnAlign  1 "right"
+   -columnAlign  2 "left"
+   -columnAttach 1 "both"  0
+   -columnAttach 2 "both"  0;
+   symbolButton -width 20 -image "gg_info.xpm" -c ("AEgg_exrTemplateDocs \"gg_exrCompression\" \"Compression\"") gg_exrCompression;
+   attrEnumOptionMenuGrp
+              -l "Compression"
+              -at $plug
+              -ei  0 "None"
+              -ei  1 "RLE"
+              -ei  2 "PIZ"
+              -ei  3 "PIZ12"
+              -ei  4 "ZIP"
+              -ei  5 "ZIPS"
+              -ei  6 "PXR24"
+	exrCompressionCtrl
+	;
+   setParent ..;
+}
+
+
+//
+// Routine to replace a pulldown of whats
+//
+global proc AEgg_exrCompressionReplace( string $plug )
+{
+  attrEnumOptionMenuGrp -e -at $plug exrCompressionCtrl;
+}
+
+//
+//  Procedure Name:
+//	AEgg_exrTemplate
+//
+
+
+global proc AEgg_exrTemplate ( string $nodeName )
+{
+   AEswatchDisplay $nodeName;
+   editorTemplate -beginScrollLayout;
+   editorTemplate -beginLayout "File Attributes" -collapse 0;
+   editorTemplate -l "Single File" -addControl "singleFile";
+   
+   editorTemplate -callCustom "AEgg_exrNameNew" "AEgg_exrNameReplace" "filename";
+   editorTemplate -l "Padding" -addControl "padding";
+   
+   editorTemplate -beginLayout "EXR Options" -collapse 0;
+   editorTemplate -callCustom "AEgg_exrCompressionNew" "AEgg_exrCompressionReplace" "compression";
+   editorTemplate -callCustom "AEgg_exrPixelTypeNew" "AEgg_exrPixelTypeReplace" "pixeltype";
+   editorTemplate -endLayout;
+   
+   // suppressed attributes
+   editorTemplate -suppress "singleFile";
+   editorTemplate -suppress "filename";
+   editorTemplate -suppress "padding";
+   editorTemplate -suppress "compression";
+   editorTemplate -suppress "pixeltype";
+   
+   editorTemplate -addExtraControls;
+   editorTemplate -endScrollLayout;
+}

@@ -1,0 +1,34 @@
+
+If I understood the license correctly, per the Mozilla and the mental ray
+licenses, it is necessary to disclose also the following information:
+
+The mental ray scene description language (also known as .mi or .mi2 scene 
+format) is the creation of mental images GmbH, Berlin, Germany.
+
+mental images also holds the following registered trademarks:
+
+imatter
+mental images
+mental matter
+mental ray
+Reality Server
+SPM
+
+and the following trademarks:
+
+incremental images
+iray
+IRP
+mental cave
+mental ray Phenomenon
+mental ray Phenomena
+mental ray Relay
+Phenomenon
+Phenomena
+Phenomenon Editor
+Phenomenon Creator
+Photon Map
+Relay
+
+This and accompanying technical and non-technical documentation may refer to 
+those under the fair use act.

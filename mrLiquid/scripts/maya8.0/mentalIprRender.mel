@@ -1,0 +1,20 @@
+
+
+global proc string mentalIprRender(int $resX, int $resY, 
+				   int $doShadows, int $doGlowPass, 
+                                   string $camera)
+{
+   eval("mental -imr on -prg off -x " + $resX + " -y " + $resY + 
+        " -cam " + $camera); 
+
+   if ( `menu -exists mentalMenu` )
+   {
+      menuItem -e -en off mentalIPRStart;
+      menuItem -e -en on  mentalIPROptions;
+      menuItem -e -en on  mentalIPRProgressive;
+      menuItem -e -en on  mentalIPRStop;
+      menuItem -e -en on  mentalIPRPause;
+      menuItem -e -en off mentalIPRContinue;
+   }
+   return "";
+}

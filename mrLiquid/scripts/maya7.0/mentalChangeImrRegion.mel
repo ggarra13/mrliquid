@@ -1,0 +1,9 @@
+
+
+global proc mentalChangeImrRegion(string $editor)
+{
+    if (eval("mental -q -imr"))
+    {
+       eval("mental -region");
+    }
+}

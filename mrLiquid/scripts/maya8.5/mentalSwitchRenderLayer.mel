@@ -1,0 +1,105 @@
+
+//  Copyright (c) 2004-2006, Gonzalo Garramuno
+//  All rights reserved.
+//
+//  Redistribution and use in source and binary forms, with or without
+//  modification, are permitted provided that the following conditions are
+//  met:
+//  *       Redistributions of source code must retain the above copyright
+//  notice, this list of conditions and the following disclaimer.
+//  *       Redistributions in binary form must reproduce the above
+//  copyright notice, this list of conditions and the following disclaimer
+//  in the documentation and/or other materials provided with the
+//  distribution.
+//  *       Neither the name of Gonzalo Garramuno nor the names of
+//  its other contributors may be used to endorse or promote products derived
+//  from this software without specific prior written permission. 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+//  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+//  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+//  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+//  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+//  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+//  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+//  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+
+/** 
+ * Switch to a new render pass, applying overrides.
+ * Run post-commands of previous pass, first. 
+ * 
+ * @param  newPass Name of new pass
+ * 
+ * @return nothing
+ */
+global proc mentalSwitchRenderLayer( string $newPass )
+{
+   global string $gMentalCmd; 
+   int $language;
+   string $code;
+   string $currPass = mentalGetCurrentRenderLayer();
+   string $plug;
+   string $overrides[];
+   string $cmd = $gMentalCmd + " -q -imr";
+   int $ipr = eval($cmd);
+
+   if (  $ipr == 0 )
+   {
+      string $attr    = "mrOverrides";
+      string $valid[] = `listAttr -st $attr $currPass`;
+      if ( size($valid) != 0 )
+      {
+	 //
+	 // Get postCommands on each override and run them
+	 // in descending order.
+	 //
+	 $plug    = $currPass + "." + $attr;
+	 $overrides = `listConnections -s on -d off $plug`;
+	 int $num = size($overrides);
+	 int $i;
+	 for ( $i = $num - 1; $i >= 0; $i-- )
+	 {
+	    $plug = $overrides[$i] + ".language";
+	    $language = `getAttr $plug`;
+	    $plug = $overrides[$i] + ".postCommands";
+	    $code = `getAttr $plug`;
+	    mentalRunCode($language, $code);
+	 }
+      }
+   }
+   
+
+   mentalSetCurrentRenderLayer($newPass);
+   if ( $newPass == "" ) return;
+   
+   $attr  = "mrOverrides";
+   $valid = `listAttr -st $attr $newPass`;
+   if ( size($valid) == 0 ) return;
+
+   
+   if (  $ipr == 0 )
+   {
+      //
+      // Get preCommands on each override and run them
+      // in ascending order.
+      //
+      $plug = $newPass + "." + $attr;
+      $overrides = `listConnections -s on -d off $plug`;
+      int $num = size($overrides);
+      int $i;
+      for ( $i = 0; $i < $num; $i++ )
+      {
+	 $plug = $overrides[$i] + ".language";
+	 $language = `getAttr $plug`;
+	 $plug = $overrides[$i] + ".preCommands";
+	 $code = `getAttr $plug`;
+	 mentalRunCode($language, $code);
+      }
+   }
+
+}
+

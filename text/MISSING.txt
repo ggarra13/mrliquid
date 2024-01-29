@@ -1,0 +1,23 @@
+
+
+Compared to maya2mr, these are the main things that are currently 
+not supported (yet):
+
+1)  ** DONE **
+2)  ** DONE **
+3)  ** DONE **
+4)  ** DONE **
+5)  **DONE**
+6)  **DONE**  
+7)  **DONE**
+8)  **DONE**
+9)  **DONE**
+10) **DONE**
+11) **DONE**
+
+The main reason for the above stuff missing is twofold:
+a) I had no time to do it all just yet :)
+b) Some of those will require changing completely how that stuff works 
+   in maya2mr as the maya2mr/Alias implementation of all of the above is, 
+   imo, not that great.
+   I need to think on it for a while before I jump to code it in...

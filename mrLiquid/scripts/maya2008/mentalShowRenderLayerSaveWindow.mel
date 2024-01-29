@@ -1,0 +1,198 @@
+//
+//  Copyright (c) 2004, Gonzalo Garramuno
+//  All rights reserved.
+//
+//  Original MEL code this files is based on
+//  Copyright Andrew Chapman 2003-2004 - chapman AT technolumiere.com
+//  Used by permission from the author.
+//
+//
+//  Redistribution and use in source and binary forms, with or without
+//  modification, are permitted provided that the following conditions are
+//  met:
+//  *       Redistributions of source code must retain the above copyright
+//  notice, this list of conditions and the following disclaimer.
+//  *       Redistributions in binary form must reproduce the above
+//  copyright notice, this list of conditions and the following disclaimer
+//  in the documentation and/or other materials provided with the
+//  distribution.
+//  *       Neither the name of Gonzalo Garramuno nor the names of
+//  its other contributors may be used to endorse or promote products derived
+//  from this software without specific prior written permission. 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+//  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+//  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+//  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+//  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+//  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+//  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+//  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+
+proc string getRenderScenesDir()
+{
+  string $res[] = `workspace -q -renderType`;
+  int $i;
+  string $basedir = `workspace -q -fullName`;
+  for($i=0; $i<size($res); $i++) {
+    if ($res[$i] == "renderScenes") {
+      //return ($basedir + "/" + $res[$i+1]);
+      return $res[$i+1];
+    }
+  }
+  //return ($basedir + "/renderScenes");
+  return "renderScenes";
+}
+
+proc string getRenderScenesBaseName()
+// This function definition by Jeremy Bloch (jeremy AT brppi.com) after
+// he found the original one was still only returning a temporary name
+{
+  string $filename = `file -q -sceneName`;
+  if ($filename == "") {
+    $filename = "untitled";
+  } else {
+    string $chunks[];
+    int $numChunks;		
+    $numChunks = tokenize($filename, "/", $chunks); // break filename up at slash
+    $filename  = $chunks[$numChunks-1];	            // last part (index starts at zero)
+    $numChunks = tokenize($filename, ".", $chunks); // break up at period
+    $filename  = $chunks[$numChunks-2];	            // lose file extension
+  }
+  return ($filename);
+}
+
+global proc mentalSaveRenderLayerScenes()
+{
+  // save a record of what the current pass and scene name is
+  string $originalPass = mentalGetCurrentPass();
+  string $originalSceneDir = `workspace -q -objectTypeEntry scene`;
+  string $originalSceneName = `file -q -sceneName`;
+  if ($originalSceneName == "") {
+    $originalSceneName = "untitled";
+  }
+
+  // go through all passes in the dialog, setting the current pass
+  // and saving them out in turn
+  string $outputDir = `textFieldGrp -q -text "mentalRenderLayerSaveWindow|renderPassSaveLayout|outputDirField"`;
+  workspace -ot "scene" $outputDir;
+  string $checkboxes[] = `columnLayout -q -childArray "mentalRenderLayerSaveWindow|renderPassSaveLayout|renderPassSavePassesFrame|scrollLO|renderPassSavePassesFrameColLayout"`;
+  int $i;
+  int $saved = 0;
+  for($i=0; $i<size($checkboxes); $i++) {
+    if (`checkBox -q -value $checkboxes[$i]`) {
+      string $passName = `checkBox -q -label $checkboxes[$i]`;
+      print("Saving out pass: " + $passName + "\n");
+      mentalApplyRenderLayer $passName;
+      string $sceneBaseName = `textFieldGrp -q -text "mentalRenderLayerSaveWindow|renderPassSaveLayout|baseNameField"`;
+      file -rename ($sceneBaseName + "_" + $passName);
+      string $format = "mayaBinary";
+      if (`radioButtonGrp -q -select "mentalRenderLayerSaveWindow|renderPassSaveLayout|outputFormat"` == 2) {
+        $format = "mayaAscii";
+      }
+      file -save -type $format;
+      $saved = 1;
+    }
+  }
+
+  //if (!$saved) {
+  //
+  //}
+
+  // set the original current pass back again
+  mentalApplyRenderLayer $originalPass;
+  workspace -ot "scene" $originalSceneDir;
+  file -rename $originalSceneName;
+}
+
+global proc mentalShowRenderLayerSaveWindow()
+{
+   // check to make sure we've got at least one
+   // mentalRenderLayer node in the scene
+   string $pass[] = `ls -type mentalRenderLayer`;
+   int $numPasses = size($pass);
+   if ($numPasses == 0)
+   {
+      mentalSetupDefaultRenderLayeres;
+      $pass = `ls -type mentalRenderLayer`;
+      $numPasses = size($pass);
+   }
+
+   if (`window -exists mentalRenderLayerSaveWindow`) {
+      deleteUI -window mentalRenderLayerSaveWindow;
+   }
+
+  window -title "Save Render Pass Scenes"
+  -topLeftCorner 185 300 -width 630 -height 460 mentalRenderLayerSaveWindow;
+  formLayout renderPassSaveLayout;
+
+  // output name/path
+  textFieldGrp   -columnWidth 1 100 -adjustableColumn 2
+  -label "Base Name:" -text `getRenderScenesBaseName` baseNameField;
+  textFieldGrp   -columnWidth 1 100 -adjustableColumn 2
+  -label "Output Dir:" -text `getRenderScenesDir` outputDirField;
+  radioButtonGrp -columnWidth 1 100 -label "Format" -numberOfRadioButtons 2
+  -label1 "Binary" -label2 "Ascii" -select 1 outputFormat;
+
+  // list all the passes as checkboxes
+  frameLayout -label "Select Passes to Save" -collapsable true renderPassSavePassesFrame;
+  scrollLayout -horizontalScrollBarThickness 0 scrollLO;
+  columnLayout -adj true renderPassSavePassesFrameColLayout;
+  int $i;
+  for($i=0; $i<$numPasses; $i++)
+  {
+    string $passName = $pass[$i];
+    checkBox -align "left" -label $passName;
+  }
+  if ($numPasses == 0) {
+    text -label ""; // hack - fix display glitch when we've got an empty list
+  }
+  setParent ..;
+  setParent ..;
+  setParent ..;
+
+  // save/cancel buttons
+  formLayout buttonsForm;
+    button -height 25 -label "Save Selected Passes"
+    -command "mentalSaveRenderLayerScenes" saveButton;
+    button -height 25 -label "Cancel"
+    -command "deleteUI -window mentalRenderLayerSaveWindow" cancelButton;
+  setParent ..;
+
+  formLayout -edit -af saveButton "left" 0 -ap saveButton "right" 0 50
+  -ap cancelButton "left" 0 50 -af cancelButton "right" 0 buttonsForm;
+
+  setParent ..;
+  
+  formLayout -edit
+  -af baseNameField "top" 0
+  -ac outputDirField "top" 0 baseNameField
+  -af baseNameField "left" 0
+  -af baseNameField "right" 0
+  -af outputDirField "left" 0
+  -af outputDirField "right" 0 renderPassSaveLayout;
+
+  formLayout -edit
+  -ac outputFormat "top" 0 outputDirField
+  -af outputFormat "left" 0
+  -af outputFormat "right" 0 renderPassSaveLayout;
+  
+  formLayout -edit
+  -ac renderPassSavePassesFrame "top" 0 outputFormat
+  -af renderPassSavePassesFrame "left" 0
+  -af renderPassSavePassesFrame "right" 0 renderPassSaveLayout;
+
+  formLayout -edit
+  -aof buttonsForm "top" -30
+  -af buttonsForm "left" 0
+  -af buttonsForm "right" 0 renderPassSaveLayout;
+
+  formLayout -edit
+  -ac renderPassSavePassesFrame "bottom" 0 buttonsForm renderPassSaveLayout;
+
+  showWindow mentalRenderLayerSaveWindow;
+}

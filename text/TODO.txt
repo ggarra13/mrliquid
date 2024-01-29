@@ -1,0 +1,240 @@
+mrLiquid
+--------
+
+  - Mayatomr starts traversal right away (if we consider warnings of map),
+    while mrLiquid takes much longer.  Potential optimize area?
+
+  - Spitting of meshes is a tad slow compared to mayatomr (albeit more
+    efficient in disk space).  Problem with slowness of in_hash function?
+
+  - Thread safety.  Turn all write*(MRL_FILE*) functions into
+     write( mrTranslator* ).
+     getData() functions should become getData( mrTranslator* ).
+     Move options and globals into mrTranslator.
+     
+  - Refactor globals into mrTranslator to make thread safe.
+
+  - Multiple render contexts.  The ability to have multiple IPRs
+    or converters running simultaneously.
+
+  - Make all code be part of a namespace like mrl.
+
+  - Baking of textures or geometry as a standard mrLiquid render pass.
+
+  - Create a mrl_exr_env for loading spherical/cubic EXR environment maps.
+
+  - Make mapVizShape show photon map points properly.
+
+  - Make mrIPRCallbacks::stop() work better when rendering multiple
+    cameras/layers.  It should abort rendering of ALL layers/cameras.
+    We need a flag for nextCamera and one for nextLayer so we update
+    render stament once a render for a layer/camera has finished.
+
+  - Verify IPR all layers/cameras works fine when switching/adding/
+    removing new camera/layer.
+
+  - Add other shader swatches besides a ball.
+
+  - Clean up a portion of mrTranslator and added support for 
+    multiple render contexts.
+
+  - Add support for creating shader balls with a separate render context.
+
+  - Add support for displaying shader in OpenGL (maya 8.0) with
+    a separate render context using MPxMaterialInformation.
+
+  - Add utility for quicktime creation from exr images.
+    That is: exr2mov.
+
+  - Create shadow passes:
+		    * static shadow pass
+		    * animated shadow pass
+		    * deep shadow pass
+
+  - Add a compositing pass (or support maya's render layers' compositing)
+
+  - Add render set to pass
+
+  - Add support for ffmpeg shader for loading/saving wmv, avi
+    and quicktime.
+
+
+MEL
+---
+	   - Create a mental render globals if possible.
+	     Add a new mental Render Globals that shows
+	     mentalray's settings in a tabbed format (MUCH nicer).
+
+	   - Add a Light Manager (see highend3d)
+	     Both lightGirl and ab_* are nice.  lightGirl is more
+	     powerful but uses tons of screen space.  Also, not
+	     sure if fully mray aware.
+	   - Add a Texture Manager.  This tool allows you to easily
+	     list all textures in your scene and change them using
+	     regular expressions.
+	   - Add new AE*Template for approximations to show flagged 
+	     approximations a tad nicer, instead of in the 'Extra' tab.
+	   - Add a demo project and some maya scenes to distribution.
+
+
+TODO
+----
+1) More Speed, Less memory.  Ideas...
+   a) Make sure all class data is aligned for size.
+   b) Make booleans use 1 bit using :1 notation?  How much performance hit vs
+      space savings?
+   c) Change some enums to chars/shorts, as enums in C/C++ go to ints 
+      usually -yuck.
+   d) Improve the .mi language description to support more binary stuff in it
+      or add a plugin parser so I can use my own tokenized mi files.
+   e) Get rid of auxiliary nodes and make sure mray supports per component
+      color<>scalar connections directly.
+   f) Allow for automatic shader/geometry caching thru $include files.
+      Need recursive geometry shaders, but some stuff we can do without.
+   g) Add shader parameter changing from instances (need to improve the .mi
+      scene description?)
+   h) Write my own vprintf() function to speed up printing and print floats in
+      mray format.
+2) **DONE**
+3) **DONE**
+4) **DONE**
+5) **DONE**
+6) **DONE**
+7) **DONE**
+8) **DONE**
+9) Particles
+   Particles are mostly done (only tubes cannot be rendered).  The octree
+   and its traversal, however, could use some work, as we are often much
+   slower than the maya shaders (at least on simple scenes).
+10) **DONE**
+11) **DONE**
+12) **DONE**
+13) **DONE**
+14) Curves?  Do we want to render curves individually?  Probably good
+    to use for ropes and similar.  mray's curve primitive is crap for anything
+    other than hair, as normals flip along its length.
+15) **DONE**
+16) **DONE**
+17) Translator preferences    **IN PROGRESS**  about 90% done
+    Currently I have added all the maya2mr flags but not all are functional.
+18) **DONE**
+19) **DONE** (override flags not supported yet)
+20) **DONE**
+21) **DONE**
+22) **DONE**
+23) **DONE**
+24) **DONE**
+25) **DONE**
+27) Document the code.  **IN PROGRESS**
+28) **DONE**
+29) **DONE**
+30) **DONE**
+31) **DONE**
+32) Integrate with CLR or Parrot.  Bah!  Forget about them.
+    ruby's YARV is the future.
+33) Build my own hypergraph?  Well, maya's hypergraph has been slowly getting
+    better on each release.  Perhaps there's still hope...
+34) **DONE**
+35) **DONE**
+36) **DONE**
+37) Add support for dynamic translation of objects (ie. spit all objects
+    as bboxes with geoshader calls) --only raylib
+38) **DONE**
+39) **DONE**
+
+
+OPTIMIZATIONS
+-------------
+1) **DONE**
+2) Carefully go thru all the classes' data and align the data so less
+   space is taken.  Do checks and stats printing of each class
+   with sizeof().
+3) *DONE*
+4) *DONE*
+5) **DONE?**
+
+TO VERIFY
+---------
+1) **DONE**
+2) **DONE**
+3) Why is maya2mr changing | to : now?  Ouch, emulating the new 
+   Export Exact Hierarchy is a mess of new nodes!  Need to figure out
+   why this is needed at all.  It should not be needed.  This is probably
+   another mess of mental images and alias.
+
+mray3.3/4 features to add (these will require changes to the maya MEL GUI)
+-----------------------
+1) ** DONE **
+2) ** DONE **
+3) Approximations inheritance thru overrides?
+4) ** DONE **
+
+
+
+rmanLiquid
+----------
+
+- Primitives
+  - Mesh		*DONE*
+  - NurbsSurface
+    - Uniform		*DONE*
+    - Non-rational      *DONE*
+    - Trims
+  - CC Mesh		*DONE*
+    - Creases
+    - Holes
+  - Hrc Subd		*UNSUPPORTED BY PIXIE*
+    - Creases
+  - Particles
+  - Hair
+  - Fur
+  - Fluids
+  - Volume Objects
+  - File Objects
+  - File Assemblies
+  - Coordinate Systems
+
+- Cameras
+  - Image Planes
+
+- Lights
+  - Ambient
+  - Directional
+  - Point
+  - Spot
+  - Area
+  - IBL
+  - User Object
+  - Custom Renderman Shader
+  - Light Profile
+
+- Shadow maps
+  - Spot
+  - Point
+  - Deep Shadow maps
+
+- Shading Networks
+  - Shaders (use 3delights)
+  - Flattening to single shader
+  - Recompile thru IPR?
+
+- Frame buffers
+  - RGB
+  - A
+  - Z
+  - Normals
+  - ST
+  - Coverage
+  - Tag
+  - User Defined (unnamed)
+  - User Defined (named)
+
+- mentalrayOutputs
+  - Display Drivers
+  - User Defined (unnamed)
+  - User Defined (named)
+
+
+- IPR
+  - Plane shader with special dso to stop render.
+  

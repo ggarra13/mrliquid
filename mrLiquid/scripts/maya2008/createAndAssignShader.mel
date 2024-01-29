@@ -1,0 +1,156 @@
+// Copyright (C) 1997-2004 Alias Systems Corp.
+// 
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias license agreement, without fee.
+// 
+// ALIAS DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+
+//
+//  Alias Script File
+//  MODIFY THIS AT YOUR OWN RISK
+//
+//  Creation Date:  Oct 6, 2000
+//
+//  Description:
+//      This script creates menu items to add shaders to an object.
+//
+
+global proc showShadingGroupAE(string $shader)
+//
+//	If the option to show the attribute editor is on, then
+//	display the attribute editor for the object $shader.
+//
+{
+	if (`optionVar -q AEpopupWhenCreatingShaders`) {
+		string $cmd = ("showEditor " + $shader);
+		evalDeferred -lowestPriority $cmd;
+	}
+}
+
+global proc createAndAssignShader (string $type, string $item)
+//
+//	Create a shader of the given type and assign it to the
+//	given object.
+//
+//	$type = type of shader
+//	$item = object to act on, if empty then use the selection list
+//
+{
+	string $objs[];
+	string $assignString = $item;
+	if ($item == "") {
+		// No object was specified in the call to this procedure, so we will
+		// assign the shader to whatever is on the current selection list 
+		// instead.
+		//
+		$objs = `ls -selection`;
+		$assignString = "the selected objects";
+	}
+	else
+	{
+		//
+		// The $item is always an object, never a component (ie face).
+		// If the current selection contains faces of the specified item, then
+		// we would rather assign the new shader to the specifically selected
+		// faces rather than the object as a whole. In particular, this allows
+		// users to select faces of a poly object and use the RMB menu to
+		// assign shaders to them.
+		// 
+
+		string $selection[] = `ls -selection`;
+		int $i;
+
+		for ($i = 0; $i < size($selection); $i++)
+		{
+			if (`match ($item + "\\.f\\[.*\\]") $selection[$i]` != "")
+			{
+				// One part of the currently selection is faces of the
+				// specified item. We will add the selected faces to the list
+				// of objects to which the shader will be assigned.
+				//
+				$objs[size($objs)] = $selection[$i];
+				$assignString = ("the selected faces of " + $item);
+			}
+		}
+
+		if (size($objs) == 0)
+		{
+			// Try again with the shape. Face selection will be names
+			// after the shape when other shapes are parented below the
+			// transform.
+			string $shapes[] = `listRelatives -s $item`;
+			if (size($shapes) > 0 )
+			{
+				string $shape = $shapes[0];
+				for ($i = 0; $i < size($selection); $i++)
+				{
+					if (`match ($shape + "\\.f\\[.*\\]") $selection[$i]` != "")
+					{
+						$objs[size($objs)] = $selection[$i];
+						$assignString = ("the selected faces of " + $shape);
+					}
+				}
+			}
+		}
+
+		if (size($objs) == 0)
+		{
+			// There were no faces of the specified item in the current
+			// selection. Therefore, we will assign the shader to the entire
+			// object specified.
+			//
+			$objs[0] = $item;
+		}
+	}
+
+	$material = `shadingNode -asShader $type`;
+	$sg = `sets -renderable true -noSurfaceShader true 
+				-empty -name ($material + "SG")`;
+
+	// Connect the material to the shading group
+	//
+	defaultNavigation 
+		-connectToExisting 
+		-source $material
+		-destination $sg;
+
+	// For mentalray shaders, connect the surfaceShader attribute.
+	connectAttr -f ($material + ".message") ($sg + ".surfaceShader");
+
+	// Select the items to which the shading group is to be assigned.
+	//
+	select -r $objs;
+
+	// Assign the shading group to the selected objects.
+	//
+	if( $type == "oceanShader" ){
+		connectAttr -f ($material + ".displacement") ($sg + ".displacementShader");
+		connectAttr -f "time1.outTime" ($material + ".time");
+		assignOceanShader $sg;
+	} else {
+		hyperShade -assign $sg;
+	}
+	if( $type == "fluidShape" ){
+		connectAttr -f "time1.outTime" ($material + ".currentTime");
+	}
+
+	print ("// Result: Created " + $type + " shader and assigned to "
+		+ $assignString + ". //\n") ;
+
+	showShadingGroupAE($sg);
+	
+//	string $state = `menuItem -q -cb attrEdPopupItem`;
+//	if ($state == 1)
+//	{
+//		string $cmd = ("showEditor " + $sg);
+//		evalEcho $cmd;
+//	}
+}

@@ -1,0 +1,64 @@
+
+
+
+source "gg_mray_aux.mel";
+
+
+
+global proc AEgg_mixTypeNew( string $plug )
+{
+      attrEnumOptionMenuGrp
+              -l "Normal Mix Type"
+              -at $plug
+              -ei  0 "Replace"
+              -ei  1 "Add"
+              -ei  2 "Multiply"
+	mixTypeCtrl
+	;
+}
+
+
+//
+// Routine to replace a pulldown of mixTypes
+//
+global proc AEgg_mixTypeReplace( string $plug )
+{
+  attrEnumOptionMenuGrp -e -at $plug mixTypeCtrl;
+}
+
+global proc AEgg_rgbdisplacementTemplate( string $nodeName )
+{
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	   editorTemplate 
+	     -beginLayout "RGB Displacement Attributes" 
+	     -collapse 0;
+
+	       editorTemplate  -beginLayout "Main" -collapse 0;
+		   editorTemplate -addControl "intensity";
+	       editorTemplate -endLayout;
+
+	       editorTemplate  -beginLayout "Direction" -collapse 0;
+		   editorTemplate -callCustom 
+		     "AEgg_mixTypeNew" 
+		     "AEgg_mixTypeReplace" 
+		     "mixType";
+		   editorTemplate 
+		     -label "Direction" 
+		     -addControl "direction";
+		   editorTemplate -callCustom 
+		     "AEgg_vectorSpaceNew" 
+		     "AEgg_vectorSpaceReplace" 
+		     "space";
+
+	       editorTemplate -endLayout;
+
+	   editorTemplate -endLayout;
+
+	   AEdependNodeTemplate $nodeName;
+
+	   editorTemplate -addExtraControls;
+
+	editorTemplate -endScrollLayout;
+}

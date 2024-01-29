@@ -1,0 +1,58 @@
+
+
+source "gg_mray_aux.mel";
+
+
+
+global proc AEgg_ambientocclusionTemplate( string $nodeName )
+{
+
+	AEswatchDisplay $nodeName;
+	editorTemplate -beginScrollLayout;
+
+	   editorTemplate 
+	     -beginLayout "Ambient Occlusion Shader Attributes" 
+	     -collapse 0;
+
+		editorTemplate -beginLayout "Main" -collapse 0;
+		   editorTemplate -addControl "blocker";
+		   editorTemplate -addControl "useProbes";
+		editorTemplate -endLayout;
+
+		editorTemplate -beginLayout "Sampling" -collapse 0;
+		     editorTemplate -addControl "nearSamples";
+		     editorTemplate -addControl "nearDistance";
+		     editorTemplate -addControl "farSamples";
+		     editorTemplate -addControl "farDistance";
+		editorTemplate -endLayout;
+
+		editorTemplate -addControl "transparency";
+
+		editorTemplate -beginLayout "Ray" -collapse 0;
+		   editorTemplate -label "Spread"    -addControl "angle";
+		   editorTemplate -label "Near Attenuation" -addControl "minFalloff";
+		   editorTemplate -label "Far  Attenuation" -addControl "maxFalloff";
+		editorTemplate -endLayout;
+
+
+		editorTemplate -beginLayout "Bent Normal" -collapse 0;
+		   editorTemplate -label "Calculate" -addControl "calculateNormal";
+		   editorTemplate -label "Difference" -addControl "useNormalDifference";
+		   editorTemplate -label "Normal Buffer" -addControl "useNormalBuffer";
+		   editorTemplate -callCustom "AEgg_normalSpaceNew" 
+		     "AEgg_normalSpaceReplace" "normalSpace";
+		editorTemplate -endLayout;
+
+	   editorTemplate -endLayout;
+
+	   editorTemplate -suppress "normalCamera";
+	   editorTemplate -suppress "normalSpace";
+
+	   AEdependNodeTemplate $nodeName;
+
+	   editorTemplate -addExtraControls;
+
+	editorTemplate -endScrollLayout;
+}
+
+

@@ -1,0 +1,15 @@
+
+global proc string mentalRender(int $resX, int $resY, 
+				int $doShadows, int $doGlowPass, 
+				string $camera, string $option)
+{
+   eval("mental -preview -x " + $resX + " -y " + $resY + 
+        " -cam " + $camera + " " + $option); 
+
+   if ( `menu -exists mentalMenu` )
+   {
+      menuItem -e -en off mentalStartRender;
+      menuItem -e -en on  mentalStopRender;
+   }
+   return "";
+}

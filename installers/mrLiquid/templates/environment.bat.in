@@ -1,0 +1,36 @@
+REM
+REM Environment settings for <%ShortAppName%> <%Version%>.  
+REM Source these from cmd.exe before starting maya <%MayaVersion%>.
+REM
+set MRL_ROOT="<%InstallDir%>/<%ShortAppName%>/<%Version%>/<%Platform%>/<%Arch%>"
+
+REM
+REM Add license (change 127.0.0.1 to your license server if needed)
+REM
+set RLM_LICENSE=2764@127.0.0.1
+
+REM
+REM Add module path
+REM
+set MRL_MODULE="%MRL_ROOT%/maya<%MayaVersion%>"
+set MAYA_MODULE_PATH="%MRL_MODULE%;%MAYA_MODULE_PATH%"
+
+REM
+REM Modify user's PATH variable
+REM
+set MRL_PLUGIN="%MRL_MODULE%/plug-ins"
+set MRL_SHADERS="%MRL_ROOT%/shaders/mentalray<%MrayVersion%>"
+set PATH="%MRL_PLUGIN%;%MRL_ROOT%/bin;%PATH%"
+
+REM
+REM For mental ray
+REM
+set MI_CUSTOM_SHADER_PATH="%MRL_SHADERS%;%MI_CUSTOM_SHADER_PATH%"
+set MI_RAY_INCPATH="%MRL_SHADERS%;%MI_RAY_INCPATH%"
+set MI_LIBRARY_PATH="%MRL_SHADERS%;%MI_LIBRARY_PATH%"
+
+REM
+REM For Ruby
+REM
+set RUBYLIB="%MRL_ROOT%/lib/ruby/<%RubyVersion%>;%RUBYLIB%"
+

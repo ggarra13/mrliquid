@@ -1,0 +1,54 @@
+
+
+
+global proc mentalNewFramebuffer( int $outputPass )
+{
+   // Make sure miDefaultOptions exists
+   miCreateDefaultNodes();
+
+   // Create new user buffer
+   string $buffer = `createNode mentalrayUserBuffer`;
+
+   connectAttr -na ($buffer + ".message") miDefaultOptions.frameBufferList;
+
+   // Make it an RGBA float buffer by default
+   setAttr ( $buffer + ".dataType" ) 5;
+
+   // Set its buffer index to begin at 8 + idx, to avoid the default
+   // 0-7 framebuffers you can create from render settings panel.
+   int $num = `getAttr -size miDefaultOptions.frameBufferList`;
+   setAttr ($buffer + ".bufferIndex") ($num+8);
+
+   print("// Added a new rgba float buffer.\n");
+
+   if ( $outputPass )
+   {
+      // Create an output pass for that buffer too
+      string $output    = `createNode mentalrayOutputPass`;
+
+      // Set the output to be a half EXR file by default
+      setAttr ($output + ".fileMode") 1;
+      setAttr ($output + ".fileFormat") 27;
+      setAttr ($output + ".dataType") 16;
+      string $filename = "$RNDR/" + $output + ".@.exr";
+      setAttr -type "string" ($output + ".fileName") $filename;
+
+      connectAttr -na ($buffer + ".message") ($output + ".userBuffers");
+
+      // Connect the output pass to each renderable camera
+      string $cameras[] = `ls -type camera`;
+
+      for ( $camera in $cameras )
+      {
+	 int $renderable = `getAttr ($camera + ".renderable")`;
+	 if ( $renderable == 0 ) continue;
+
+	 int $idx = `getAttr -size ($camera + ".miOutputShaderList")`;
+
+	 connectAttr ($output + ".message") 
+	             ($camera + ".miOutputShaderList[" + $idx + "]");
+
+	 print("// Added its output to camera \"" + $camera + "\".\n");
+      }
+   }
+}

@@ -1,0 +1,512 @@
+
+These set of classes simplifies usage of the mental ray API, by using
+C++ wrappers.
+It uses some advanced but now well supported C++ features in modern 
+compilers (VC7.1, gcc3+, Intel).  These classes will likely not work
+properly or at all on machines with not so great compilers (SGI, etc).
+
+Classes have currently been tested on VC 7.1 and VC6 with the Intel 
+compiler.
+
+
+LICENSE
+-------
+
+The mrClasses distribution is covered by a modified BSD license; see
+the file named LICENSE.txt (included in this distribution) for details.
+
+
+FEATURES
+--------
+
+- Stack trace in case of crashes.
+- Optional memory debugging and logging (MR_MEM_CHECK).
+- Optional automatic NAN checks on every operation and
+  assignment on debug builds (MR_DEBUG).
+- A comprehensive vector/point/normal classes supporting:
+    + overloadad operators
+    + fast concatenation of operations
+    + swizzle operators
+    + simple transformation among different spaces
+    + support for array access  ( N[0] in addition to N.x )
+    + some useful manipulation routines (mix, etc)
+    + 100% compatible with any routine using miVector or miVector*.
+    + matrix multiplication (automatically knowing how to based on
+      type)
+- A comprehensive color class supporting:
+    + overloaded operators
+    + fast concatenation of operations
+    + swizzle operators
+    + support for array access  ( Cl[0] in addition to Cl.r )
+    + simple transformation among different spaces (hsv,ycc,ypp)
+    + color validity checks (isPremult, isInRange, isPositive)
+    + some useful color manipulation routines
+      (saturation, lumma, mix, gamma, etc)
+    + 100% compatible with any routine using miColor or miColor*.
+- New matrix class supporting querying of mray's internal matrices,
+  and common matrix operations and access.  SSE support provided.
+- New streams, overloads and macros, replacing mi_info() and similar
+  routines, for printing easily like:
+
+	    mr_info(state);
+	    mr_info("We print a color here: " << Cl); 
+
+- Fast math routines for typical functions in graphics
+  (inversesqrt, trigonometric functions, ceil/floor(), round(), etc)
+- Improved Perlin noise on 1,2,3 and 4 dimensions, with support for
+  periodic, signed and unsigned noise.
+- Worley Noise, supporting multiple distance calculations and
+  arbitrary dimensions.
+- Cellnoise
+- Routines for calculating derivatives (dPds, dPdu, Du(), du, etc.),
+  including the possibility of calculating derivatives of 
+  arbitrary expressions (using a point cache scheme in displacements)
+- Bump mapping routines supporting:
+     + linear bump mapping
+     + parallax bump mapping
+     + blinn bump mapping
+- Mutex class for simple miLocks.
+- 70-80% Renderman SL compatability thru a collection of functions and
+  macros, with identical or very similar syntax.
+- Templated Spline supporting linear, catmull-clark, bspline, 
+  bezier, and power basis.
+- Samplers wrapping mi_sample() for:
+      + spherical sampling
+      + hemisphere sampling (cosine, uniform distributions)
+      + disk sampling (concentric, uniform distributions)
+- A collection of filters: box, triangle, gaussian, sinc, disk,
+			   mitchell, catmullrom, bessel, lanczos
+  Useful for texture sampling, sample compositing, etc.
+- A very basic and barebones profiler class.
+- A collection of simple shaders demonstrating the use of the library.
+  All come with sample .mi files and some with AEtemplates that 
+  work with maya.
+- Contains some optional SSE optimizations (thru a compiler flag)
+
+
+WHAT'S INCLUDED
+---------------
+
+mrClasses,  a group of demo shaders,the corresponding .mi files for the
+demo shaders, AEtemplates for some shaders to use in maya.
+
+WHAT YOU MAY NEED
+-----------------
+If you want to build all of the shaders and mrClasses, you will need
+to download:
+
+* Bash
+Standard in any linux or osx distribution.
+For Windows, install cygwin ( www.cygwin.com ) or MSYS ( www.mingw.org )
+
+* CMake
+www.cmake.org
+This is a kickass replacement for Makefiles/GNU's autoconf.
+
+* OpenEXR
+ILM's OpenEXR library.
+www.openexr.org
+
+You can still build the library and shaders without OpenEXR, but some
+stuff (mainly gg_exr_standalone.cpp) will not work.
+
+
+HISTORY
+-------
+
+mrClasses was written in some spare time in about 3-4 months, while being 
+bored in Argentina.  But its roots date way back.
+
+Ever since my working at DD, I started learning and tinkering with C++.
+One of the original things I experimented with back then, was to wrap the 
+C apis of Softimage SAAPHIRE and mental ray into C++ code 
+(Back then, this just meant overloading operators and it was pretty damn
+horrible and inefficient code, as my code usually looks when I am testing 
+new ideas).
+At a following smaller and now defunct company, a second attempt at mrClasses
+ began timidly, as a more elaborate rewrite, expanding on that previous 
+experience.  Use of templates was minimum or non-existant due to the state 
+of compilers back then, but much groundwork was placed to completely 
+replace the miColor and similar structs by proper C++ classes.  
+Sadly, the company more or less closed before much testing had been done
+with it.  The code would later provide useful at other places.
+This third rewrite was my idea to push template use more (as described by 
+blinn), while at the same time I added new ideas that came my way.
+I also wanted to be able to take advantage of any open source code available,
+and start setting up a framework so that if there was enough interest, it 
+would be relatively easy to  add/remove code that would access 
+graphic cards, too.
+
+
+This new version has not yet been really battle tested under ANY real 
+production and as such, ugly bugs are bound to still be lurking around.  
+Also, there's still a big list of things to add or change (see TODO).
+
+
+WHY RELEASE IT?
+---------------
+A bunch of reasons, I guess.  On one hand, our industry is maturing, so most 
+of the stuff contained herein is not such a technological advantage anymore.
+I also happen to change companies every now and then and find myself 
+re-writing similar code time and again.  And hell, I hate writing code.
+Hopefully providing an open source repository will help me (and others) do
+it faster, instead of starting from scratch.  And perhaps, someone will
+come around and do a much better job than me so I can dedicate myself to just
+doing artistic stuff :)
+I also like helping out smart kids with their problems, as they usually
+reward you by creating something cool and teaching you something else in
+return.
+Finally, I thought it was fitting and overdue that someone finally sat down
+and shared some code the way the renderman community does.  
+
+
+COMPILING
+---------
+
+* ALL Platforms
+
+Open a bash window, then run:
+
+> cd Directory/of/mrClasses  # directory where mrClasses is located
+> ./mk
+
+
+
+
+A BASIC INTRODUCTION
+--------------------
+
+All the C++ wrappers are all under the namespace "mr", albeit some other
+namespaces within mr are also used.
+Thus, the usual usage of mrClasses to start your shader like:
+
+#include "mrGenerics.h"
+using namespace mr;
+
+Note that shader.h, math.h, etc. are already automatically included.
+The library is also fully compatible with the STL, but you have to be
+careful when using vectors as both mr::vector and std::vector mean quite
+different things.
+
+Within mrClasses, you will find equivalent classes for most mi??? structs.
+Thus, for miVector, there is a mr::vector, mr::point, and mr::normal.
+For miColor, there's mr::color.
+For miMatrix, there's mr::matrix.
+
+All these classes overload all the standard operators to allow easy
+operations and comparisons.  
+
+Vectors / Points / Normals
+--------------------------
+
+Unlike mray, there exist classes identifying each type for easier
+manipulation.  All of them derive from miVector, so they are backwards
+compatible with it.
+
+In vectors and normals, Overloading of ^ and % is used for cross product 
+and dot product where appropiate (to make it similar to renderman, and
+not to respect operator precendence, which in my experience, is not so
+much an issue - Use parenthesis to desambiguate).
+Ex:    miScalar dot_nl = N % L
+       normal N = dPdu ^ dPds
+
+Mnemonics: % finds where a point is in front/behind a plane.
+           ^ is two perpendicular vectors at an angle.
+
+Classes support to/fromSPACE for transformations and transform().
+Ex:    P.toNDC(state);
+       N.toObject(state);
+
+Swizzle operators are provided for assignment and reading.
+Ex:    Nflip = N.zyx();
+       Nflip.zyx( N );
+
+Assignment and reading of components is possible thru indicess, too.
+Ex:    miScalar x = P[0];
+       P[i] *= 2;
+
+Most concatenated operations are transformed (thru the magic of templates)
+into single channel operations.
+Ex:    point Psum, P0, P1, P2;
+       Psum = P0 + P1 * P2;
+With a good compiler should become:
+       point Psum, P0, P1, P2;
+       Psum.x = P0.x + P1.x * P2.x;
+       Psum.y = P0.y + P1.y * P2.y;
+       Psum.z = P0.z + P1.z * P2.z;
+unlike your typical vector class.
+Note that some compilers limit the amount of nested templates for evaluation
+so check that you set your settings for the maximum template recursion.
+For windows, this is done in mrWin32.h thru a couple of pragmas.
+
+
+Objects are inited to 0 by default, but can be left without initing.
+Ex:	point P0;   // P0 = [0,0,0]
+	point P0( kNoInit );   // P0 =[?,?,?] like miVector declaration.
+                               // x,y,z contain random numbers, not 0.
+
+For more information, consult the .h files.
+
+
+Color
+-----
+
+Very similar features to vectors.
+Color operations work similar to prman, in that the alpha channel is NOT
+modified in any operations.  Not even in assignments.
+For assigning colors with alpha channel, the operator |= can be used.
+Thus...
+	color a,c;
+	c  = a;  // c.r = a.r, c.g = a.g, c.b = a.b, c.a = ?
+	c |= a;  // c.r = a.r, c.g = a.g, c.b = a.b, c.a = a.a
+
+A good mnemonic for this is to remember how colors are printed with
+mr_info(), where the alpha is separated by |:
+
+	( 1.0, 0.4, 0.2 | 1.0 )
+
+You can of course also manipulate the alpha manually, with:
+    c.a = 1.0f;
+or 
+    c[3] = 1.0f;
+
+
+Matrix
+------
+A tad more expensive than miMatrix, as it is not derived from it.
+
+Passing miMatrix pointers to functions is achieved by using:
+	matrix r,m1,m2;
+	mi_matrix_prod(&r,&m1,&m2);
+
+which tends to make more sense than mray's:
+      miMatrix r,m1,m2;
+      mi_matrix_prod(r,m1,m2);
+
+Most features of vectors are available (component access, constructor
+without initialization, etc).
+vectors, points and normals can be post-multiplied by a matrix, by doing:
+	 matrix m; point P;
+	 P *= m;
+or by the inverse as prman:
+	 P /= m;
+normals are automatically multiplied by the transpose of the matrix.
+
+The matrix class has several routines to take advantage of SSE optimizations
+(for AthlonXP,64 and Pentium3 or later processors).  These are turned on
+by default, using the MR_SSE flag and the windows' /G6 and /arch:SSE flags. 
+
+
+Streams
+-------
+
+Don't you hate printing and debugging things with mi_info and similar?
+I do.  As such, some stream classes and macros allow using C++ stream 
+syntax for easier debugging.
+
+Thus, instead of doing the cumbersome:
+    miColor test;
+    mi_info("%f %f %f %f", test.r, test.g, test.b, test.a);
+
+You can just do:
+    mr::color test;
+    mr_info(test);  // note the new mr_info() macro
+
+You can also print out the whole state, by just doing:
+    mr_info(state);
+
+And use C++ streams, like:
+    mr_info("This is a test of printing " << 1 << " color " << Cl);
+
+To turn tags into strings, a simple iostream manipulator is provided:
+   mr_info("My material is " << tag2name(state->material));
+
+Note that tag2name will only work on the master cpu which has the full
+scene database, and only if your program actually spits out object names.
+For example, for speed's sake, maya2mr, during previews, does not spit 
+out names.
+
+
+Math
+----
+
+Besides that, the mr::math class is a wrapper for platform
+independent math operations (cos, etc.) and for overloaded precision.
+This class is largely based on ILM's IMath.
+
+Its use is like:
+    math<float>::cos( number );
+
+
+FastMath
+--------
+Also, the mr::fastmath class provides some additional operators that
+trade precision for speed.
+Parts of mrClasses take advantage of these speed ups when possible.
+You probably should, too.
+
+
+Derivs
+------
+The mrDerivs.h provides common and easy to use routines for 
+calculating common derivatives.  dPdu, dPds, dNds, Du(), Dv(), du, dv,
+etc.
+See the shader gg_showinfo.cpp for examples of its use.
+
+
+Memory
+------
+As part of including mrClasses, the global new/delete operators are
+also overloaded, so that they call the mray's allocation functions.
+The mrMemory.h class also allows tracking memory leaks and usage by
+setting up the macro MR_MEM_CHECK.
+Be careful if you mix shaders with and without MR_MEM_CHECK, as you
+don't want to be doing new() with one set of calls and delete() with
+another.  Ideally, place your MR_MEM_CHECK shader first in the list
+of shaders loaded.
+
+
+Rman
+----
+Finally, for those used to renderman's shading language, the mrRman.h
+file provide an additional namespace called rsl which contains most of
+the functions of the RSL shading language, using an almost identical 
+syntax whenever possible.  
+Note, however, that string options are usually changed for enums instead.
+  
+These functions make it very practical to translate renderman shaders
+almost by doing cut/paste, but manual optimization and following mray
+conventions instead can still shell out better performance.
+
+The file mrRman_macros.h contains macros to easily map the structs within
+state to the prman equivalents.  So P will refer to state->point, N to
+state->normal, etc.   
+
+Note that objects within miState do NOT support the features of mr::vector
+and similar.
+
+
+Usage in a shader, goes something like:
+
+#include "mrGenerics.h"
+using namespace mr;
+
+
+To use renderman functionality, use:
+
+#include "mrGenerics.h"
+#include "mrRman.h"
+#include "mrRman_macros.h"  // so P is state->point, etc.
+
+using namespace mr;
+using namespace rsl;
+
+
+Perlin
+------
+This is an implementation of Improved Perlin noise.  That is, perlin noise
+without problems at lattice points.
+Versions are provided for signed noise (snoise [-1,1]), noise [0,1], and
+periodic functions of them.  
+
+
+Worley
+------
+A very standard worley noise implementation.
+
+
+Cell
+----
+A standard cellnoise implememtation, that does not suffer from some of the
+issues in other public domain code.
+
+
+Sampler
+-------
+A renderman11 kind-of wrapper, but smarter, for mi_sample().
+Example:
+
+ hemisphereSampler g( state->normal, 16 );
+
+ color result( kNoInit );
+ color CKd;
+
+ while ( g.cosine() )
+ {
+     if ( mi_trace_reflection( result, state, &g.direction() ) )
+     {
+         CKd += result;
+     }
+ }
+
+ CKd /= g.count();
+
+Note that this class does make mi_sample() loops a very tiny bit
+slower, as the g.cosine() or g.uniform() constructs cannot usually
+be optimized by the compiler.
+
+Mutex
+-----
+Don't you hate mi_locks, having to init them, release them, etc?
+mr::mutex will do that for you automatically.  Just do:
+
+	  static mr::mutex myLock;
+
+	  routine()
+	  {
+		myLock.lock();
+		// sensitive code
+		myLock.unlock();
+	  }
+
+The lock will be inited automatically on creation and removed on
+deletion.  Note that maya2mr, on windows, at least, is very, very bad
+about this and during loading of the .dll (when mutex is instantiated,
+mi_init_lock will NOT work properly and will make the dll not load).
+To work around the problem, you should not use static mr::mutex'es but
+use pointers to them which would be inited in one of the mray multiple
+_init (shader_init or module_init) routines.
+
+
+DOCUMENTATION
+-------------
+
+For more documentation, consult the source code.
+You can also run doxygen (an automatic documentation system) on mrClasses 
+to get a better perspective and html docs.
+
+
+Command-Line options
+--------------------
+
+When compiling your shaders, you can define some macros to change the
+behavior of the compilation.
+
+MR_MEM_CHECK
+This will re-define the global new and delete operators to allow for memory
+debugging.  This will catch all memory leaks using such operators and it 
+may also help to catch memory trashing.
+Note that mi_mem_allocate and malloc are NOT checked for correctness.
+
+MR_DEBUG
+This will turn on all assertions in the mrClasses.  By default, for speed
+reasons, the mrClasses do very little self checking of its functions and 
+of the parameters passed to them.
+When strange behavior occurs, this can sometimes help pinpoint problems.  
+This will also help catch NaNs, stopping the code right after a nan 
+assignment occurs.
+
+MR_SSE
+This is to enable SSE optimizations when possible.  SSE is originally
+an Intel optimization that works with Pentium3 or later cpus.  Latest AMD
+processors (Athlon64, AthlonXP) also support SSE optimizations.
+The default in the project is to have SSE optimizations on.
+SSE optimization can give anywhere from 25% to 300% speedup in some
+operations.  Currently, this is mostly used for matrix operations.
+
+CONTACT INFO
+------------
+
+Currently, I can be reached at ggarramuno@aol.com, but this address may 
+end up changing in some months.  Use the sourceforge web page if that's 
+the case.

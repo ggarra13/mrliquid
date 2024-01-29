@@ -1,0 +1,88 @@
+
+This is the description for a new scene specification, which can then
+be read by a geometry shader.
+This specification can be used for faster translation of scenes.
+
+
+TOKENS FOR GLOBAL OPTIONS
+type (float|double) vectors
+
+
+TOKENS FOR MAIN SECTIONS
+camera
+data
+declare
+end
+instance
+instgroup
+light
+material
+object
+profile
+render
+shader
+
+
+TOKENS FOR LIGHTS
+shadowmap
+direction
+cone
+samples
+profile
+
+
+TOKENS FOR OBJECTS
+tagged (needed?)
+
+keep   ( keep connectivity, uv and/or user vectors )
+
+basis NAME bezier|bspline [rational] DEGREE
+
+group
+	vectors		NUM  3*NUM sizeof(TYPE)
+			     VERTEX_POSITIONS
+			     NORMALS
+			     MOTION_VECTORS
+			     TEXTURE_VECTORS
+			     USER_VECTORS
+			     
+	vertices	NUM  NUM_COMPONENTS (n, num m, num t, num u)
+				     (NUM * NUM_COMPONENTS) indices
+	mesh
+		p/c	MATERIAL  VERTICES
+	subd
+		p	MATERIAL  VERTICES
+			split	  [6?|12?]*VERTICES
+	nurbs
+		surface BASIS(NAME) KNOTS
+	trilist
+
+vector
+volume
+texture
+
+
+
+TOKENS FOR INSTANCE
+transform (ie. matrix)  MATRIX
+material		NUM  MATERIALS
+
+TOKENS FOR OBJECTS/INSTANCES
+trace
+visible
+reflection
+refraction
+transparency
+opaque
+shadow
+caustic
+globillum
+
+approximate
+surface
+displacement
+trim
+fine
+parametric
+view
+tree

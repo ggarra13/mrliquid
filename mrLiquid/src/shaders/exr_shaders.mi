@@ -1,0 +1,83 @@
+#
+# This file contains shaders that rely on the OpenEXR library.
+#
+# They need to be grouped together to minimize library conflicts.
+#
+
+
+declare shader
+	color 				#: shortname "oc"
+	"gg_exr"
+	(
+		integer "padding",      #: shortname "pad" default 1  min 1 max 5
+		integer "pixeltype",    #: shortname "pt"  default 0  min 0 max 1
+		integer "compression"   #: shortname "c"   default 4  min 0 max 4
+	)
+	#:
+	#: nodeid 3019
+	#:
+	apply output
+	version 1
+end declare
+
+
+# File
+#
+declare shader
+	struct {				   
+		color		"outColor",	   #: shortname "oc"
+		scalar		"outAlpha",	   #: shortname "oa"
+		vector		"outSize",	   #: shortname "os"
+		boolean		"outFileHasAlpha", #: shortname "ofha"
+		color		"outTransparency", #: shortname "ot"
+		vector		"outNormal"        #: shortname "on"
+	} "mrl_exr_file" (
+		string	        "fileTextureName", #: shortname "ftn"
+		integer		"filterType",      #: shortname "ft"
+		scalar		"filterWidth",     #: shortname "fw"
+		boolean		"useMaximumRes",   #: shortname "umr"
+		# Inherited from Texture2d
+		vector		"uvCoord",	   #: shortname "uv"
+		vector		"uvFilterSize",    #: shortname "uvfs"
+		scalar		"filter",          #: shortname "f"
+		scalar		"filterOffset",    #: shortname "fo"
+		boolean		"invert",          #: shortname "i"
+		boolean		"alphaIsLuminance", #: shortname "ail"
+		color		"colorGain",        #: shortname "cg"
+		color		"colorOffset",      #: shortname "co"
+		scalar		"alphaGain",        #: shortname "ag"
+		scalar		"alphaOffset",      #: shortname "ao"
+		color		"defaultColor",     #: shortname "dc"
+		# New in Maya 4.5
+		boolean		"fileHasAlpha",     #: shortname "fha"
+		# New in Maya 6.5
+		boolean		"disableFileLoad",  #: shortname "dfl"
+		vector		"coverage",         #: shortname "cov"
+		vector		"translateFrame",   #: shortname "tf"
+		scalar		"rotateFrame",      #: shortname "rf"
+		boolean		"doTransform",      #: shortname "dot"
+		boolean		"mirrorU",          #: shortname "miu"
+		boolean		"mirrorV",          #: shortname "miv"
+		boolean		"stagger",          #: shortname "stg"
+		boolean		"wrapU",            #: shortname "wru"
+		boolean		"wrapV",            #: shortname "wrv"
+		vector		"repeatUV",         #: shortname "rpu"
+		vector		"offset",           #: shortname "off"
+		scalar		"rotateUV",         #: shortname "rou"
+		vector		"noiseUV",          #: shortname "nuv"
+		boolean		"blurPixelation",   #: shortname "bp"
+		vector		"vertexUvOne",      #: shortname "vuo"
+		vector		"vertexUvTwo",      #: shortname "vud"
+		vector		"vertexUvThree",    #: shortname "vut"
+		# New in Maya 8.0
+		integer		"normalEncoding",   #: shortname "ne"
+		integer		"normalSpace",      #: shortname "ns"
+		# New in Maya 8.5
+		boolean		"missingAlphaOpaque" #: shortname "mao"
+		)
+	#:
+	#: nodeid 6007
+	#:
+	apply texture
+	version 6
+end declare

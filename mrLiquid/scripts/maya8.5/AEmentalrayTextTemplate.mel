@@ -1,0 +1,100 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+proc mrl_add_script_type(string $node)
+{
+   string $attr[];
+   $attr = `listAttr -st scriptType $node`;
+   if ( size($attr) == 0 )
+   {
+	 addAttr -ln scriptType -sn sct -at enum -min 0 -max 3 -dv 0
+	 -en "Text:MEL:Ruby:Python" $node;
+   }
+}
+
+//****************************************************************************
+// The custom text editor.
+//****************************************************************************
+
+global proc miTextTemplateNew(string $attr)
+{
+	columnLayout -adj true -cat "both" 5 -rs 5 textcl;
+		scrollField -h 200 -nl 25 text;
+		rowLayout -nc 2 -cw2 80 80
+				-ct2 "both" "both"
+				-cl2 "center" "center"
+				-co2 2 2 textrl;
+			button -label (uiRes("m_AEmentalrayTextTemplate.kApply"))  
+				-annotation (uiRes("m_AEmentalrayTextTemplate.kStoreCurrentTextAnnot"))  texta;
+			button -label (uiRes("m_AEmentalrayTextTemplate.kClear"))  
+				-annotation (uiRes("m_AEmentalrayTextTemplate.kDeleteAllTextAnnot"))  textc;
+		setParent ..;
+	setParent ..;
+
+	miTextTemplateReplace $attr;
+}
+
+global proc miTextTemplateReplace(string $attr)
+{
+   string $node = `substitute "[a-zA-Z.]*$" $attr ""`;
+   mrl_add_script_type($node);
+
+	string	$txt = `getAttr $attr`;
+	scrollField -e -text $txt text;
+	button -e -c ("miTextApply " + $attr) texta;
+	button -e -c ("miTextClear " + $attr) textc;
+}
+
+global proc miTextApply(string $attr)
+{
+	string $txt = `scrollField -q -tx text`;
+	setAttr -type "string" $attr $txt;
+}
+
+global proc miTextClear(string $attr)
+{
+	scrollField -e -cl text;
+	setAttr -type "string" $attr "";
+}
+
+global proc AEmentalrayTextTemplate(string $node)
+{
+	editorTemplate -bsl;
+		editorTemplate -beginLayout (uiRes("m_AEmentalrayTextTemplate.kMiText"))  -cl 0;
+		editorTemplate -ccu "miTextTemplateNew"
+				    "miTextTemplateReplace" "text";
+		editorTemplate -as;
+		editorTemplate -label (uiRes("m_AEmentalrayTextTemplate.kCustomTextMode"))  -ac "mode";
+		editorTemplate -el;
+
+		editorTemplate -s "text";
+		editorTemplate -s "append";
+		editorTemplate -s "type";
+
+		// include/call base class/node attributes
+		AEdependNodeTemplate $node;
+
+		// suppressed attributes
+		editorTemplate -aec;
+
+	editorTemplate -esl;
+}
+

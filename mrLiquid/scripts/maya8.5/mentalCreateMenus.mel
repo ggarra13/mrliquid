@@ -1,0 +1,1428 @@
+
+//  Copyright (c) 2004-2006, Gonzalo Garramuno
+//  All rights reserved.
+//
+//  Redistribution and use in source and binary forms, with or without
+//  modification, are permitted provided that the following conditions are
+//  met:
+//  *       Redistributions of source code must retain the above copyright
+//  notice, this list of conditions and the following disclaimer.
+//  *       Redistributions in binary form must reproduce the above
+//  copyright notice, this list of conditions and the following disclaimer
+//  in the documentation and/or other materials provided with the
+//  distribution.
+//  *       Neither the name of Gonzalo Garramuno nor the names of
+//  its other contributors may be used to endorse or promote products derived
+//  from this software without specific prior written permission. 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+//  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+//  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+//  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+//  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+//  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+//  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+//  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+
+
+// source this script to make available assignSG command
+source "buildShaderMenus";
+source "mentalTraceGroups";
+source "mentalSetupDefaultRenderLayers";
+source "mentalRenderLayerOverridePanel";
+source "mentalIsLoaded";
+
+string $gMentalCmd        = "mental";
+string $gMentalFactoryCmd = "mentalFactory";
+string $gMentalRenderer   = "mental";
+string $gMentalConvertLightmapSetup = "mentalConvertLightmapSetup";
+if ( `getenv("MRL_NO_MAYA2MR")` != "" )
+{
+   if ( `pluginInfo -q -loaded Mayatomr` == 0 )
+   {
+     $gMentalCmd = "Mayatomr"; 
+     $gMentalRenderer = "mentalRay";
+     $gMentalFactoryCmd = "mrFactory";
+     $gMentalConvertLightmapSetup = "convertLightmapSetup";
+   }
+}
+
+
+//
+// Standard options for mrLiquid
+//
+int    $gMentalIPRMin      = -3;
+int    $gMentalIPRStep     =  1;
+string $gMentalIPRFlags    = "00";
+float  $gMentalIdleTime    = 0.1;
+string $gMentalCropContext = "";
+    
+// Description:  This procedure returns true if IPR is running by
+//  the current renderer, and false otherwise.
+//
+proc int isRunningIpr()
+{
+    string $isRunningIprProc = 
+		`renderer -q -isRunningIprProcedure (currentRenderer())`;
+	if ($isRunningIprProc !="" && eval($isRunningIprProc) ) 
+    {
+        return true;
+    }
+    return false;
+}
+
+// Description: Return mental's IPR image.
+//
+proc string mentalIPRImage()
+{
+   return mentalTempDir() + "/ipr.exr";
+}
+
+//
+// Description:
+//		Returns the render window editor, creates it if needed.
+//
+proc string getRenderWindowPanel()
+{
+   string $renderPanel;
+   string $renderPanels[] = `getPanel -scriptType "renderWindowPanel"`;
+
+   if( size($renderPanels) == 0 )
+   {
+      $renderPanel = `scriptedPanel -type "renderWindowPanel" -unParent`;
+      scriptedPanel -e -label `interToUI $renderPanel` $renderPanel;
+   }
+   else
+   {
+      $renderPanel = $renderPanels[0];
+   }
+
+   return $renderPanel;
+}
+
+//
+// Description:
+//		This procedure is called by TrenderWindowSelectCtx.cc that defines
+//	a region. It checks if a region can be rendered.
+//
+global proc mentalRenderWindowCheckAndRenderRegion
+( float	$top,    float	$left,
+  float	$bottom, float	$right )
+{	
+  //
+  //	If there's no current camera (first render), do what has to be
+  //	done...
+  //
+  string	$renderPanel = `getRenderWindowPanel`;
+  int		$snapped = 0;
+
+  if (!isRunningIpr() ) {
+    if( `renderWindowEditor -q -currentCamera $renderPanel` == "" )
+      {
+	//
+	//	Take a snapshot of the first persp camera found.
+	//
+	string $cameras[] = `listCameras -perspective`;
+
+	if( size($cameras) )
+	  {
+	    string	$camera = $cameras[0];
+	    string	$panel = `getCameraPanel( $camera )`;
+	    int		$res[] = `getTestResolution( $panel )`;
+
+	    renderWindowTakeSnapshot( $res[0], $res[1], $camera );
+	    $snapped = 1;
+	  }
+	else
+	  {
+	    $cameras = `listCameras`;
+
+	    if( size($cameras) )
+	      {
+		string	$camera = $cameras[0];
+		string	$panel = `getCameraPanel( $camera )`;
+		int		$res[] = `getTestResolution( $panel )`;
+
+		renderWindowTakeSnapshot( $res[0], $res[1], $camera );
+		$snapped = 1;
+	      }
+	  }
+      }
+    else
+      $snapped = 1;
+  } else
+    $snapped = 1;
+
+
+  //
+  //	Otherwise, set the region and render if the renderViewAutoRenderRegion
+  //	is set to true.
+  //
+  if( $snapped )
+    {
+      renderWindowEditor -e -mq $top $left $bottom $right $renderPanel;
+
+      // We can't autoRenderRegion if ipr is on
+      if( `optionVar -exists renderViewAutoRenderRegion` &&
+	  `optionVar -query renderViewAutoRenderRegion` != 0 &&
+	  !isRunningIpr())
+	{
+	  string $editor = `showRenderView`;
+	  renderWindowRenderRegion($editor);
+	}
+			
+    }
+
+  if (isRunningIpr()) 
+    {
+      // Change the region for IPR
+      //
+      string $changeIprRegionProc = 
+	`renderer -q -changeIprRegionProcedure (currentRenderer())`;
+      eval $changeIprRegionProc $renderPanel;
+    }
+}
+
+global proc mentalAbout()
+{
+   string $title = "mrLiquid v";
+   string $plugin = mrLiquidPlugin();
+
+   string $version = `pluginInfo -q -v $plugin`;
+   $title += $version;
+
+    confirmDialog -title $title
+    -message ("\n " + $title + "\n(C) 2004-6 - Gonzalo Garramuño\n\nrubyMEL plugin\n(C) 2004-6 - Gonzalo Garramuño\n\nIcon Designed:\nJan Sandstrom\n\nBeta-testers:\nMartin Leguizamon, Pavel Ledin, Francesca Luce\nJared Martin, Horvátth Szabolcs, Barnaby Robson,\nFabien Corrente, Marcus Halbritter, Frank Bonniwell\n\n\nInspiration:\nImre Tuske, Colin Doncaster\n")
+    -button "OK" -defaultButton "OK";
+}
+
+
+// TODO:  This running of overrides commands should be done in C,
+//        in a common routine to make sure code that plugin runs and
+//        this code is identical.  oh well...
+global proc mentalRunCode( int $language, string $code )
+{
+   if ($code == "") return;
+   
+   switch($language)
+   {
+      case 0: // MEL
+	 eval($code);
+	 break;
+      case 1: // RUBY
+	 $code = "ruby -c \"" + encodeString($code) + "\"";
+	 eval($code);
+	 break;
+      case 2: // Python
+	 $code = "python -c \"" + encodeString($code) + "\"";
+	 eval($code);
+	 break;
+   }
+}
+
+
+/** 
+ * Set the mrLiquid pass to a certain node
+ * 
+ * @param pass node name of pass (renderLayer)
+ * 
+ * @return nothing
+ */
+global proc mentalSetCurrentRenderLayer( string $pass )
+{
+   editRenderLayerGlobals -crl $pass;
+}
+
+/** 
+ * Get the current render layer
+ * 
+ * @return name of pass/node
+ */
+global proc string mentalGetCurrentRenderLayer()
+{
+   return `editRenderLayerGlobals -q -crl`;
+}
+
+
+
+/** 
+ * Update the render layer menu
+ * 
+ * @return 
+ */
+global proc mentalUpdateSelectRenderLayerMenu()
+{
+   string $pass[] = `ls -type renderLayer`;
+   int $numPasses = size($pass);
+
+   menu -edit -deleteAllItems mentalRenderLayerSelectMenu;
+   radioMenuItemCollection -p mentalRenderLayerSelectMenu;
+
+   // add any render layer that have been defined
+   string $currPass = mentalGetCurrentRenderLayer();
+   
+   int $i;
+   for ($i = 0; $i < $numPasses; $i++ )
+   {
+      int $tickRadio = 0;
+      if ($pass[$i] == $currPass)
+	 $tickRadio = 1;
+
+      menuItem -p "mentalRenderLayerSelectMenu"
+      -radioButton $tickRadio
+      -label $pass[$i]
+      -c ("layerEditorLayerButtonSelect 0 \"" + $pass[$i] + "\"");
+   }
+}
+
+/** 
+ * Get a list of dependency nodes a plugin depends on
+ * 
+ * @param  plugin plugin name
+ * 
+ * @return string like "-type nodename2 -type nodename2"
+ */
+proc string mentalGetPluginDependencyNodes( string $plugin )
+{
+   string $d;
+   string $dependNodes[] = `pluginInfo -q -dn $plugin`;
+   string $flags = "";
+   for ($d in $dependNodes)
+   {
+      $flags += " -type " + $d; 
+   }
+   return $flags;
+}
+
+/** 
+ * Unload mrLiquid
+ * 
+ * 
+ * @return 
+ */
+global proc mentalUnload()
+{
+   // Get all dependency nodes of mrLiquid and delete them
+   string $plugin = mrLiquidPlugin();
+
+   if ( `pluginInfo -q -loaded $plugin` == 1 )
+   {
+      string $flags = mentalGetPluginDependencyNodes( $plugin );
+      string $nodes[] = eval("ls "+$flags);
+      if ( size($nodes) > 0 )
+	 delete $nodes;
+      flushUndo;
+      unloadPlugin $plugin;
+   }
+
+}
+
+/** 
+ * Unload Mayatomr
+ * 
+ * @return 
+ */
+global proc mentalMayatomrUnload()
+{
+   mentalUnload(); // First, we remove any mental.
+   if ( `pluginInfo -q -loaded Mayatomr` == 0 )
+   {
+      return;
+   }
+
+   // Get all dependency nodes of Mayatomr and delete them
+   string $flags = mentalGetPluginDependencyNodes( "Mayatomr" );
+   string $nodes[] = eval("ls "+$flags);
+   if ( size($nodes) > 0 )
+      delete $nodes;
+   flushUndo;
+   
+   unloadPlugin Mayatomr;
+}
+
+/** 
+ * Delete all menus
+ * 
+ * @return 
+ */
+global proc mentalDeleteMenus()
+{
+   global int $gMentalScriptJob;
+   if ( `menu -exists mentalMenu` )
+      deleteUI mentalMenu;
+   if ( `scriptJob -exists $gMentalScriptJob` ) 
+      scriptJob -kill $gMentalScriptJob;
+}
+
+
+/** 
+ * Return a string with the proper temp directory
+ * 
+ * @return 
+ */
+global proc string mentalTempDir()
+{
+   string $tmp = getenv("TEMP");
+   if ( $tmp == "" ) $tmp = getenv("TEMPDIR");
+   if ( $tmp == "" ) $tmp = getenv("TMP");
+   if ( $tmp == "" ) $tmp = "/usr/tmp";
+   return $tmp;
+}
+
+
+/** 
+ * Open an image viewer.
+ * 
+ * @return 
+ */
+global proc mentalViewer(string $opts)
+{
+  string $paths[];
+  string $path = getenv("PATH");
+  string $start = "";
+  string $viewers[];
+
+  if ( `about -nt` )
+    {
+      // Check if mrViewer is available in user's path
+      tokenize $path ";" $paths;
+      $viewers = {
+	"mrViewer.exe",
+	"imf_disp.exe"
+      };
+
+      $start = "start ";
+    }
+  else
+    {
+      tokenize $path ":" $paths;
+
+      $viewers = {
+	"mrViewer",
+	"imf_disp"
+      };
+
+      $opts += " &";
+    }
+
+
+  // Check if any valid viewer is available in user's path
+  string $viewer = getenv("MRL_VIEWER");
+
+  if ( $viewer == "" )
+    {
+      for ($try in $viewers)
+	{
+	  string $ok = searchPathArray( $try, $paths );
+	  if ( $ok != "" ) {
+	    $viewer = $ok; break;
+	  }
+	}
+    }
+  
+  if ( $viewer == "" )
+    {
+      error("No valid image viewer found in PATH\n" + $path + "\n");
+    }
+
+  string $cmd = $start + $viewer + " " + $opts;
+  system($cmd);
+}
+
+
+/** 
+ * Open an image viewer, pointing to the ipr file
+ * 
+ * @return 
+ */
+global proc mentalIPRViewer()
+{
+   string $image = mentalIPRImage();
+
+   // Check IPR image exists on disk
+   int $count = 0;
+   while ( ! `filetest -r $image` )
+   {
+     $count += 1;
+
+     if ( $count > 4 )
+       {
+	 // After five seconds, fail.
+	 warning("Could not open IPR viewer.  No IPR image \"" + 
+		 $image + "\".");
+	 return;
+       }
+
+     // wait a second and try again.
+     pause -sec 1;
+   }
+
+   string $opts = "";
+   float $gamma = `getAttr miDefaultFramebuffer.gamma`;
+   if($gamma != 1.0) 
+   {
+      int $type = `getAttr miDefaultFramebuffer.datatype`;
+      // if image type is:
+      // adjust viewer's gamma.
+      if ( ($type == 4) || ($type == 5) ||
+	   ($type == 16) || ($type == 17) )
+      {
+	 $opts += " -g " + (1.0/$gamma);
+      }
+   }
+
+   $opts += " \"" + $image + "\"";
+
+   mentalViewer( $opts );
+}
+
+
+//
+// Description:
+//		Returns the render window editor, creates it if needed.
+//
+proc string getRenderWindowPanel()
+{
+  string $renderPanel;
+  string $renderPanels[] = `getPanel -scriptType "renderWindowPanel"`;
+
+  if( size($renderPanels) == 0 )
+    {
+      $renderPanel = `scriptedPanel -type "renderWindowPanel" -unParent`;
+      scriptedPanel -e -label `interToUI $renderPanel` $renderPanel;
+    }
+  else
+    {
+      $renderPanel = $renderPanels[0];
+    }
+
+  return $renderPanel;
+}
+
+
+//
+// Description:
+//	Raise the render view window if exists, then return 1.
+//	Return 0 otherwise.
+//
+proc int raiseRenderViewWindow()
+{
+  //
+  //	Look for the renderViewWindow and pop it up if it exists.
+  //
+  for( $i in `lsUI -windows` )
+    {
+      if( $i == "renderViewWindow" )
+	{
+	  showWindow $i;
+	  return 1;
+	}
+    }
+
+  return 0;
+}
+
+
+// If there is a render window open, we pop it up to front.
+// If not, we create a mentalIPRViewer (ie. imf_disp)
+proc mentalPopUpRenderWindow()
+{
+   string $editor = `getRenderWindowPanel`;
+
+   if( `raiseRenderViewWindow` == 1 )
+   {
+      // The Render View exists and is in a torn-off window. It has been
+      // brought to the front.
+      //
+      return;
+   }
+
+   // If we get to here, the Render View is not in a torn-off window
+   //
+   for( $i in `getPanel -vis` )
+   {
+      if( $i == $editor )
+      {
+	 // The Render View exists and is in a panel. 
+	 //
+	 return;
+      }
+   }
+
+   // If we get to here, the Render View is not currently in a panel nor is
+   // it in a torn-off window.
+   //
+   string $running = mentalTempDir() + "/mrl_run";
+   if ( !`filetest -r $running` )
+   {
+      print("Waiting for render to begin...");
+      int $try = 0;
+      while ( !`filetest -r $running` )
+      {
+	 print("."); pause -sec 1;
+	 $try++;
+	 if ( $try == 5 ) break;
+      }
+   }
+   mentalIPRViewer();
+}
+
+
+global proc mentalIPRContinue()
+{
+   global string $gMentalCmd;
+   if ( eval($gMentalCmd + " -q -imr") )
+   {
+      setCurrentRenderer("mental");
+      eval($gMentalCmd + " -bin -pt off");
+      menuItem -e -en on  mentalIPROptions;
+      menuItem -e -en on  mentalIPRStop;
+      menuItem -e -en on  mentalIPRPause;
+      menuItem -e -en off mentalIPRContinue;
+      int $progressive = eval($gMentalCmd + " -q -prg");
+      if ( $progressive )
+      {
+	 menuItem -e -en on  mentalIPRStart;
+	 menuItem -e -en off mentalIPRProgressive;
+	 menuItem -e -en off mentalIPRTwoStep;
+      }
+      else
+      {
+	 menuItem -e -en off mentalIPRStart;
+	 menuItem -e -en on  mentalIPRProgressive;
+	 menuItem -e -en on  mentalIPRTwoStep;
+      }
+   }
+   else
+   {
+      error("IPR is not active.  Cannot continue.");
+   }
+}
+
+global proc mentalIPRPause()
+{
+   global string $gMentalCmd;
+   if ( eval($gMentalCmd + " -q -imr") )
+   {
+      eval($gMentalCmd + " -bin -pt on");
+      menuItem -e -en off mentalIPRStart;
+      menuItem -e -en off mentalIPROptions;
+      menuItem -e -en off mentalIPRProgressive;
+      menuItem -e -en on  mentalIPRStop;
+      menuItem -e -en off mentalIPRPause;
+      menuItem -e -en on  mentalIPRContinue;
+   }
+   else
+   {
+      error("IPR is not active.  Cannot pause.");
+   }
+}
+
+/** 
+ * Start IPR render
+ * 
+ * @param progressive  set to 1 if progressive IPR, 0 if not. 
+ * 
+ * @return 
+ */
+global proc mentalIPRStart(int $progressive)
+{
+  global string $gMentalCmd;
+  global string $gMentalRenderer;
+  global float $gMentalIdleTime;
+  global int $gMentalIPRMin;
+  global int $gMentalIPRStep;
+  global string $gMentalIPRFlags;
+
+  setCurrentRenderer($gMentalRenderer);
+
+  int $ipr = eval($gMentalCmd + " -q -imr" );
+  if ( $progressive > 0 )
+    {
+      string $cmd = $gMentalCmd + " -pmn " + $gMentalIPRMin;
+      $cmd += " -bin -prg on -idl " + $gMentalIdleTime;
+      $cmd += " -imf \"" + $gMentalIPRFlags + "\"";
+      if ( $progressive == 2 )
+	{
+	  $cmd += " -pst 8";
+	  menuItem -e -en off mentalIPRTwoStep;
+	  menuItem -e -en on  mentalIPRProgressive;
+	}
+      else
+	{
+	  $cmd += " -pst " + $gMentalIPRStep;
+	  menuItem -e -en off mentalIPRProgressive;
+	  menuItem -e -en on  mentalIPRTwoStep;
+	}
+
+      if ( $ipr )
+	{
+	  eval($cmd);
+	}
+      else
+	{
+	  eval($cmd + " -imr on ");
+	  mentalIPRViewer(); // for now...
+	  //    mentalPopUpRenderWindow();
+	}
+      menuItem -e -en on mentalIPRStart;
+    }
+  else
+    {
+      if ( $ipr )
+	{
+	  eval($gMentalCmd + " -prg off");
+	}
+      else
+	{
+	  string $cmd = $gMentalCmd + " -bin ";
+	  $cmd += " -imr on -prg off -idl " + $gMentalIdleTime;
+	  $cmd += " -imf \"" + $gMentalIPRFlags + "\"";
+	  eval($cmd);
+
+	  mentalIPRViewer(); // for now...
+
+	  //    mentalPopUpRenderWindow();
+	}
+      menuItem -e -en on mentalIPRTwoStep;
+      menuItem -e -en on mentalIPRProgressive;
+      menuItem -e -en off mentalIPRStart;
+    }
+
+  menuItem -e -en on  mentalIPROptions;
+  menuItem -e -en on  mentalIPRStop;
+  menuItem -e -en on  mentalIPRPause;
+  menuItem -e -en off mentalIPRContinue;
+
+
+}
+
+/** 
+ * 
+ * Stop IPR
+ * 
+ * @return 
+ */
+global proc mentalIPRStop()
+{
+   global string $gMentalCmd;
+   catch( eval($gMentalCmd + " -bin -imr off") );
+
+   if ( (`menu -exists mentalMenu`) == true )
+   {
+      menuItem -e -en on   mentalIPRStart;
+      menuItem -e -en on   mentalIPROptions;
+      menuItem -e -en on   mentalIPRProgressive;
+      menuItem -e -en on   mentalIPRTwoStep;
+      menuItem -e -en off  mentalIPRStop;
+      menuItem -e -en off  mentalIPRPause;
+      menuItem -e -en off  mentalIPRContinue;
+   }
+}
+
+
+
+/** 
+ * Set IPR idle time (callback)
+ * 
+ * 
+ * @return 
+ */
+global proc mentalIPRSetOptions()
+{
+   global string $gMentalCmd;
+   global float  $gMentalIdleTime;
+   global int    $gMentalIPRMin;
+   global int    $gMentalIPRStep;
+   global string $gMentalIPRFlags;
+   
+   // Get user options
+   setParent mentalIPROptionsWindow;
+
+   string $cmd = $gMentalCmd + " -bin ";
+
+   // Handle IPR min/step
+   $gMentalIPRMin  = `intSliderGrp -q -v IPRMin`;
+   $gMentalIPRStep = `intSliderGrp -q -v IPRStep`;
+   if ( $gMentalIPRStep < 0.0 ) $gMentalIPRStep = 0.0;
+   $cmd += " -pmn " + $gMentalIPRMin;
+   $cmd += " -pst " + $gMentalIPRStep;
+
+   // Handle IPR idle time
+   $gMentalIdleTime = `floatFieldGrp -q -v1 IdleTime`;
+   if ( $gMentalIdleTime < 0.0 ) $gMentalIdleTime = 0.0;
+   $cmd += " -idl " + $gMentalIdleTime;
+
+   // Handle IPR flags
+   $gMentalIPRFlags = "";
+   int $layers  = `checkBox -q -v ActiveLayers`;
+   $gMentalIPRFlags += $layers;
+   int $cameras = `checkBox -q -v RenderableCameras`;
+   $gMentalIPRFlags += $cameras;
+   $cmd += " -imf \"" + $gMentalIPRFlags + "\"";
+
+   // Send options to plugin
+   eval( $cmd );
+
+   deleteUI mentalIPROptionsWindow;
+}
+
+/** 
+ * Open a window to allow changing IPR options
+ * 
+ * 
+ * @return 
+ */
+global proc mentalIPROptionsWindow()
+{ 
+   global int    $gMentalIPRStep;
+   global int    $gMentalIPRMin;
+   global float  $gMentalIdleTime;
+   global string $gMentalIPRFlags;
+
+   //If such a window already exists, destory it.
+   if ( (`window -exists mentalIPROptionsWindow`) == true )
+   { 
+         deleteUI mentalIPROptionsWindow;
+   }
+
+   //Create the window.
+   window -title "mrLiquid's Options" -rtf true mentalIPROptionsWindow;
+
+   columnLayout -adjustableColumn true;
+
+   frameLayout -label "IPR"  -cll true
+               -labelAlign "top" 
+               -borderStyle "out" IPR;
+
+   columnLayout -adjustableColumn true;
+
+   int $val = substring($gMentalIPRFlags, 1, 1);
+   checkBox    -l "All Active Render Layers"
+	       -align "left" -v $val
+               ActiveLayers;
+
+   $val = substring($gMentalIPRFlags, 2, 2);
+   checkBox    -l "All Renderable Cameras"
+               -align "left" -v $val
+               RenderableCameras;
+
+   frameLayout -label "Progressive" -cll true
+               -labelAlign "top" 
+               -borderStyle "in" progressive;
+
+   columnLayout -adjustableColumn true;
+
+   intSliderGrp -label "Min Samples" -f true
+         -min -3 -max 3 -v $gMentalIPRMin IPRMin;
+
+   intSliderGrp -label "Samples Step" -f true 
+         -min 1 -max 5 -v $gMentalIPRStep IPRStep;
+
+   floatFieldGrp -label "Idle Time (seconds)" -nf 1
+         -v1 $gMentalIdleTime IdleTime;
+   setParent ..;
+   setParent ..;
+   setParent ..;
+   setParent ..;
+
+   rowLayout -nc 2 -cw2 200 200
+   -columnAttach 1 "both" 0
+   -columnAttach 2 "both" 0 layout;
+   button -l "Accept" -align "center" -c "mentalIPRSetOptions();";
+   button -l "Cancel" -align "center" -c "deleteUI mentalIPROptionsWindow;";
+   setParent ..;
+
+   setParent ..;
+
+   //Show it.
+   showWindow mentalIPROptionsWindow;
+}
+
+/** 
+ * Start a new preview render
+ * 
+ * 
+ * @return 
+ */
+global proc mentalStartRender()
+{
+   global string $gMentalCmd;
+   eval($gMentalCmd + " -preview");
+   if ( `menu -exists mentalMenu` )
+   {
+      menuItem -e -en off mentalStartRender;
+      menuItem -e -en on  mentalStopRender;
+   }
+	 mentalIPRViewer(); // for now...
+//    mentalPopUpRenderWindow();
+}
+
+/** 
+ * Stop a preview render
+ * 
+ * 
+ * @return 
+ */
+global proc mentalStopRender()
+{
+   global string $gMentalCmd;
+   catch( eval($gMentalCmd + " -cancel") );
+
+   if ( (`menu -exists mentalMenu`) == true )
+   {
+     menuItem -e -en on mentalStartRender;
+   }
+}
+
+
+/** 
+ * Switch to mental crop region tool.
+ * 
+ * 
+ * @return 
+ */
+global proc mentalCropRegion()
+{
+  global string $gMentalCropContext;
+  setToolTo $gMentalCropContext;
+}
+
+//
+// Description: 
+//			This procedure is called when the poly prelight command is issued 
+//			for the mental ray renderer. It is used to standardize the  
+//			command calls , since not all renderers take the same arguments.
+// 	Returns:  None			
+//
+global proc mentalBakeToVertices(int $arg)
+{
+   string $command = "mentalBake " + $arg + " " + "false";
+   eval $command;
+}
+
+
+//
+// Description: 
+//			This procedure is called when the texture bake command is issued 
+//			for the mental ray renderer. 
+// 	Returns:  None			
+//
+global proc mentalBakeToTexture( int $action, int $useMultiListerHighlighted )
+{	
+   string $command = "mentalBake " + $action + " " + $useMultiListerHighlighted;
+   eval $command;
+}
+
+
+
+/** 
+ * Create menus
+ * 
+ * 
+ * @return 
+ */
+global proc mentalCreateMenus()
+{
+   //
+   putenv("MI_1TC_LIMIT", "1");
+  
+  // bring in globals telling us where the Maya menus are
+  global string $gRenderingMenus[];
+  global string $gMainWindow;
+  global int    $gMentalScriptJob;
+  global string $gMentalCropContext;
+
+  // add a new Passes menu when in Rendering mode
+  setParent $gMainWindow;
+  int $last = size($gRenderingMenus);
+  $gRenderingMenus[$last] = `menu -l "mrLiquid" -to true mentalMenu`;
+  updateMenuModeUI;
+
+  menuItem -p "mentalMenu" -divider true;
+
+  //-------------------------------- Common Maya stuff
+
+  menuItem -p "mentalMenu"
+  -label "Render Globals"
+  -c "unifiedRenderGlobalsWindow"
+  mentalGlobals;
+  
+  menuItem -p "mentalMenu"
+  -label "Approximation Editor..."
+  -annotation "mrLiquid's Approximation Editor"
+  -c "mentalApproxEditor"
+  mentalApproximations;
+
+
+  menuItem -p "mentalMenu" -divider true;
+
+  //-------------------------------- Render Layers
+  menuItem -p "mentalMenu"
+  -subMenu true -to true 
+  -label "Render Layers"
+  mentalRenderLayersMenu;
+
+  menuItem
+  -p "mentalRenderLayersMenu"
+  -label "Create"
+  -subMenu true -tearOff false
+  -annotation "Create a new Render Layer"
+  mentalRenderLayerCreateMenu;
+
+  menuItem
+  -p "mentalRenderLayerCreateMenu"
+  -label "Default Render Layers"
+  -annotation "Create Several Default Render Layers"
+  -c "mentalCreateDefaultRenderLayers";
+  
+  menuItem -p "mentalRenderLayerCreateMenu" -divider true;
+
+  menuItem
+  -p "mentalRenderLayerCreateMenu"
+  -label "Ambient Occlusion"
+  -annotation "Create an Ambient Occlusion Render Layer"
+  -c "mentalCreateAmbOcclPass";
+
+  menuItem
+  -p "mentalRenderLayerCreateMenu"
+  -label "Beauty"
+  -annotation "Create a Beauty Render Layer"
+  -c "mentalCreateBeautyPass";
+
+  menuItem
+  -p "mentalRenderLayerCreateMenu"
+  -label "Cast Shadows"
+  -annotation "Create a Cast Shadows Render Layer"
+  -c "mentalCreateCastShadowsPass";
+
+  menuItem
+  -p "mentalRenderLayerCreateMenu"
+  -label "Compositing"
+  -annotation "Create a Compositing Render Layer"
+  -c "mentalCreateCompositingPass";
+
+  menuItem
+  -p "mentalRenderLayerCreateMenu"
+  -label "FinalGather"
+  -annotation "Create a FinalGather Only Render Layer"
+  -c "mentalCreateFinalGatherPass";
+
+  menuItem
+  -p "mentalRenderLayerCreateMenu"
+  -label "Information"
+  -annotation "Create an Information Render Layer"
+  -c "mentalCreateInformationPass";
+
+  menuItem
+  -p "mentalRenderLayerCreateMenu"
+  -label "Shadow Maps"
+  -annotation "Create a Shadow Maps Only Render Layer"
+  -c "mentalCreateShadowMapPass";
+
+  menuItem -p "mentalRenderLayersMenu" -divider true;
+  
+  menuItem
+  -p "mentalRenderLayersMenu"
+  -label "Set Render Layer"
+  -subMenu true  -tearOff false
+  -annotation "Apply Render Layer changes to the current scene"
+  -postMenuCommand "mentalUpdateSelectRenderLayerMenu"
+  mentalRenderLayerSelectMenu;
+  
+  radioMenuItemCollection -p mentalRenderLayerSelectMenu
+    mentalRenderLayerCollection;
+  
+  menuItem -p "mentalRenderLayersMenu" -divider true;
+  
+  menuItem -p "mentalRenderLayersMenu"
+  -label "Validate Render Layers"
+  -c "mentalValidateRenderLayers"
+  -annotation
+  "Applies each layer to test for any errors in the override MEL code"
+  mentalRenderLayerMenuValidate;
+  
+  menuItem
+  -p "mentalRenderLayersMenu"
+  -label "Create Render Layer Scenes"
+  -c "mentalShowRenderLayerSaveWindow"
+  -annotation
+  "Generate a render scene file for each render layer you have defined"
+  mentalRenderLayerMenuCreateAllPasses;
+  
+  menuItem
+  -p "mentalRenderLayersMenu"
+  -label "Export Render Layers"  -c "mentalExportRenderLayers"
+  -annotation
+  "Export the Render Layers to a Maya scene file, which you can then import elsewhere"
+  mentalRenderLayerMenuExport;
+
+
+  //-------------------------------- Samples Passes
+  menuItem -p "mentalMenu"
+  -subMenu true -to true 
+  -label "Samples Pass Files"
+  mentalPassFilesMenu;
+
+  menuItem -p "mentalPassFilesMenu"
+  -label "New Pass File"  -c "mentalNewPassFile()"
+  -annotation
+  "Create a new pass file for selected camera";
+
+  menuItem -p "mentalPassFilesMenu"
+  -label "New Merge Pass File"  -c "mentalNewMergePass()"
+  -annotation
+  "Create a new pass to merge previous passes";
+
+  //-------------------------------- Frame Buffers
+  menuItem -p "mentalMenu"
+  -subMenu true -to true 
+  -label "Frame Buffers"
+  mentalFramebuffersMenu;
+
+  menuItem -p "mentalFramebuffersMenu"
+  -label "New Frame Buffer"  -c "mentalNewFramebuffer(0)"
+  -annotation
+  "Create a new floating point frame buffer"
+  mentalFramebuffersNewMenu;
+
+  menuItem -p "mentalFramebuffersMenu"
+  -label "New Frame Buffer and Output"  -c "mentalNewFramebuffer(1)"
+  -annotation
+  "Create a new floating point frame buffer and an output to save it to disk"
+  mentalFramebuffersNewOutputMenu;
+
+
+  //-------------------------------- Trace Groups
+  
+  menuItem -p "mentalMenu"
+  -subMenu true -to true 
+  -label "Trace Groups"
+  mentalTraceGroupsMenu;
+
+  menuItem
+  -p "mentalTraceGroupsMenu"
+  -label "Create Trace Group"  -c "mentalCreateTraceGroup"
+  -annotation
+  "Create a new trace group for selected objects"
+  mentalCreateTraceGroup;
+  
+  menuItem
+  -p "mentalTraceGroupsMenu"
+  -label "Use Trace Group"
+  -subMenu true  -tearOff false
+  -annotation "Apply Trace Group to the selected material(s)/object(s)"
+  -postMenuCommand "mentalUpdateUseTraceGroupsMenu"
+  mentalUseTraceGroupMenu;
+
+  radioMenuItemCollection -p mentalUseTraceGroupMenu
+    mentalUseTraceGroupCollection;
+
+
+  //-------------------------------- Lights
+  
+  menuItem -p "mentalMenu"
+  -subMenu true -to true 
+  -label "Lights"
+  mentalLightsMenu;
+
+  menuItem
+  -p "mentalLightsMenu"
+  -label "Show Saved Shadow Map"  -c "mentalShowShadowmaps"
+  -annotation
+  "Show the saved shadow map of the selected light(s)"
+  mentalShowShadowmaps;
+
+  menuItem
+  -p "mentalLightsMenu"
+  -label "Toggle Area Lights"  -c "mentalToggleAreaLights"
+  -annotation
+  "Toggle all area lights on and off"
+  mentalToggleAreaLights;
+
+  menuItem
+  -p "mentalLightsMenu"
+  -label "Toggle Quick Shadows"  -c "mentalToggleShadowSamples"
+  -annotation
+  "Toggle all shadow settings between quick and simple and user settings"
+  mentalToggleQuickShadows;
+
+  //-------------------------------- Materials
+  
+  menuItem -p "mentalMenu"
+  -subMenu true -to true 
+  -label "Materials"
+  mentalMaterialsMenu;
+  
+  menuItem
+  -p "mentalMaterialsMenu"
+  -label "Create/Export Phenomena"  -c "mentalCreatePhenomena"
+  -annotation
+  "Create or replace material/shading network with single phenomena node"
+  mentalCreatePhenomena;
+
+  menuItem
+  -p "mentalMaterialsMenu"
+  -label "Expand Phenomena"  -c "mentalExpandPhenomena"
+  -annotation
+  "Replace selected phenomena with corresponding shading network"
+  mentalExpandPhenomena;
+
+
+  menuItem
+  -p "mentalMaterialsMenu"
+  -divider true;
+
+
+  menuItem
+  -p "mentalMaterialsMenu"
+  -label "Export Materials"  -c "mentalMaterial -export"
+  -annotation
+  "Export all the materials to a Maya scene file, which you can then import elsewhere"
+  mentalMaterialMenuExport;
+
+  $gMentalScriptJob = `scriptJob -e deleteAll "mentalCreateDefaults"`;
+
+
+  menuItem -p "mentalMenu" -divider true;
+
+  //-------------------------------- IPR
+  menuItem -p "mentalMenu"
+  -subMenu true -to true 
+  -label "IPR"
+  mentalIPRMenu;
+
+  menuItem -p "mentalIPRMenu"
+  -label "Normal"  -c "mentalIPRStart(0)"
+  -annotation "Start IPR."
+  mentalIPRStart;
+
+  menuItem -p "mentalIPRMenu"
+  -label "Two-Step"  -c "mentalIPRStart(2)"
+  -annotation "Start a two-step IPR."
+  mentalIPRTwoStep;
+
+  menuItem -p "mentalIPRMenu"
+  -label "Progressive"  -c "mentalIPRStart(1)"
+  -annotation "Start a progressive IPR."
+  mentalIPRProgressive;
+
+  menuItem -p "mentalIPRMenu" -divider true;
+
+  $gMentalCropContext = `mentalCropToolContext`;
+
+  menuItem -p "mentalIPRMenu"
+  -label "Crop Region Tool"  -c "mentalCropRegion()"
+  -annotation
+  "Set/Clear a crop region for camera or spot lights.  Also allows changing render camera."
+  mentalIPRCropRegion;
+
+  menuItem -p "mentalIPRMenu" -divider true;
+
+  menuItem -p "mentalIPRMenu"
+  -label "Options"  -c "mentalIPROptionsWindow()"
+  -annotation "Set options for IPR update."
+  mentalIPROptions;
+
+  menuItem -p "mentalIPRMenu" -divider true;
+
+
+  menuItem -p "mentalIPRMenu"
+  -label "Image Viewer"  -c "mentalIPRViewer"
+  -annotation "(Re)open image viewer."
+  -en on
+  mentalImageViewer;
+
+
+  menuItem -p "mentalIPRMenu" -divider true;
+
+  menuItem -p "mentalIPRMenu"
+  -label "Pause"  -c "mentalIPRPause"
+  -annotation "Pause IPR."
+  -en off
+  mentalIPRPause;
+
+  menuItem -p "mentalIPRMenu"
+  -label "Continue"  -c "mentalIPRContinue"
+  -annotation "Continue IPR."
+  -en off
+  mentalIPRContinue;
+
+  menuItem -p "mentalIPRMenu" -divider true;
+
+  menuItem -p "mentalIPRMenu"
+  -label "Stop"  -c "mentalIPRStop"
+  -annotation "Stop IPR."
+  -en off
+  mentalIPRStop;
+
+  //-------------------------------- Render
+  menuItem -p "mentalMenu"
+  -subMenu true -to true -label "Render"
+  mentalRenderMenu;
+
+  menuItem -p "mentalRenderMenu"
+  -label "Render Current Frame" -c "mentalStartRender"
+  -annotation "Start Render"
+  mentalStartRender;
+
+  menuItem -p "mentalRenderMenu" -divider true;
+
+  menuItem -p "mentalRenderMenu"
+  -label "Stop Render"  -c "mentalStopRender"
+  -annotation "Stop the current render."
+  -en off
+  mentalStopRender;
+
+  //-------------------------------- Export
+  menuItem -p "mentalMenu"
+  -subMenu true -to true 
+  -label "Export"
+  mentalExportMenu;
+
+  menuItem -p "mentalExportMenu"
+  -label "Create Ruby Export File"  -c "mentalCreateRb(0)"
+  -annotation "Create a Ruby export file for scene"
+  mentalCreateExportYAML;
+
+  menuItem -p "mentalExportMenu"
+  -label "Render Timeline"  -c "mentalCreateRb(1)"
+  -annotation "Export frames using RNDR.rb and a scene .rb file"
+  mentalExportRb;
+
+  //-------------------------------- Batch
+  menuItem -p "mentalMenu"
+  -subMenu true -to true 
+  -label "Batch"
+  mentalBatchMenu;
+
+  menuItem -p "mentalBatchMenu"
+  -label "Create Ruby Render File"  -c "mentalCreateRb(0)"
+  -annotation "Create a Ruby render file for scene"
+  mentalCreateYAML;
+
+  menuItem -p "mentalBatchMenu"
+  -label "Render Timeline"  -c "mentalCreateRb(1)"
+  -annotation
+  "Render frames using RNDR.rb and a scene .rb file"
+  mentalRenderRb;
+
+  //-------------------------------- Bake
+  menuItem -p "mentalMenu"
+  -subMenu true -to true -aob on
+  -label "Bake"
+  mentalBakeMenu;
+
+  menuItem -p "mentalBakeMenu"
+  -label "Textures"  -c "mentalBakeToTexture(false,false)"
+  -annotation
+  "Bake shading/lighting of objects to textures."
+  mentalBakeTexturesMenu;
+
+  menuItem -ob true  -c "source \"mentalBake\"; mentalBakeOptions"
+  mentalBakeTexturesOptions;
+
+  menuItem -p "mentalBakeMenu"
+  -label "Geometry"  -c "mentalBakeGeometry()"
+  -annotation
+  "Bake selected objects to .mi files for file object reads."
+  mentalBakeGeometryMenu;
+
+  menuItem -ob true
+  -c "source \"mentalBakeGeometry\"; mentalBakeGeometryOptions"
+  mentalBakeGeometryOptions;
+
+  //-------------------------------- Console
+  if ( `about -nt` )
+  {
+     menuItem -p "mentalMenu" -divider true;
+     menuItem -p "mentalMenu"
+     -label "Clear Console"   -c "mentalClearConsole"
+     -annotation "Clear the Maya output console window."
+     mentalClearConsole;
+  }
+
+  menuItem -p "mentalMenu" -divider true;
+
+  //-------------------------------- Unload
+
+  menuItem -p "mentalMenu"
+  -subMenu true -to false  -label "Unload"
+  mentalUnloadMenu;
+
+  if ( mrLiquidIsLoaded() )
+  {
+     menuItem -p "mentalUnloadMenu"
+     -label "mrLiquid"  -c "mentalUnload"
+     -annotation "Unloads the mrLiquid plugin"
+     mentalmrLiquidUnload;
+  }
+  
+  if (`pluginInfo -q -l Mayatomr`)
+  {
+     menuItem -p "mentalUnloadMenu"
+     -label "Mayatomr"  -c "mentalMayatomrUnload"
+     -annotation
+     "Unloads both the mrLiquid and Mayatomr plugins"
+     mentalMayatomrUnload;
+  }
+
+  menuItem -p "mentalMenu" -divider true;
+
+  //-------------------------------- About
+
+  menuItem -p "mentalMenu"
+  -label "About"  -c "mentalAbout"
+  -annotation  "Some information about mrLiquid"
+  mentalAbout;
+  
+
+  mentalCreateDefaults();
+}
+
+
+
+/** 
+ * Validate each mrLiquid render pass's MEL code.
+ * 
+ */
+global proc mentalValidateRenderLayers()
+{
+   string $currPass = mentalGetCurrentRenderLayer();
+   
+   string $passes[] = `ls -type renderLayer`;
+   for ($pass in $passes)
+   {
+      mentalSwitchRenderLayer($pass);
+   }
+   
+   mentalSwitchRenderLayer $currPass;
+   print("All render passes overrides are fine\n");
+}
+
+
+/** 
+ * Export all render passes
+ * 
+ */
+global proc mentalExportRenderLayers()
+{
+   string $n[] = `ls -type mentalRenderLayerOverride -type renderLayer`;
+   select -r $n;
+   ExportSelection;
+}
+
+
+/** 
+ * Create default mrLiquid nodes.
+ * 
+ */
+global proc mentalCreateDefaults()
+{
+   mentalRenderLayerOverridePanel();
+}
+

@@ -1,0 +1,98 @@
+// Copyright (C) 1997-2004 Alias Systems Corp.
+// 
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias license agreement, without fee.
+// 
+// ALIAS DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+
+proc mrl_add_script_type(string $node)
+{
+   string $attr[];
+   $attr = `listAttr -st scriptType $node`;
+   if ( size($attr) == 0 )
+   {
+	 addAttr -ln scriptType -sn sct -at enum -min 0 -max 3 -dv 0
+	 -en "Text:MEL:Ruby:Python" $node;
+   }
+}
+
+//****************************************************************************
+// The custom text editor.
+//****************************************************************************
+
+global proc miTextTemplateNew(string $attr)
+{
+
+	columnLayout -adj true -cat "both" 5 -rs 5 textcl;
+		scrollField -h 200 -nl 25 text;
+		rowLayout -nc 2 -cw2 80 80
+				-ct2 "both" "both"
+				-cl2 "center" "center"
+				-co2 2 2 textrl;
+			button -l "Apply" -ann "Store current text" texta;
+			button -l "Clear" -ann "Delete all text" textc;
+		setParent ..;
+	setParent ..;
+
+	miTextTemplateReplace $attr;
+}
+
+global proc miTextTemplateReplace(string $attr)
+{
+   string $node = `substitute "[a-zA-Z.]*$" $attr ""`;
+   mrl_add_script_type($node);
+
+	string	$txt = `getAttr $attr`;
+	scrollField -e -tx $txt text;
+	button -e -c ("miTextApply " + $attr) texta;
+	button -e -c ("miTextClear " + $attr) textc;
+}
+
+global proc miTextApply(string $attr)
+{
+	string $txt = `scrollField -q -tx text`;
+	setAttr -type "string" $attr $txt;
+}
+
+global proc miTextClear(string $attr)
+{
+	scrollField -e -cl text;
+	setAttr -type "string" $attr "";
+}
+
+global proc AEmentalrayTextTemplate(string $node)
+{
+
+	editorTemplate -bsl;
+		editorTemplate -bl "mi Text" -cl 0;
+
+		editorTemplate -ccu "miTextTemplateNew"
+				    "miTextTemplateReplace" "text";
+		editorTemplate -as;
+		editorTemplate -l "Custom Text Mode" -ac "mode";
+		editorTemplate -l "Type" -addControl "scriptType";
+		editorTemplate -el;
+
+
+
+		editorTemplate -s "text";
+		editorTemplate -s "append";
+		editorTemplate -s "type";
+
+		// include/call base class/node attributes
+		AEdependNodeTemplate $node;
+
+		// suppressed attributes
+		editorTemplate -aec;
+
+	editorTemplate -esl;
+}
+

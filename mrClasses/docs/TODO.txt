@@ -1,0 +1,30 @@
+
+TOP PRIORITY
+------------
+- Create better documentation (html docs, finish Doxygen docs).
+- Add file descriptors count and recycling for mrTiff.cpp ?
+
+MID PRIORITY
+------------
+- mrStackTrace_linux.h was written from code taken from the web,
+  but was not tested or even compiled on a linux box yet.
+- Add mrOctree   as an acceleration structure.
+- Add mrPlucker  for plucker coordinates
+- Add filterednoise()
+- Add Musgrave fractals: fBm(), vfBm, VLNoise, turbulence,
+			 ridge multifractals, etc.
+- Create environment shader to use libtiff?
+- Add AETemplates for all shader demos
+
+
+
+LOW PRIORITY
+------------
+- Create light shader reading shadows from libtiff
+- Add mrDifferentials.h  for tracing ray differentials?  Is this needed now
+  that mi_raster_unit is available?
+- Add quaternion class?
+- Check mrWorley to make it faster?
+- Perlin noise should optionally return gradients?
+- Add mrInterval for interval arithmetic 
+  (boost/numeric/interval is pretty amazing)

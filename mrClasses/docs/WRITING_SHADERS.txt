@@ -1,0 +1,121 @@
+
+
+Quick notes for Rman shader writers
+-----------------------------------
+
+Try to use both mrRman.h and mrRman_macros.h.  
+Will make transition easier.
+
+
+Try to rely on mrClasses' primitive classes (vector, matrix, color),
+instead of the mray miVector, miMatrix, miColor structs, outside of
+parameter declarations, as they are usually faster for a lot of 
+operations.
+
+
+All the primitive vectors/normals ( N, Ng, I, etc) are assumed to be 
+normalized already, except on displacement shaders.  
+No need to do NN = normalize(N) in general.
+
+
+The shading normal is already facing forward.  
+No need to do NN = faceforward(N).  
+You can find out if you hit a back side by looking at 
+state->inv_normal.
+
+
+illuminance() loops.  There are several illuminance macros to
+support prman's illuminance(P,PI/2) functionality, for example.
+illuminance loops in mrClasses are like:
+
+	    illuminance(params)
+	    {
+		color CKd;
+		samplelight( state )
+		{
+		  CKd += NdL * diffuse;
+		}
+		if ( samples )
+		{
+		   CKd /= samples;
+		   Ci += CKd;
+		}
+	    }
+
+In addition, mr_illuminance() loops are provided, which will also handle
+shaders with a light mode parameter, as in all of the mray demo library.
+
+Samplelight and samples need to be handled like above to deal with
+area lights properly.  The API is set like that to allow light messages
+on a per sample basis instead of on a global basis like prman.
+
+
+When reading a parameter of type vector, color, or similar, you should
+try reading it with:
+    const color& diffuse = mr_eval( p->diffuse );
+This gives the compiler the chance to optimize the access to the parameter
+by passing a simple pointer around, instead of having to copy 4 values.
+
+
+If you are using SSE, make sure matrices are allocated at memory addresses
+that are 16-bit compatible or an ugly crash will happen.  Be really weary
+of using mr::matrix as a shader parameter.
+
+
+Oi is a scalar in mray, not a color and it is part of Ci (result).
+
+
+Handling transparency in mray is much more tricky than in prman.  mray will
+not do automatic sample compositing by changing Oi, unless it is working in
+rapid motion blur.  As such, shader writers are expected to do the transparency
+and compositing yourself.  To do this, use the functions in mrShading.h
+called AlphaOpacity() and RGBOpacity().  Thus, at the end of shader, you would
+do:
+	Ci *= Oi;
+	AlphaOpacity(Ci,state);
+
+Both AlphaOpacity and RGBOpacity provide optional parameters to handle blurred
+transparency/refraction.
+
+
+Prman really does not have much concept of refraction.  It simply relies on the
+gather() call to do it for you, making it hard to detect internal refraction 
+and other issues.  
+mray does not suffer from this, but you need to do more work to handle 
+refraction.  Again, mrShading.h provides the auxiliary functions AlphaOpacity
+and RGBOpacity to handle refractions properly.  But, before calling them,
+you need to obtain the index of refraction of the material and call 
+find_refraction_index() (defined in mrRefraction.h) in order to detect whether
+you are entering or exiting the object.
+See:  gg_phong for an example of using the refraction api.
+
+
+Prman does not have the concept of shadow shaders or even shadow directions.  
+Until recently, prman only did shadow mapping.  With the advent of raytracing 
+and deep shadows, prman can evaluate surface shaders in order to find out the 
+value of Oi during shadow calculations and uses a RIB attribute to determine 
+how shadows are handled.
+mray, instead, uses shadow shaders.  In most cases, material shaders are 
+written in such a way that they perform as shadow shaders too, by checking
+when state->type == miRAY_SHADOW and it is up to the shader to perform whatever
+form of shadow attenuation the shader writer wants.  Albeit much more work,
+this allows you to have shadows be attenuated quite differently from how
+surface transparency calculations are handled and it also avoids having to
+evaluate the whole surface shader just to find out the transparency.
+Most often, however, you want to handle shadow attenuation as transparency.
+mray also allows you to change the direction in which shadows are calculated,
+based on a global switch.  Thus, you can have mray calculate shadows from the
+light towards the shading point (as most renderers do) or in the opposite 
+direction.  The main benefit of this is that it allows volume shaders to 
+operate more efficiently and also to handle semi-transparent shadows and
+shadows thru refractive materials to be calculated properly.
+This code is rather elaborate on mray shaders, so mrClasses provides the 
+convenience functions isCastingShadow and AlphaShadow 
+(defined in mrShadows.h).
+So, a typical surface shader acting as shadow shader looks like just this:
+   if (state->type == miRAY_SHADOW)
+   {
+      if ( ! isCastingShadow( state, p ) ) return miTRUE;
+      return AlphaShadow( Ci, state, diffuse, opacity, state->ior );
+   }
+

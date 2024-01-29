@@ -1,0 +1,66 @@
+
+// Description: This procedure is called to register mrLiquid as renderer
+global proc mentalRegisterRenderer()
+{
+    renderer -rendererUIName         "mental"
+ 		-iprRenderProcedure          "mentalIprRender"
+ 		-isRunningIprProcedure       "mentalIsRunningImr"
+ 		-startIprRenderProcedure     "mentalStartImrRender"
+ 		-stopIprRenderProcedure      "mentalStopImrRender"
+ 		-refreshIprRenderProcedure   "mentalRefreshImr"
+ 		-pauseIprRenderProcedure     "mentalPauseImrRender"
+ 		-changeIprRegionProcedure    "mentalChangeImrRegion"
+ 		-iprOptionsMenuLabel         "IPR Quality"
+// 		-iprOptionsSubMenuProcedure  "mentalImrUpdateOptionsSubMenu"
+		-renderProcedure             "mentalRender"
+		-renderOptionsProcedure      "mentalrayRenderOptionWindow"
+// 		-renderDiagnosticsProcedure  "mentalDiagnostic"
+		-commandRenderProcedure      "mentalCmdlineRender"
+		-batchRenderProcedure        "mentalCmdlineRender"
+		-batchRenderOptionsProcedure "mentalrayBatchRenderOptionWindow"
+		-cancelBatchRenderProcedure  "batchRender"
+		-showBatchRenderProcedure    "batchRender -showImage true"
+		-showRenderLogProcedure      "MentalLogfileRender"
+		-showBatchRenderLogProcedure "MentalLogfileBatch"
+		-renderRegionProcedure       "mayaRenderRegion"
+		-textureBakingProcedure      "mentalBakeToTexture"
+		-polyPrelightProcedure       "mentalBakeToVertices"
+		-renderingEditorsSubMenuProcedure    "mentalRayRenderingEditorsSubMenu"
+
+        mental;
+
+    evalDeferred mentalAddTabs;
+
+    renderer -edit -addGlobalsNode "mentalrayGlobals" mental;
+    renderer -edit -addGlobalsNode "miDefaultFramebuffer" mental;
+    renderer -edit -addGlobalsNode "miDefaultOptions" mental;
+}
+
+
+global proc mentalAddTabs()
+{
+    // Because mentalAddTabs is executed at evalDeferred time
+    // for mentalRegisterRenderer procedure.  For  
+    // test-o-matic tests, sometimes, when mentalAddTabs is called,
+    // the test is already finished and mental renderer is 
+    // already unregistered.  So we need to check if mental
+    // renderer still exists at the begeinning of this 
+    // procedure.
+    //
+    if (!`renderer -exists mental`)
+    {
+        return;
+    }
+
+    renderer -edit
+        -addGlobalsTab               "Common" 
+                                     "createMayaSoftwareCommonGlobalsTab"
+                                     "updateMayaSoftwareCommonGlobalsTab"
+        mental;
+
+    renderer -edit
+        -addGlobalsTab               "mental" 
+                                     "createMentalRayGlobalsTab"
+                                     "updateMentalRayGlobalsTab"
+        mental;
+}

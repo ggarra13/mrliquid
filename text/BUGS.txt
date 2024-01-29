@@ -1,0 +1,171 @@
+
+
+BUGS
+----
+
+- unload of mayatomr in 2008 crashes.  (Linux)
+- Unknown maya format "imagefile".  Using iff instead.  (Linux)  **FIXED?**
+- Creation of subd sphere/cube in windows does not subdivide. (Windows)
+
+- Bad topology for cylinder subd. (Fixed?)
+- mi_int_mem_allocate missing (Windows upon loading)
+
+
+INSTALLER
+---------
+
+
+- Add  ruby1.8 to path?
+- Test RNDR.rb and similar are working properly.
+
+
+
+
+
+
+
+
+
+
+---------------------------------------------------------
+Ideally, this file would be empty :)
+
+
+// Error: createRenderNodeLoadPluginCallback mrLiquid-demo; // 
+// Error: Line 1.49: Wrong number of arguments on call to createRenderNodeLoadPluginCallback. // 
+
+
+Known things not working:
+
+- Cropping tool is not 100% accurate under some camera Fit options.
+
+- You can animate the showing/hiding of objects if doing
+   incremental saving of .mi files (ie. several frames into a 
+   single .mi file), but the objects need to be visible in the first frame
+   or you need to spit all objects (non-invisible ones too).
+   Workaround: either spit all non-visible objects or 
+	       spit frames into separate .mi files.
+
+- If using multiple renderers in the same scene, there is the potential
+   for conflict.  Some renderers add their own set of attributes to the 
+   light nodes and shaders. 
+   **SOMEWHAT FIXED**
+
+- Particle instancer currently does not match maya's cycles completely.
+
+- Particles do not match exactly as maya2mr.  **FIXED, CLOSE ENOUGH**
+
+- Tube Particles are not supported yet.
+
+- Particles Numeric and Particles Spheres are not supported.
+
+- Particles Cycle Objects do not match maya, unless an expression is used.
+
+- Changing resolution to a bigger resolution than the one we started with
+  crashes imf_disp.  (mray imf_disp bug) **FIXED WITH MRVIEWER**
+
+- mentalStopImrRender.mel is deactivated, as it was causing problems.  Maya
+  seems to call it a bunch of times once you open the render view window.
+  Investigate...
+
+
+
+   mrLIQUID BUGS/Stuff to improve:
+   - Fix cloud shader, so it is volumetric and intersecting plane 
+     does not show spheres.
+   - Improve speed of motionblur octree by making moblur path 
+      intersection accurate, instead of bounding sphere.
+   - Whole octree intersector is pathetically slow compared to 
+     maya2mr. Improve.
+   - Add tube particle.
+   - Creating nurbs curves should not do a re-render.
+     We still need to have callbacks for them in case they are linked
+     to weird expressions and so forth.
+   - Baking -- create them thru render passes.
+   - Bake Geometry options window should allow you to also select
+     how nodes are spit (short paths or long paths) and how to
+     deal with namespaces.
+
+   mrLiquid stuff to add:
+   - Rendering of curves
+
+
+   MAYA BUGS:
+   - API is not callback safe.  Running, say, MFnMesh on a mesh that
+     has just been created and that does not have its inMesh attribute
+     yet connected will crash maya.
+   - Also, a lot of weird behavior can be seen when API is called 
+     during callbacks of object creation/connection (Nurbs Surfaces 
+     returning degree 0, opengl icons going berserk, etc...).
+     If not a bug but a feature, documentation needs clarification
+     when and what api functions can be called where.
+   - Tear-off menu will crash maya if their contents are deleted
+     or even if the parent menu is deleted [this bug is only
+     partially documented in the mel docs].
+
+   MAYA API FEATURES:
+   - MLightLink is crap as it flattens list of objects.  Should allow
+     easy retrieval of non-flattened lists.  **FIXED WITH MY OWN CODE**
+
+
+   MRAY BUGS:
+   - Neither state shaders nor lens shaders have a way of
+     distinguishing when a shadow map is being generated for saving.
+     This does not allow me to interrupt the IPR while the shadowmap
+     is being generated.  All this needs fixing on mental's side.
+   - imf_disp crashes on changing resolution through incremental
+     updates.  Very low priority bug.  Most decent houses have
+     their own viewer and won't use imf_disp.
+   - File objects are not dealing with namespaces properly.
+     If I have a file object defined as:
+
+namespace "A"
+  object "B"
+    file "some.mi"
+  end object
+end namespace
+
+      the name of the object file searched in the mi file should
+      *NOT* be A::B, but just B.  That just kills the whole
+      purpose of namespaces.  Also, see below about file objects
+      not being object name dependant.
+
+      If, on the other hand, I define my object as:
+  object "A::B"
+    file "some.mi"
+  end object
+      then, sure, go search for "A::B" in the mi file.
+
+
+
+   MRAY REQUESTS:
+   - shadow map caching to files in mray saves out the 
+     whole map and re-does the shadow map generation, thou.
+     We are still behind on this... shadow map caching needs to
+     happen in tiles as rendering progresses. 
+   - File objects need recursion, but no news there.
+   - File objects need to not be name dependant.  It should be
+     possible to specify a "name" parameter for the file object
+     to look for that object name in the .mi file.
+     The reason is that to do crowds, you actually want to
+     duplicate file objects and have them be offsetted in time, not
+     just instantiate them (ie. object A, reads "test.10.mi", while 
+     object B, reads "test.50.mi" --- but they both reference the
+     same pre-baked guy in Troy, but at different frames of the
+     walk cycle).  
+     With the current file object design where the name of the
+     object is the one used to search for in the mi file, I can't
+     do that without having to keep identical mi files with only
+     the names changed.  
+     Proper namespaces would at least allow me a very ugly 
+     work-around, but a naming paramater is the stuff really needed,
+     as this would allow file objects to be easily duplicated while
+     in IPR, too.
+   - Saving/Loading of samples needs to be available to shader
+     writers in other shaders other than sample compositing shaders.
+     
+
+
+   MAYATOMR BUGS:
+   - hair shadows are wrong, shadow shader not attached, hair shader
+     not returning transparency.

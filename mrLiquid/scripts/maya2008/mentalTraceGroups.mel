@@ -1,0 +1,532 @@
+//  Copyright (c) 2006, Gonzalo Garramuno
+//  All rights reserved.
+//
+//  Redistribution and use in source and binary forms, with or without
+//  modification, are permitted provided that the following conditions are
+//  met:
+//  *       Redistributions of source code must retain the above copyright
+//  notice, this list of conditions and the following disclaimer.
+//  *       Redistributions in binary form must reproduce the above
+//  copyright notice, this list of conditions and the following disclaimer
+//  in the documentation and/or other materials provided with the
+//  distribution.
+//  *       Neither the name of Gonzalo Garramuno nor the names of
+//  its other contributors may be used to endorse or promote products derived
+//  from this software without specific prior written permission. 
+//
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+//  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+//  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+//  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+//  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+//  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+//  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+//  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+//  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+/////////////////////////////////////////////////////////////////////
+// Standard tracegroup list procedures to manage tracegroups connections
+// for Mental Ray shaders in Maya
+/////////////////////////////////////////////////////////////////////
+
+
+proc string mentalGetNodeName( string $attr )
+{
+  string $part[];
+  tokenize $attr "." $part;
+  return $part[0];
+}
+
+/** 
+ * Returns an array of the Shading Groups (shadingEngine nodes) responsible
+ * for shading the specified shape node.
+ * 
+ * @param shape 
+ * 
+ * @return shading groups
+ */
+proc string[] getSGsFromShape( string $shape )
+{
+  string $shadingGroups[];
+
+  if ( `objExists $shape` )
+  {
+    $shadingGroups = `listConnections -destination true -source false
+      -plugs false -type "shadingEngine" $shape`;
+
+    // listConnections can return duplicates within its list.
+    //
+    $shadingGroups = stringArrayRemoveDuplicates( $shadingGroups );
+  }
+
+  return $shadingGroups;
+}
+
+/** 
+ * 
+ * 
+ * 
+ * @return 
+ */
+proc string[] mentalGetTraceGroups()
+{
+   string $allGroups[] = `ls -type objectSet`;
+   string  $allSGs[] = `ls -type shadingEngine`;
+   string $tracegroups[] = stringArrayRemove( $allSGs, $allGroups );
+   $tracegroups = stringArrayRemove( { "defaultLightSet",
+					 "defaultObjectSet" }, $tracegroups );
+   return $tracegroups;
+}
+
+
+/** 
+ * 
+ * 
+ * 
+ * @return 
+ */
+global proc mentalUpdateUseTraceGroupsMenu()
+{   
+   string $tracegroups[] = mentalGetTraceGroups();
+   int $numGroups = size($tracegroups);
+
+   // build up default list just containing an "<empty>" entry
+   menu -edit -deleteAllItems mentalUseTraceGroupMenu;
+   radioMenuItemCollection -p mentalUseTraceGroupMenu;
+   
+   menuItem -p "mentalUseTraceGroupMenu"
+   -radioButton false
+   -label "<empty>"
+   -c "mentalAttachTraceGroup \"\"";
+
+   int $i;
+   for ($i = 0; $i < $numGroups; $i++ )
+   {
+      menuItem -p "mentalUseTraceGroupMenu"
+      -label $tracegroups[$i]
+      -c ("mentalAttachTraceGroup \"" + $tracegroups[$i] + "\"");
+   }
+}
+
+
+/** 
+ * Creates a new tracegroup from selected transforms/shapes selected.
+ * 
+ * 
+ * @return nothing
+ */
+global proc mentalCreateTraceGroup()
+{
+   string $t, $g;
+   string $geo[] = `ls -l -sl -g`;
+   string $tr[]  = `ls -l -sl -tr`;
+
+   int $idx = size($geo);
+   for ( $t in $tr )
+   {
+      string $ch[]   = `listRelatives -c $t`;
+      string $geo2[] = `ls -g $ch`;
+      if ( size($geo2) == 0 ) continue;
+
+      $geo[$idx++] = $t;
+   }
+
+   if ( size($geo) == 0 )
+      error("No objects selected to create new tracegroup.");
+
+   select -r $geo;
+   string $name = "TraceGroup#";
+   string $tracegroup = `sets -n $name`;
+   print("// Created new trace group \"" + $tracegroup + "\".\n");
+}
+
+/** 
+ * Attach a gg_select_tracegroup shader to all objects of set.
+ * 
+ * @param set Trace Group (Maya Set).
+ * 
+ * @return nothing
+ */
+global proc mentalAttachSelectTraceGroup( string $set )
+{
+   string $objs[] = `sets -q -no $set`;
+
+   string $geo[] = `ls -l -g $objs`;
+   string $tr[]  = `ls -l -tr $objs`;
+   for ( $t in $tr )
+   {
+      string $ch[]   = `listRelatives -c $t`;
+      string $geo2[] = `ls -g $ch`;
+      $geo = stringArrayCatenate( $geo, $geo2 );
+   }
+
+   for ($g in $geo)
+   {
+      string $SGs[] = getSGsFromShape( $g );
+      for ($sg in $SGs )
+      {
+	 string $history[] = `listHistory $sg`;
+	 string $tracegroups[] = `ls -type gg_select_tracegroup $history`;
+	 if ( size($tracegroups) != 0 ) continue;
+	 
+	 string $mat[];
+	 string $tracegroup = `createNode -n selectTraceGroup gg_select_tracegroup`;
+	 $mat = `listConnections -d on -p on ($sg+".miMaterialShader")`;
+	 if ( size($mat) == 0 )
+	 { 
+	    $mat = `listConnections -d on -p on ($sg + ".surfaceShader")`;
+	 }
+	 connectAttr -f ($tracegroup + ".message") ($sg + ".miMaterialShader");
+	 if ( size($mat) > 0 )
+	 {
+	    connectAttr -f ($mat[0]) ($tracegroup + ".input");
+	 }
+      }
+   }
+}
+
+/** 
+ * Connects one or more tracegroups to a shader with a "groups" parameter,
+ * like gg_tracegroup.
+ * 
+ * @param nodeName    shader node name
+ * @param tracegroups   trace groups to connect
+ * 
+ * @return nothing
+ */
+global proc mentalConnectTraceGroup( string $node, 
+				     string $tracegroups[] )
+{
+   string $groups[] = `listConnections -sh 1 ($node + ".groups")`;
+   int $counter = 0;
+   for ($set in $groups)
+   {
+      string $dst = $node + ".groups[" + $counter + "]";
+      if (! `isConnected ($set + ".message") $dst`)
+	 connectAttr -f ($set + ".message") $dst;		
+      $counter++;
+   }
+
+   $tracegroups = stringArrayRemove( $groups, $tracegroups );
+   for ($set in $tracegroups)
+   {
+      string $dst = $node + ".groups[" + $counter + "]";
+      connectAttr -f ($set + ".message") $dst;
+      mentalAttachSelectTraceGroup($set);
+      $counter++;
+   }
+   refreshAE();
+}
+
+/** 
+ * Attaches gg_tracegroup shader to selected objects or shading groups.
+ * 
+ * 
+ * @return 
+ */
+global proc mentalAttachTraceGroup( string $tracegroup )
+{
+   string $t, $g, $sg;
+   string $SGs[] = `ls -sl -type shadingEngine`;
+   string $geo[] = `ls -sl -l -g`;
+   string $tr[]  = `ls -sl -l -tr`;
+   for ( $t in $tr )
+   {
+      string $ch[]   = `listRelatives -c $t`;
+      string $geo2[] = `ls -g $ch`;
+      $geo = stringArrayCatenate( $geo, $geo2 );
+   }
+
+   for ( $g in $geo )
+   {
+      string $SGList[] = getSGsFromShape( $g );
+      $SGs = stringArrayCatenate( $SGs, $SGList );
+   }
+
+
+   for ($sg in $SGs )
+   {
+      string $history[] = `listHistory $sg`;
+      string $shader;
+      string $shaders[] = `ls -type gg_tracegroup $history`;
+      if ( size($shaders) != 0 ) 
+      {
+	 $shader = $shaders[0];
+      }
+      else
+      {
+	 string $mat[];
+	 $shader = `createNode gg_tracegroup`;
+
+	 string $selects[] = `ls -type gg_select_tracegroup $history`;
+	 if ( size($selects) != 0 )
+	 {
+	    $mat = `listConnections -d on -p on ($selects[0] + ".input")`;
+	    connectAttr -f ($shader + ".output") ($selects[0] + ".input");
+	 }
+	 else
+	 {
+	    $mat = `listConnections -d on -p on -s off ($sg+".miMaterialShader")`;
+	    if ( size($mat) == 0 )
+	    { 
+	       $mat = `listConnections -d on -p off -s off ($sg + ".surfaceShader")`;
+	       if ( size($mat) > 0 )
+		 {
+		   $mat[0] = $mat[0] + ".outColor";
+		 }
+	    }
+	    connectAttr -f ($shader + ".message") 
+	                   ($sg + ".miMaterialShader");
+	 }
+
+	 if ( size($mat) > 0 )
+	 {
+	    connectAttr -f ($mat[0]) ($shader + ".input");
+	 }
+      }
+
+      if ( $tracegroup != "" )
+      {
+	 mentalConnectTraceGroup( $shader, { $tracegroup } );
+      }
+   }
+}
+
+
+
+/** 
+ * 
+ * 
+ * @param cameraList 
+ * 
+ * @return 
+ */
+global proc AEmr_selectAllTraceGroups()
+{
+   string $group;
+   string $groups[] = `textScrollList -q -ai groupListAddTSL`;
+   for ($group in $groups)
+   {
+      textScrollList -e -selectItem $group groupListAddTSL;
+   }
+}
+
+
+/** 
+ * 
+ * 
+ * @param node 
+ * 
+ * @return 
+ */
+global proc AEmr_removeTraceGroups( string $node )
+{
+   string $objectType = `objectType $node`;
+   string $uiList = "AEmr_groupList_" + $objectType;
+
+   string $camera;
+   string $cameras[] = `textScrollList -q -si $uiList`;
+   string $plug = $node + ".groups";
+   for ( $camera in $cameras )
+   {
+      textScrollList -e -removeItem $camera $uiList;
+   }
+
+   string $connected[] = `listConnections -s on -d off -c on -sh on -p on $plug`;
+   int $num = size($connected);
+   int $i = 0;
+   for ( $i = 0; $i < $num; $i += 2 )
+   {
+      disconnectAttr ($connected[$i+1]) ($connected[$i]);
+   }
+
+   $cameras = `textScrollList -q -ai $uiList`;
+   int $i = 0;
+   int $num = size($cameras);
+   for ( $i = 0; $i < $num; $i++ )
+   {
+      connectAttr ($cameras[$i] + ".message") ($plug + "[" + $i + "]");
+   }
+
+   if ( `window -exists AEmr_addCamerasWindow` )
+   {
+      AEmr_refreshTraceGroupsPopup( $node );
+   }
+
+}
+
+/** 
+ * 
+ * 
+ * @param node 
+ * 
+ * @return 
+ */
+global proc AEmr_addTraceGroups( string $node )
+{
+   string $objectType = `objectType $node`;
+   string $uiList = "AEmr_groupList_" + $objectType;
+
+   string $group;
+   string $groups[] = `textScrollList -q -si groupListAddTSL`;
+   string $plug = $node + ".groups";
+   for ( $group in $groups )
+   {
+      textScrollList -e -removeItem $group groupListAddTSL;
+      textScrollList -e -append     $group $uiList;
+
+      int $idx = `getAttr -size $plug`;
+      connectAttr ($group + ".message") ($plug + "[" + $idx + "]");
+   }
+}
+
+
+/** 
+ * 
+ * 
+ * @param node 
+ * 
+ * @return 
+ */
+global proc AEmr_refreshTraceGroupsPopup( string $plug )
+{
+  string $node = mentalGetNodeName($plug);
+   string $groups[] = mentalGetTraceGroups();
+
+   // Get a list of groups already connected to node
+   string $objectType = `objectType $node`;
+   string $uiList = "AEmr_groupList_" + $objectType;
+
+   if ( `textScrollList -exists $uiList` )
+     {
+       string $connected[] = `textScrollList -q -ai $uiList`;
+
+       // Remove connected groups from all groups list
+       $groups = stringArrayRemove( $connected, $groups );
+     }
+
+   // Sort groups alphabetically
+   $groups = sort($groups);
+
+   // Refresh list - first clear all 
+   textScrollList -e -ra groupListAddTSL;
+
+   // Then, add valid groups
+   int $active = true;
+   if ( size($groups) == 0 )
+   {
+      $active = false;
+      textScrollList -e -a "No unlinked groups in scene..." groupListAddTSL;
+   }
+   else
+   {
+      for ( $group in $groups )
+      {
+	 textScrollList -e -append $group groupListAddTSL;
+      }
+   }
+
+   button -e -en $active mr_selectAllTraceGroupsBTN;
+   button -e -en $active mr_addTraceGroupsBTN;
+
+}
+
+/** 
+ * 
+ * 
+ * @param node 
+ * 
+ * @return 
+ */
+global proc AEmr_createTraceGroupsPopup( string $node )
+{
+   if ( `window -exists AEmr_addTraceGroupsWindow` )
+   {
+      deleteUI AEmr_addTraceGroupsWindow;
+   }
+
+   window -title "Group List" -rtf 1 -s 0 AEmr_addTraceGroupsWindow;
+   columnLayout;
+   textScrollList -nr 12  -w 200  -ams 1 groupListAddTSL;
+
+
+   button -l "Select All" -w 200
+   -c "AEmr_selectAllTraceGroups()"
+   mr_selectAllTraceGroupsBTN;
+
+   button -l "Link Selected" -w 200
+   -c ("AEmr_addTraceGroups(\""+$node+"\");") mr_addTraceGroupsBTN;
+
+   setParent ..;
+
+   AEmr_refreshTraceGroupsPopup($node);
+
+   showWindow;
+}
+
+
+/** 
+ * Refresh the attribute editor's trace group list
+ * 
+ * @param plug 
+ * 
+ * @return 
+ */
+global proc AEmr_refreshTraceGroupsGUI( string $plug ) 
+{
+  string $node = mentalGetNodeName($plug);
+  string $objectType = `objectType $node`;
+  string $list = "AEmr_groupList_" + $objectType;
+  textScrollList -e -ra $list;
+  string $groups[] = `listConnections -sh 1 ($node + ".groups")`;
+  for ($group in $groups)
+    textScrollList -e -append $group $list;
+}
+
+
+/** 
+ * Create trace groups list in AttributeEditor.
+ * 
+ * @param nodeName shader node with 'groups' parameter.
+ * 
+ * @return (nothing)
+ */
+global proc AEmr_createTraceGroupsGUI( string $plug ) 
+{
+  string $node = mentalGetNodeName($plug);
+  $node = mentalGetNodeName($node);
+   string $objectType = `objectType $node`;
+
+   setUITemplate -pst attributeEditorTemplate;
+   separator -style "none" -h 4;
+   rowLayout -nc 2;
+   text -l "Connected Trace Groups";
+
+   string $list = "AEmr_groupList_" + $objectType;
+   textScrollList -nr 8  -ams 1 $list;
+
+   string $groups[] = `listConnections -sh 1 ($node + ".groups")`;
+   for ($group in $groups)
+      textScrollList -e -append $group $list;
+   setParent ..;
+
+   rowColumnLayout 
+   -nc 3
+   -columnWidth 1 132
+   -columnWidth 2 105
+   -columnWidth 3 105;
+
+   text -l "";
+   button -l "Add Groups" 
+     -c ("AEmr_createTraceGroupsPopup \"" + $node + "\"");
+   button -l "Remove Groups" 
+     -c ("AEmr_removeTraceGroups \"" + $node + "\"");
+   setParent ..;
+
+   separator -style "none" -h 8;
+   setUITemplate -ppt;
+}
+
+

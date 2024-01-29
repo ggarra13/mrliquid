@@ -1,0 +1,27 @@
+
+DESIGN
+------
+
+Currently, the exporter is written with a DAG on-demand approach to exporting,
+where nodes higher up in the DAG (and thus, lower in the .mi description)
+query its children (upper nodes in the .mi) for information.
+This design makes code extremely clean and easy to maintain, but it does tend
+to use a tad more memory than a strict query->export converter would.
+This approach is also needed to support IPR in the future.
+Note that in my experience this still leads to a much smaller footprint than
+raylib and maya2mr, as classes can be kept very small with almost no data.
+The most complicated part of the translator (and the one ugly code) is the
+translation of maya shaders, as maya nodes tend to have a lot of gotchas due
+to Alias design of their shading graph and shaders.
+
+The exporter is, currently, an exporter towards a text file based scene
+description language.  Currently, it is heavily based on standard stdio.h 
+constructs (printf, puts, putc), so in general it is not very nice to read.
+
+mental ray also supports a much more high-level API to achieve the same in 
+the form of raylib.  
+This api has the benefit in that it provides ASCII output, IPR support and 
+embedding into 3d applications all from within the same api.  
+As you can imagine, this api does not come for free, and thus only a few 
+places have it (mainly 3d vendors).
+

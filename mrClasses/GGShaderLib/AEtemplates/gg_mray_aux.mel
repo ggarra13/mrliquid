@@ -1,0 +1,189 @@
+
+
+
+//==================================================================
+// Builds an information window for online documentation a la slim
+//==================================================================
+global proc ggShowHelp( string $checkBox, string $title,
+			string $name, string $tx )
+{
+   // window
+
+   // reset control the user clicked
+   iconTextCheckBox -e -v 0 $checkBox;
+
+   // only one window at a time. Delete window if it exsits
+   if ( `window -exists ggShowInfo` == true )
+      deleteUI ggShowInfo;
+
+   int $developing = 0;
+   if ($developing && `windowPref -exists ggShowInfo`)
+      windowPref -remove ggShowInfo;
+
+   window
+   -maximizeButton false
+   -menuBar false
+   -title $title
+   -wh 470 240
+   ggShowInfo;
+
+   // layouts
+   formLayout ggInfoForm;
+   frameLayout -h 200 -labelVisible 0 -borderStyle "etchedOut"
+               -p ggInfoForm ggInfoFrame ;
+   frameLayout -h 26 -labelVisible 0 -borderStyle "etchedOut"
+               -p ggInfoForm ggButtonFrame ;
+
+   formLayout -e
+   -attachForm 	ggInfoFrame "left" 5
+   -attachForm	   	ggInfoFrame "right" 5
+   -attachForm	   	ggInfoFrame "top" 5
+   -attachControl 	ggInfoFrame "bottom" 5 ggButtonFrame
+
+   -attachForm 	ggButtonFrame "left" 5
+   -attachForm	   	ggButtonFrame "right" 5
+   -attachPosition	ggButtonFrame "bottom" 5 100
+
+   ggInfoForm;
+
+   // controls
+   // text
+   setParent ggInfoFrame;
+   scrollLayout;
+   columnLayout -adj 1 -cat "both" 5;
+   text -l "" -h 5;
+   text -al "left" -fn "boldLabelFont" -l ("Info on "+$name) ;
+   text -l "" -h 10;
+   text -al "left" -l $tx;
+
+
+   // button
+   setParent ggButtonFrame;
+   columnLayout -adj 1 ;
+   button -l "Close" -c "deleteUI ggShowInfo" ggInfoButton;
+   setParent ..;
+
+
+
+   showWindow ggShowInfo;
+
+}
+
+
+
+global proc AEgg_normalSpaceNew( string $plug )
+{
+      attrEnumOptionMenuGrp
+              -l "Space"
+              -at $plug
+              -ei 0 "World / Internal"
+              -ei 1 "Object"
+              -ei 2 "Camera"
+	      -ei 6 "Light"
+	normalSpace
+	;
+}
+
+
+//
+// Routine to replace a pulldown of spaces
+//
+global proc AEgg_normalSpaceReplace( string $plug )
+{
+  attrEnumOptionMenuGrp -e -at $plug normalSpace;
+}
+
+
+global proc AEgg_vectorSpaceNew( string $plug )
+{
+      attrEnumOptionMenuGrp
+              -l "Space"
+              -at $plug
+              -ei 0 "World / Internal"
+              -ei 1 "Object"
+              -ei 2 "Camera"
+              -ei 6 "Light"
+	vectorSpace
+	;
+}
+
+
+//
+// Routine to replace a pulldown of spaces
+//
+global proc AEgg_vectorSpaceReplace( string $plug )
+{
+  attrEnumOptionMenuGrp -e -at $plug vectorSpace;
+}
+
+
+global proc AEgg_spaceNew( string $plug )
+{
+      attrEnumOptionMenuGrp
+              -l "Space"
+              -at $plug
+              -ei 0 "World / Internal"
+              -ei 1 "Object"
+              -ei 2 "Camera"
+              -ei 3 "Screen"
+              -ei 4 "Raster"
+              -ei 5 "NDC"
+              -ei 6 "Light"
+	space;
+}
+
+
+//
+// Routine to replace a pulldown of spaces
+//
+global proc AEgg_spaceReplace( string $plug )
+{
+  attrEnumOptionMenuGrp -e -at $plug space;
+}
+
+
+//
+//  Procedure Name:
+//	AEgg_assignTextureCB
+//
+
+global proc int AEgg_assignTextureCB( string $fileAttribute,
+				      string $filename,
+				      string $fileType )
+{
+	//
+	// Description:
+	//	This procedure is called when the user changes the file texture name in
+	//	the edit box in the file texture attribute editor (whether by manually
+	//	typing it in, or by using the file browser to choose a new file).
+	//
+	//	This procedure updates the file texture node file name attribute
+	//
+
+	setAttr $fileAttribute -type "string" $filename;
+
+	string $currentDir = `workspace -q -dir`;
+	retainWorkingDirectory ($currentDir);
+
+	// Extract the name of the node from the node.attribute name
+	//
+	string $tokenArray[];
+	tokenize($fileAttribute, ".", $tokenArray);
+
+	string $fileNode = $tokenArray[0];
+
+	return true;
+}
+
+//
+//  Procedure Name:
+//	AEfileTextureBrowser
+//
+
+global proc AEgg_fileTextureBrowser( string $cmd )
+{
+    string  $workspace = `workspace -q -fn`;
+    setWorkingDirectory $workspace "image" "sourceImages";
+	
+    fileBrowser ($cmd, "Open", "image", 0);
+}

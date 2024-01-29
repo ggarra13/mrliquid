@@ -1,0 +1,13 @@
+--------------------- TODO
+
+        - Add support for moving of lights based on shadow location.
+	- Add support for shadow map slide maps by drawing on image.
+	- Add support for adjustment of lights thru drawing around areas of 
+	image being displayed in image viewer.
+	- Improve MEL scripts and interface so the whole hypergraph/shading/
+	material adjustment can be done just with a pen/tablet.
+	- Add my own image viewer.
+	- Add support for texture baking. *DONE*
+	- Add support for default tesselations in addition to tesselation
+	  overrides and maya derivated tesselations.
+	- Add support *DONE* and instgroup file objects

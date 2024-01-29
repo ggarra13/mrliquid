@@ -1,0 +1,212 @@
+// Copyright (C) 1997-2004 Alias Systems Corp.
+// 
+// The information in this file is provided for the exclusive use of the
+// licensees of Alias.  Such users have the right to use, modify,
+// and incorporate this code into other products for purposes authorized
+// by the Alias license agreement, without fee.
+// 
+// ALIAS DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+// EVENT SHALL ALIAS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+// DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+// TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+// PERFORMANCE OF THIS SOFTWARE.
+
+//****************************************************************************
+// The methods in this file are used by AEmentalrayDisplaceApproxTemplate.mel
+// and by AEmentalraySurfaceApproxTemplate.mel.
+//****************************************************************************
+
+proc string nodeFromPlug(string $plug)
+{
+	//
+	// Description:
+	//	This procedure returns the node name contained in the specified plug
+	//	name.
+	//
+	// Returns: 
+	//	The node name.
+	//
+
+	string $tokenArray[];
+	tokenize($plug, ".", $tokenArray);
+	return $tokenArray[0];
+}
+
+global proc miRefreshApproxStyleOptionMenu(string $node)
+{
+	//
+	// Description:
+	//	This procedure is called when there has been a change to the Approx
+	//	Method option menu.
+	//	This procedure examines the approxMethod attribute of the specified
+	//	node and updates the Approx Style option menu to dim out invalid
+	//	options or to dim the entire Approx Style option menu as appropriate.
+	//
+
+	string $nodeType = `nodeType $node`;
+
+	setParent ($nodeType + "StyleOptionMenu");
+
+	int	$approxStyle = `getAttr ($node + ".approxStyle")`;
+	int	$approxMethod = `getAttr ($node + ".approxMethod")`;
+
+	if ($approxMethod != 3)
+	{
+		// The current approximation method is something other than Spatial, so
+		// the Fine approximation style is not an available option. We will
+		// disable the Fine menu item in the option box.
+		//
+		menuItem
+			-edit
+			-enable false
+			-label "Fine"
+			fineItem;
+	}
+	else
+	{
+		// The current approximation method is Spatial, so the Fine
+		// approximation style option can be enabled.
+		//
+		menuItem
+			-edit
+			-enable true
+			-label "Fine"
+			fineItem;
+	}
+
+	if ($approxMethod == 0 || $approxMethod == 1)
+	{
+		// The approximation method is either Parametric or Regular Parametric,
+		// for which only one style (Grid) is valid. We will disable the Approx
+		// Style option menu.
+		//
+		optionMenuGrp
+			-edit
+			-enable false
+			($nodeType + "StyleOptionMenu");
+	}
+	else
+	{
+		optionMenuGrp
+			-edit
+			-enable true
+			($nodeType + "StyleOptionMenu");
+	}
+
+	// Make sure the current approximation style is selected in the option menu.
+	//
+	optionMenuGrp 
+		-edit
+		-select $approxStyle
+		($nodeType + "StyleOptionMenu");
+}
+
+global proc miTessellationStyleChanged(string $node)
+{
+	//
+	// Description:
+	//	This procedure is called whenever the user selects a new entry in the
+	//	Approx Style option menu.
+	//	This procedure determines what the user has selected and sets the
+	//	approxStyle attribute on the specified node appropriately.
+	//
+
+	string $nodeType = `nodeType $node`;
+
+	// Determine which item is currently selected in the Approx Style option
+	// menu.
+	//
+	int $style;
+
+	$style = `optionMenuGrp -query -select ($nodeType + "StyleOptionMenu")`;
+
+	// Set the value of the approxStyle attribute to be the same as the index
+	// of the selected entry in the Approx Style option menu, since these two
+	// values correspond.
+	//
+	setAttr ($node + ".approxStyle") $style;
+	
+	// bug 201832
+	// changing Approx Style should update attribute editor
+	if( $nodeType == "mentalrayDisplaceApprox" )
+		miCheckDisplaceTessellation($node);
+	else if( $nodeType == "mentalraySurfaceApprox" )
+		miCheckSurfaceTessellation($node);
+}
+
+global proc AEmentalrayApproxStyleReplace(string $stylePlug)
+{
+	//
+	// Description:
+	//	This procedure is called when the attribute editor is focused on a new
+	//	node.
+	//	This procedure updates the custom UI representing the approxStyle
+	//	attribute.
+	//
+
+	string $node = nodeFromPlug($stylePlug);
+	string $nodeType = `nodeType $node`;
+
+	string $parent = `setParent -query`;
+
+	// Update the command which is issued when the user chooses something from
+	// the Approx Style option menu. The command should affect the node the
+	// attribute editor is now focused on.
+	//
+	optionMenuGrp
+		-edit
+		-changeCommand (
+			"miTessellationStyleChanged(\"" 
+			+ $node 
+			+ "\")")
+		($nodeType + "StyleOptionMenu");
+
+	// Refresh the Approx Style option menu to select the current style and
+	// disable any styles which are invalid for the current method.
+	//
+	miRefreshApproxStyleOptionMenu($node);
+}
+
+global proc AEmentalrayApproxStyleNew(string $stylePlug)
+{
+	//
+	// Description:
+	//	This procedure is called the first time a mentalrayDisplaceApprox node
+	//	appears in the attribute editor.
+	//	This procedure creates the custom UI used to represent the approxStyle
+	//	attribute.
+	//
+
+	string $node = nodeFromPlug($stylePlug);
+	string $nodeType = `nodeType $node`;
+
+	setUITemplate -pushTemplate attributeEditorTemplate;
+
+	// Create the Approx Style option menu and the items which appear within
+	// it.
+	//
+	optionMenuGrp
+		-label "Approx Style"
+		($nodeType + "StyleOptionMenu");
+
+	menuItem
+		-label "Grid"
+		gridItem;
+
+	menuItem
+		-label "Tree"
+		treeItem;
+
+	menuItem
+		-label "Delaunay"
+		delaunayItem;
+
+	menuItem
+		-label "Fine"
+		fineItem;
+
+	setUITemplate -popTemplate;
+}
+

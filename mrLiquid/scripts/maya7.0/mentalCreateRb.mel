@@ -1,0 +1,20 @@
+
+global proc mentalCreateRb(int $render)
+{
+   if ( ! `pluginInfo -q -l "rubyMEL"` )
+   {
+      loadPlugin "rubyMEL";
+      if ( ! `pluginInfo -q -l "rubyMEL"` )
+      {
+	 error("mentalCreateRb uses rubyMEL which could not be loaded.");
+	 return;
+      }
+   }
+
+   string $cmd = "ruby -c ";
+   $cmd += "\"require 'GG/ConfigMayaWriter'; GG::ConfigMayaWriter.new(";
+   $cmd += $render;
+   $cmd += ")\"";
+   eval($cmd);
+}
+

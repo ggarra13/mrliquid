@@ -1,0 +1,54 @@
+
+Data of objects
+---------------
+flags
+	visible
+	reflection
+	refraction
+	trace
+	finalgather
+	shadow	
+	--geometry
+		trilist
+		mesh
+			v
+			m
+			n
+			Usually constant data:
+			t
+			u
+			p (tag)
+			holes
+		subd
+			v
+			m
+			Usually constant data:
+			t
+			u
+			p
+			hierarchy
+		nurbs
+			v
+			m
+			Usually constant data:
+			basis
+			knots
+			trims
+	
+instance
+	flags
+		hide
+		visible
+		reflection
+		refraction
+		trace
+		finalgather
+		shadow	
+	matrix
+	motion matrix
+	material(s)
+
+
+
+objects.dta
+objects.cnt

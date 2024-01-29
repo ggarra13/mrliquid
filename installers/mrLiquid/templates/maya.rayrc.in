@@ -1,0 +1,61 @@
+
+
+registry "{MAYABASE}"	value	"@@MAYA_INSTALL_DIR@@/mentalray" end registry
+
+# registry "{SYSTEM}"	value	"linux"		end registry
+registry "{DSO}"	value	"so"		end registry
+
+$lookup "{MAYABASE}"
+$lookup "{SYSTEM}"
+$lookup "{DSO}"
+
+registry "{MRMAYA_START}"
+	link 	"{MAYABASE}/lib/base.{DSO}"
+	link	"{MAYABASE}/lib/physics.{DSO}"
+	link	"{MAYABASE}/lib/mayabase.{DSO}"
+	link	"{MAYABASE}/lib/contour.{DSO}"
+	link	"{MAYABASE}/lib/subsurface.{DSO}"
+	link	"{MAYABASE}/lib/paint.{DSO}"
+	link	"{MAYABASE}/lib/mi_openexr.{DSO}"
+	link	"{MAYABASE}/lib/mayahair.{DSO}"
+	mi	"{MAYABASE}/include/mayabase.mi"
+	mi 	"{MAYABASE}/include/base.mi"
+	mi 	"{MAYABASE}/include/physics.mi"
+	mi 	"{MAYABASE}/include/contour.mi"
+	mi 	"{MAYABASE}/include/subsurface.mi"
+	mi 	"{MAYABASE}/include/paint.mi"
+	mi 	"{MAYABASE}/include/mayahair.mi"
+	echo	"mental ray for Maya - startup done"
+end registry
+
+$lookup	"{MRMAYA_START}"
+
+
+
+#######################################################
+# BEGIN lines added by mrLiquid-demo 0.8.0.0
+
+registry "{MRL_PATH}" 
+  value "@@MR_LIQUID_ROOT@@/@@MR_LIQUID_PLATFORM@@/@@MR_LIQUID_ARCH@@/shaders/mentalray@@MRAY_VERSION@@"
+end registry
+
+$lookup "{MRL_PATH}"
+
+#
+# For mrLiquid
+#
+registry "{mrLiquid}"
+    echo "Registering mrLiquid 0.8.0.0 shaders"
+    link   "{MRL_PATH}/mrl_shaders.{DSO}"
+    mi     "{MRL_PATH}/mrl_shaders.mi"
+    link   "{MRL_PATH}/mray_shaders.{DSO}"
+    mi     "{MRL_PATH}/mray_shaders.mi"
+    link   "{MRL_PATH}/exr_shader.{DSO}"
+    mi     "{MRL_PATH}/exr_shader.mi"
+end registry
+
+$lookup "{mrLiquid}"
+
+
+# END lines added by mrLiquid-demo 0.8.0.0
+#######################################################

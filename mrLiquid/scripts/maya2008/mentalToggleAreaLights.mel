@@ -1,0 +1,52 @@
+/**
+ * @file   mentalToggleAreaLights.mel
+ * @author gga
+ * @date   Thu Aug  2 05:48:10 2007
+ * 
+ * @brief  This file implements a command to toggle on and off all area
+ *         lights in scene.  It can be used for quickly previewing stuff.
+ * 
+ * 
+ */
+
+int    $gMentalAreaLightsMode = 1;
+string $gMentalAreaLights[]   = {};
+
+
+global proc mentalToggleAreaLights()
+{
+  global int    $gMentalAreaLightsMode;
+  global string $gMentalAreaLights[];
+
+  string $light;
+  string $lights[] = `ls -lights`;
+
+  if ( $gMentalAreaLightsMode == 0 )
+    {
+      $gMentalAreaLightsMode = 1;
+      for ( $light in $gMentalAreaLights )
+	{
+	  string $attr = $light + ".areaLight";
+	  print( "Turning on area light \"" + $light + "\"\n" );
+	  setAttr $attr 1;
+	}
+    }
+  else
+    {
+      $gMentalAreaLightsMode = 0;
+      $gMentalAreaLights = {};
+
+      for ( $light in $lights )
+	{
+	  string $attr = $light + ".areaLight";
+	  int $areaLight = `getAttr $attr`;
+	  if ( $areaLight )
+	    {
+	      $gMentalAreaLights[ size($gMentalAreaLights) ] = $light;
+	      print( "Turning off area light \"" + $light + "\"\n" );
+	      setAttr $attr 0;
+	    }
+	}
+    }
+
+}

@@ -1,0 +1,8 @@
+
+MAP FILES
+---------
+
+Generate .map files with tiling (imf_copy -r) and then force mental ray to 
+agressively cache them with setting  "MI_1TC_LIMIT=1" in your environment.  
+Personally I think using .map files without these settings is a pointless 
+waste of time because because you're not saving yourself any address space.

@@ -1,0 +1,15 @@
+
+//
+// mental command line rendering
+global proc mentalCmdlineRender(string $option)
+{
+
+	string $rootDir = miGetRootDir();
+
+	string $cmd = "mental -render -project \"" + $rootDir + "\" ";
+	
+	$cmd += $option;
+	
+	eval $cmd;
+	
+}

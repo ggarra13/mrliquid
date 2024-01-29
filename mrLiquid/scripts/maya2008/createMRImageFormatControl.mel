@@ -1,0 +1,153 @@
+// Copyright (C) 1997-2006 Autodesk, Inc., and/or its licensors.
+// All rights reserved.
+//
+// The coded instructions, statements, computer programs, and/or related
+// material (collectively the "Data") in these files contain unpublished
+// information proprietary to Autodesk, Inc. ("Autodesk") and/or its licensors,
+// which is protected by U.S. and Canadian federal copyright law and by
+// international treaties.
+//
+// The Data is provided for use exclusively by You. You have the right to use,
+// modify, and incorporate this Data into other products for purposes authorized 
+// by the Autodesk software license agreement, without fee.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. AUTODESK
+// DOES NOT MAKE AND HEREBY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTIES
+// INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF NON-INFRINGEMENT,
+// MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, OR ARISING FROM A COURSE 
+// OF DEALING, USAGE, OR TRADE PRACTICE. IN NO EVENT WILL AUTODESK AND/OR ITS
+// LICENSORS BE LIABLE FOR ANY LOST REVENUES, DATA, OR PROFITS, OR SPECIAL,
+// DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES, EVEN IF AUTODESK AND/OR ITS
+// LICENSORS HAS BEEN ADVISED OF THE POSSIBILITY OR PROBABILITY OF SUCH DAMAGES.
+
+
+
+global proc string createMRImageFormatControl()
+{
+	string $parent = `setParent -query`;
+	
+	optionMenuGrp 
+		-label (uiRes("m_createMRImageFormatControl.kImageFormat"))
+		-changeCommand "changeMentalRayImageFormat"
+		imageMenuMentalRay;
+
+	global string $miImgFormat[];
+	if (size( $miImgFormat ) == 0) {
+		// If the file format array has not been initialized yet, do so.
+		// This routine may be called in dynPaintMenus.mel during the
+		// file save for PFX canvas images.
+		miCreateImageFormats();
+	}
+
+    // For Mental Ray, the control
+    //    optionMenuGrp  -label "Image format" imageMenuMentalRay
+    // is determined by two attributes, namely
+    //    . defaultRenderGlobals.imageFormat and
+    //    . defaultRenderGlobals.imfkey
+    // The reason is that:
+    //   (i) defaultRenderGlobals.imageFormat has no 1-to-1 mapping
+    //       with the imageMenuMentalRay menuItems, because
+    //       defaultRenderGlobals.imageFormat being 51 means 
+    //       custom image format, which could be
+    //       Tiff Uncompressed (tif), hdr, exr, Zpic, picture, ppm,
+    //       ps, mental's custom image formats, etc.
+    //   (ii) defaultRenderGlobals.imfkey has no 1-to-1 mapping with
+    //        the imageMenuMentalRay menuItems, because, for example,
+    //        defaultRenderGlobals.imfkey being "psd" means
+    //        the image format could be "PSD" or "PSD Layered".
+    //
+    // Hence, we need to link both
+    //    . defaultRenderGlobals.imageFormat and
+    //    . defaultRenderGlobals.imfkey
+    // to imageMenuMentalRay.
+    //  
+    global string $miImgExtLabel[]; // image extension label
+    global int    $miImgExtNum[];   // numbers corresponding to defaultRenderGlobals.imageFormat
+	
+    int $length = size($miImgFormat);
+    int $i;
+    for ($i = 0; $i < $length; $i++)
+    {
+        menuItem -label $miImgExtLabel[$i] -data $miImgExtNum[$i];
+    }
+
+    // connect the label, so we can change its color
+    connectControl -index 1 imageMenuMentalRay defaultRenderGlobals.imageFormat;
+    // connect the menu, so it will always match the attribute
+    connectControl -index 2 imageMenuMentalRay defaultRenderGlobals.imageFormat;
+	scriptJob 
+		-parent $parent 
+		-attributeChange 
+		"defaultRenderGlobals.imageFormat" 
+		"updateMentalRayImageFormatControl";
+			
+	scriptJob 
+		-parent $parent 
+		-attributeChange 
+		"defaultRenderGlobals.imfkey" 
+		"updateMentalRayImageFormatControl";
+			
+	updateMentalRayImageFormatControl();		
+	return "imageMenuMentalRay";
+}
+
+global proc changeMentalRayImageFormat()
+{
+//
+//  Procedure Name:
+//      changeMentalRayImageFormat
+//
+//  Description:
+//		This procedure is called when the user changes the type of 
+//		image that will be written out.  It sets the internal 
+//		representation and then updates the example to show the changes.
+//
+	setParentToCommonTab();
+
+	int $item = `optionMenuGrp -q -sl imageMenuMentalRay` - 1; 
+
+	global int 	$miImgExtNum[];
+	global string $miImgFormat[];
+	setAttr defaultRenderGlobals.imageFormat $miImgExtNum[$item];
+	setAttr defaultRenderGlobals.imfkey -type "string" $miImgFormat[$item];
+}
+
+global proc updateMentalRayImageFormatControl()
+{
+	if( currentRenderer() != "mentalRay" && currentRenderer() != "mental" )
+		return;
+		
+	string $oldParent = `setParent -query`;
+	setParentToCommonTab();
+
+	global string $miImgFormat[];  // This is the actual file format
+	global int $miImgExtNum[];  // This is the corresponding internal value
+
+	int $compare;
+
+	int $imageNum = `getAttr "defaultRenderGlobals.imageFormat"`;
+	string $imageFormat = `getAttr "defaultRenderGlobals.imfkey"`;
+	int $i = 0;
+
+	for ($i=0; $i < size($miImgExtNum); ++$i) 
+	{
+		if ($imageNum == 51 && $imageFormat == $miImgFormat[$i]) {
+			optionMenuGrp -edit -sl ($i+1) imageMenuMentalRay;
+			break;
+		}
+		else if ($imageNum != 51 && $imageNum == $miImgExtNum[$i]) {
+			optionMenuGrp -edit -sl ($i+1) imageMenuMentalRay;
+			break;
+		}
+	}
+	
+	// could not find the corresponding image format.
+	// fall back to iff.
+	if( $i == size($miImgExtNum) )
+	{
+		setAttr defaultRenderGlobals.imageFormat 7;
+		optionMenuGrp -edit -sl 1 imageMenuMentalRay;
+	}
+	
+	setParent $oldParent;
+}
+

@@ -1,0 +1,9 @@
+
+global proc mentalStopImrRender()
+{
+  //   print("mentalStopImrRender\n");
+  //     if (eval("mental -q -imr"))
+  //     {
+  //        mentalIPRStop();
+  //     }
+}

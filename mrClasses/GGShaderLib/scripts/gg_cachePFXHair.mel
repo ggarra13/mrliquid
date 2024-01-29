@@ -1,0 +1,67 @@
+
+global proc gg_cachePFXHair()
+{
+   string $scene = `file -q -sn`;
+   if ( $scene == "" )
+   {
+      error("Please save scene first in a project before running cacheScene");
+   }
+
+   // We will save the pfxstrokes cache data inside the data/
+   // folder of the project
+   string $dir  = `substitute "/scenes/[^/]*$" $scene ""`;
+   string $root = `substitute "^.*/scenes/" $scene ""`;
+   $root = `substitute "\\.ma$" $root ""`;
+   $root = `substitute "\\." $root "_"`;
+   string $fileroot = $dir + "/data/" + $root;
+   
+
+   // We cache the timeline (+1 for motion blur)
+   int $start = `playbackOptions -q -ast`;
+   int $end   = `playbackOptions -q -aet`;
+   $end += 1;
+
+   // Start caching...
+   int $i;
+   for ( $i = $start; $i <= $end; ++$i )
+   {
+      currentTime $i;
+      string $filename = $fileroot + "." + $i + ".hair";
+      pfxstrokes -fn $filename;
+   }
+
+
+   // Create mrayPFXHair if it does not exist
+   string $exists[] = `ls mrayPFXHair`;
+   string $geoshader;
+   string $srfshader;
+
+   if ( size($exists) == 0 )
+   {
+      string $plane[] = `polyPlane -w 1 -h 1 -sx 1 -sy 1 -ax 0 1 0 -tx 0 -ch 1`;
+      select -r $plane[0];
+      DeleteHistory;
+      
+      // Attach gg_geo_pfxhair shader, reading cache we just created
+      setAttr ("mrayPFXHair.miExportGeoShader") 1;
+      string $cmd = "defaultNavigation -connectToExisting -destination mrayPFXHair.miGeoShader -source %node";
+      $geoshader = `mrCreateCustomNode -asUtility $cmd gg_geo_pfxhair`;
+
+      // Attach gg_pfxhair as surface shader
+      createAndAssignShader gg_pfxhair "";
+   }
+   else
+   {
+      // Find geoshader + srfshader
+      string $conn[] = `listConnections mrayPFXHair.miGeoShader`;
+      $geoshader = $conn[0];
+     
+      $conn = `listRelatives -s mrayPFXHair`;
+      $conn = `listConnections ($conn[0]+".instObjGroups")`;
+      $conn = `listConnections ($conn[0]+".miMaterialShader")`;
+      $srfshader = $conn[0];
+   }
+
+   setAttr -type "string" ($geoshader + ".fileroot") $fileroot;
+
+}
